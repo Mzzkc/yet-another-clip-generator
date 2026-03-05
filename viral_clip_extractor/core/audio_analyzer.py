@@ -1,0 +1,256 @@
+"""
+Audio analysis module using librosa for ASMR-specific features.
+
+Extracts audio features relevant to virality scoring: peak loudness,
+high-frequency content (ASMR triggers), dynamic range, zero-crossing
+rate, and overall energy.  Also detects ASMR trigger words via
+faster-whisper when available.
+"""
+
+import logging
+import tempfile
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+
+from viral_clip_extractor.models import AudioFeatures
+
+logger = logging.getLogger(__name__)
+
+# Default ASMR trigger keywords for speech matching
+_DEFAULT_ASMR_KEYWORDS: list[str] = [
+    "tingles", "relax", "sleep", "cozy", "gentle",
+    "dragon", "scales", "whisper", "magic",
+]
+
+
+class AudioAnalyzer:
+    """Analyze audio segments for viral potential signals using librosa.
+
+    Computes spectral and temporal features tuned for ASMR content:
+    RMS energy peaks, high-frequency presence, dynamic range,
+    zero-crossing rate, and ASMR-specific patterns (tapping, crinkles,
+    mouth sounds).  Optionally transcribes speech to detect trigger words.
+
+    Args:
+        asmr_keywords: Custom list of trigger words to match against
+            transcribed speech.  Falls back to a built-in default list.
+    """
+
+    def __init__(self, asmr_keywords: Optional[list[str]] = None) -> None:
+        self.asmr_keywords: list[str] = asmr_keywords or list(_DEFAULT_ASMR_KEYWORDS)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def analyze_segment(
+        self, video_path: str, start_time: float, end_time: float
+    ) -> AudioFeatures:
+        """Analyze audio features for a time range within a video file.
+
+        Extracts the audio track from *video_path* (or loads it directly
+        if it is already a WAV/audio file), then computes spectral and
+        energy features over the ``[start_time, end_time)`` window.
+
+        Args:
+            video_path: Path to a video or audio file.
+            start_time: Segment start in seconds.
+            end_time: Segment end in seconds.
+
+        Returns:
+            An :class:`AudioFeatures` instance with computed scores.
+        """
+        try:
+            import librosa
+        except ImportError:
+            logger.error("librosa is not installed — returning zero-valued AudioFeatures")
+            return AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+                trigger_words=[],
+                overall_energy=0.0,
+            )
+
+        duration = end_time - start_time
+        if duration <= 0:
+            logger.warning("Invalid segment duration (%.2f–%.2f) — returning zeros", start_time, end_time)
+            return AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+                trigger_words=[],
+                overall_energy=0.0,
+            )
+
+        # Load the audio segment via librosa (handles video files too via
+        # ffmpeg backend).
+        try:
+            y, sr = librosa.load(
+                video_path, sr=22050, mono=True,
+                offset=start_time, duration=duration,
+            )
+        except Exception as exc:
+            logger.error("Failed to load audio from %s: %s", video_path, exc)
+            return AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+                trigger_words=[],
+                overall_energy=0.0,
+            )
+
+        # Guard against silent / empty audio
+        if y is None or len(y) == 0:
+            logger.warning("Empty audio data for %s (%.2f–%.2f)", video_path, start_time, end_time)
+            return AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+                trigger_words=[],
+                overall_energy=0.0,
+            )
+
+        # --- Compute features ------------------------------------------------
+
+        # 1. RMS energy
+        rms = librosa.feature.rms(y=y)[0]
+        audio_peak_score = float(np.percentile(rms, 90)) if len(rms) > 0 else 0.0
+        overall_energy = float(np.mean(rms)) if len(rms) > 0 else 0.0
+
+        # 2. High-frequency score — fraction of spectral centroid frames > 4 kHz
+        spectral_centroid = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+        high_freq_score = float(np.mean(spectral_centroid > 4000)) if len(spectral_centroid) > 0 else 0.0
+
+        # 3. Dynamic range — std of RMS (interesting vs boring)
+        dynamic_range = float(np.std(rms)) if len(rms) > 0 else 0.0
+
+        # 4. Zero-crossing rate — high for whispers and crisp sounds
+        zcr = librosa.feature.zero_crossing_rate(y)[0]
+        zcr_score = float(np.mean(zcr)) if len(zcr) > 0 else 0.0
+
+        # --- ASMR-specific detections -----------------------------------------
+
+        # Tapping detection: sharp onset transients
+        try:
+            onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+            onsets = librosa.onset.onset_detect(y=y, sr=sr, onset_envelope=onset_env, units="time")
+            if len(onsets) > 0:
+                # Dense onsets with high strength ⇒ tapping
+                onset_density = len(onsets) / max(duration, 0.01)
+                tapping_boost = min(onset_density * 0.02, 0.1)
+                audio_peak_score += tapping_boost
+        except Exception as exc:
+            logger.debug("Onset detection failed: %s", exc)
+
+        # Crinkle detection: high-frequency spectral flux
+        try:
+            spectral_flux = np.diff(spectral_centroid)
+            hf_flux = float(np.mean(np.abs(spectral_flux))) if len(spectral_flux) > 0 else 0.0
+            if hf_flux > 500:
+                high_freq_score = min(high_freq_score + 0.05, 1.0)
+        except Exception as exc:
+            logger.debug("Spectral flux computation failed: %s", exc)
+
+        # Mouth-sound detection: mid-frequency energy (1–4 kHz band)
+        try:
+            S = np.abs(librosa.stft(y))
+            freqs = librosa.fft_frequencies(sr=sr)
+            mid_mask = (freqs >= 1000) & (freqs <= 4000)
+            if np.any(mid_mask):
+                mid_energy = float(np.mean(S[mid_mask, :]))
+                total_energy_spec = float(np.mean(S))
+                if total_energy_spec > 0:
+                    mid_ratio = mid_energy / total_energy_spec
+                    if mid_ratio > 0.5:
+                        zcr_score = min(zcr_score + 0.02, 1.0)
+        except Exception as exc:
+            logger.debug("Mid-frequency analysis failed: %s", exc)
+
+        # --- Trigger word detection -------------------------------------------
+        trigger_words = self._detect_trigger_words(video_path, start_time, end_time)
+
+        return AudioFeatures(
+            audio_peak_score=float(audio_peak_score),
+            high_freq_score=float(high_freq_score),
+            dynamic_range=float(dynamic_range),
+            zcr_score=float(zcr_score),
+            trigger_words=trigger_words,
+            overall_energy=float(overall_energy),
+        )
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _detect_trigger_words(
+        self, audio_path: str, start: float, end: float
+    ) -> list[str]:
+        """Detect ASMR trigger words in the audio segment using speech-to-text.
+
+        Tries faster-whisper for transcription and matches against the
+        configured keyword list.  Returns an empty list gracefully if
+        faster-whisper is unavailable or transcription fails.
+
+        Args:
+            audio_path: Path to the audio/video file.
+            start: Segment start in seconds.
+            end: Segment end in seconds.
+
+        Returns:
+            A (possibly empty) list of detected trigger words.
+        """
+        try:
+            from faster_whisper import WhisperModel
+        except ImportError:
+            logger.debug("faster-whisper not installed — skipping trigger word detection")
+            return []
+
+        # Extract the audio segment to a temp WAV for Whisper
+        try:
+            import librosa
+            import soundfile as sf
+
+            duration = end - start
+            y, sr = librosa.load(audio_path, sr=16000, mono=True, offset=start, duration=duration)
+            if y is None or len(y) == 0:
+                return []
+
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp_path = tmp.name
+                sf.write(tmp_path, y, sr)
+
+        except Exception as exc:
+            logger.debug("Failed to extract audio for transcription: %s", exc)
+            return []
+
+        try:
+            model = WhisperModel("tiny", device="cpu", compute_type="int8")
+            segments_gen, _info = model.transcribe(tmp_path, beam_size=1, vad_filter=True)
+
+            transcript_text = " ".join(seg.text for seg in segments_gen).lower()
+
+            found: list[str] = []
+            for keyword in self.asmr_keywords:
+                if keyword.lower() in transcript_text:
+                    found.append(keyword)
+
+            if found:
+                logger.info("Detected trigger words in %.1f–%.1fs: %s", start, end, found)
+            return found
+
+        except Exception as exc:
+            logger.debug("Whisper transcription failed: %s", exc)
+            return []
+        finally:
+            # Clean up temp file
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+            except Exception:
+                pass

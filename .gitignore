@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+downloads/
+logs/
+score-artifacts/
+.mozart/
+/tmp/

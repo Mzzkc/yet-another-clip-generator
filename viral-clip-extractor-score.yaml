@@ -1,0 +1,1077 @@
+name: "viral-clip-extractor-build"
+workspace: "/home/emzi/Projects/yacg"
+
+backend:
+  type: claude_cli
+  skip_permissions: true
+  disable_mcp: true
+  timeout_seconds: 2700
+  output_format: json
+  allowed_tools: [Read, Write, Edit, Glob, Grep, Bash]
+
+sheet:
+  size: 1
+  total_items: 4
+  fan_out:
+    2: 5
+  dependencies:
+    2: [1]
+    3: [2]
+    4: [3]
+
+parallel:
+  enabled: true
+  max_concurrent: 5
+
+stale_detection:
+  enabled: true
+  idle_timeout_seconds: 1800
+
+retry:
+  max_retries: 2
+  base_delay_seconds: 15
+  max_completion_attempts: 3
+  completion_threshold_percent: 70
+
+cross_sheet:
+  auto_capture_stdout: true
+  max_output_chars: 3000
+  lookback_sheets: 8
+
+prompt:
+  variables:
+    project_root: "/home/emzi/Projects/yacg"
+    yt_transcriber_root: "/home/emzi/Projects/yt-transcriber"
+    modules:
+      1:
+        name: "scene_detector"
+        focus: "Scene detection and segmentation using PySceneDetect"
+        src_file: "core/scene_detector.py"
+        test_file: "tests/test_scene_detector.py"
+      2:
+        name: "audio_analyzer"
+        focus: "Audio analysis using librosa for ASMR-specific features"
+        src_file: "core/audio_analyzer.py"
+        test_file: "tests/test_audio_analyzer.py"
+      3:
+        name: "visual_analyzer"
+        focus: "Visual analysis using OpenCV including smart vertical cropping"
+        src_file: "core/visual_analyzer.py"
+        test_file: "tests/test_visual_analyzer.py"
+      4:
+        name: "semantic_analyzer"
+        focus: "Semantic content analysis using Qwen2.5-VL via Ollama"
+        src_file: "core/semantic_analyzer.py"
+        test_file: "tests/test_semantic_analyzer.py"
+      5:
+        name: "virality_scorer_and_extractor"
+        focus: "Virality scoring engine and FFmpeg-based clip extraction"
+        src_scorer: "core/virality_scorer.py"
+        src_extractor: "extractors/clip_extractor.py"
+        test_file: "tests/test_scorer_extractor.py"
+  template: |
+    {% macro code_quality() %}
+    ## Code Quality Requirements
+    - Production-grade Python 3.10+ code
+    - Type hints on all function signatures
+    - Docstrings on all public classes and methods
+    - Comprehensive error handling with logging (use logging module)
+    - Follow the patterns established in the existing caption_generator.py
+    - Use dataclasses for data structures
+    - Modular, testable design
+    - Import shared models from viral_clip_extractor.models — do NOT redefine data classes
+    - NO `raise NotImplementedError` in finished code — every method must have a real implementation
+    {% endmacro %}
+
+    {% if stage == 1 %}
+    ## Stage 1: Environment Setup + Architecture Foundation
+
+    You are building the **Viral Clip Extractor** — a system that automatically extracts
+    viral-potential clips from long-form videos (e.g., 60-minute YouTube ASMR sessions) by
+    detecting scene boundaries, analyzing audio/visual/semantic signals, scoring viral potential,
+    and extracting formatted clips with auto-generated Instagram captions.
+
+    The system must support BOTH local video files AND YouTube URLs as input.
+
+    ### Part A: Install Dependencies
+
+    Install all required Python packages:
+    ```bash
+    pip install "scenedetect[opencv]>=0.6" "librosa>=0.10" "opencv-python-headless>=4.8" "numpy>=1.24" "requests>=2.28" "yt-dlp" --break-system-packages
+    ```
+
+    Verify each package imports successfully:
+    ```bash
+    python -c "import scenedetect; print(f'scenedetect {scenedetect.__version__}')"
+    python -c "import librosa; print(f'librosa {librosa.__version__}')"
+    python -c "import cv2; print(f'opencv {cv2.__version__}')"
+    python -c "import numpy; print(f'numpy {numpy.__version__}')"
+    python -c "import yt_dlp; print('yt-dlp OK')"
+    ```
+
+    Also verify FFmpeg and FFprobe are available:
+    ```bash
+    ffmpeg -version 2>&1 | head -1
+    ffprobe -version 2>&1 | head -1
+    ```
+
+    If any package fails to install, note the error and continue — do your best.
+
+    ### Part B: Read Context
+
+    Read these files to understand the existing codebase and design:
+    - `{{ workspace }}/caption_generator.py` — existing caption generator to integrate with
+    - `{{ workspace }}/config.ini` — existing config format to extend
+    - `{{ workspace }}/viral-clip-extractor-design.md` — full system design (READ THOROUGHLY)
+    - `{{ workspace }}/viral-clip-roadmap.md` — implementation roadmap
+    - `{{ yt_transcriber_root }}/transcribe.py` — YouTube transcriber for Whisper/yt-dlp patterns
+
+    ### Part C: Create Project Structure
+
+    Create all directories and files:
+    ```
+    {{ workspace }}/viral_clip_extractor/
+    ├── __init__.py              (version string, short docstring)
+    ├── models.py                (ALL shared data classes — CRITICAL)
+    ├── pipeline.py              (placeholder with class skeleton)
+    ├── cli.py                   (placeholder with argparse skeleton)
+    ├── transcript_bridge.py     (placeholder)
+    ├── youtube_downloader.py    (placeholder — YouTube URL support)
+    ├── core/
+    │   ├── __init__.py
+    │   ├── scene_detector.py    (placeholder with interface)
+    │   ├── audio_analyzer.py    (placeholder with interface)
+    │   ├── visual_analyzer.py   (placeholder with interface)
+    │   ├── semantic_analyzer.py (placeholder with interface)
+    │   └── virality_scorer.py   (placeholder with interface)
+    ├── extractors/
+    │   ├── __init__.py
+    │   ├── clip_extractor.py    (placeholder with interface)
+    │   └── smart_cropper.py     (placeholder with interface)
+    └── utils/
+        ├── __init__.py
+        ├── config.py            (FULL implementation)
+        └── video_utils.py       (FULL implementation)
+    {{ workspace }}/tests/
+    └── __init__.py
+    ```
+
+    ### Part D: Shared Data Models (`models.py`) — MOST CRITICAL FILE
+
+    Every module in the system depends on these. Define all dataclasses:
+
+    - **`SceneSegment`**: start_time (float), end_time (float), scene_index (int)
+      - Property: `duration -> float` (end_time - start_time)
+    - **`AudioFeatures`**: audio_peak_score (float), high_freq_score (float), dynamic_range (float),
+      zcr_score (float), trigger_words (list[str] = field(default_factory=list)), overall_energy (float)
+    - **`VisualFeatures`**: motion_score (float), face_presence (float), visual_interest (float),
+      composition_score (float)
+    - **`SemanticFeatures`**: emotional_intensity (float, 0-10), narrative_interest (float, 0-10),
+      hook_potential (float, 0-10), asmr_quality (float, 0-10), visual_appeal (float, 0-10),
+      uniqueness (float, 0-10), description (str = "")
+    - **`ViralityScore`**: total_score (float, 0-100), component_scores (dict[str, float]),
+      confidence (float, 0-1)
+    - **`ClipData`**: scene (SceneSegment), audio (AudioFeatures), visual (VisualFeatures),
+      semantic (Optional[SemanticFeatures] = None), virality (ViralityScore),
+      output_path (Optional[str] = None), caption (Optional[dict] = None)
+    - **`PipelineConfig`**: All configuration with sensible defaults:
+      - model_name: str = "qwen2.5-vl:7b"
+      - ollama_host: str = "http://localhost:11434"
+      - scene_threshold: float = 3.0
+      - min_scene_len: float = 7.0
+      - max_scene_len: float = 60.0
+      - top_n_clips: int = 10
+      - min_virality_score: float = 70.0
+      - enable_semantic: bool = True
+      - enable_captions: bool = True
+      - vertical_crop: bool = True
+      - asmr_mode: bool = True
+      - output_dir: str = "./clip_output"
+      - context_padding: float = 2.0
+      - scoring_weights: dict = field(default_factory=lambda: {default ASMR weights from design doc})
+    - **`ProcessingResult`**: video_path (str), video_title (str), clips (list[ClipData]),
+      total_scenes (int), processing_time_seconds (float), errors (list[str] = field(default_factory=list))
+
+    ### Part E: Implement `utils/config.py`
+
+    - `load_config(path: Optional[str] = None) -> PipelineConfig` — load from INI file with defaults
+    - `save_default_config(path: str)` — write default config for first-time setup
+    - Use configparser, fall back to PipelineConfig defaults for missing values
+    - ASMR weight defaults: hook=0.20, emotional=0.15, audio_peaks=0.15, asmr=0.12,
+      motion=0.12, narrative=0.10, high_freq=0.10, uniqueness=0.08, visual=0.07, duration=0.05
+
+    ### Part F: Implement `utils/video_utils.py`
+
+    - `extract_metadata(video_path: str) -> dict` — FFprobe wrapper (adapt from existing VideoProcessor)
+    - `extract_audio(video_path: str, output_path: str, start: float = None, end: float = None) -> str`
+    - `extract_segment(video_path: str, start: float, end: float, output_path: str) -> str`
+    - `get_frame_at_time(video_path: str, time_seconds: float) -> Optional[numpy.ndarray]`
+    - Context manager for temp files cleanup
+
+    ### Part G: Implement `youtube_downloader.py`
+
+    `YouTubeDownloader` class (reference `{{ yt_transcriber_root }}/transcribe.py` for yt-dlp patterns):
+    - `__init__(self, output_dir: str = "./downloads")`
+    - `download(self, url: str) -> dict` — download video via yt-dlp, return dict with:
+      - `video_path`: path to downloaded file
+      - `title`: video title
+      - `duration`: video duration in seconds
+      - `channel`: channel name
+    - `extract_video_id(self, url: str) -> str` — parse YouTube URL formats
+    - Handle: invalid URLs, download failures, network errors
+    - Support YouTube URL formats: youtube.com/watch, youtu.be, shorts
+
+    ### Part H: Placeholder Files
+
+    Every placeholder module must contain:
+    - Module docstring explaining purpose
+    - Import of relevant models from `viral_clip_extractor.models`
+    - Class definition with all method signatures (type-hinted, matching design doc)
+    - Each method body: `raise NotImplementedError("To be implemented")`
+
+    ### Part I: Create `{{ workspace }}/requirements-clip-extractor.txt`
+
+    ```
+    scenedetect[opencv]>=0.6
+    librosa>=0.10
+    opencv-python-headless>=4.8
+    numpy>=1.24
+    requests>=2.28
+    yt-dlp
+    ```
+
+    ### Verification
+
+    After creating everything, run:
+    ```bash
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.models import SceneSegment, ClipData, PipelineConfig, ProcessingResult; print('Models OK')"
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.utils.config import load_config; print('Config OK')"
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.utils.video_utils import extract_metadata; print('Video utils OK')"
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.youtube_downloader import YouTubeDownloader; print('YouTube downloader OK')"
+    ```
+
+    Fix any import errors before finishing.
+
+    {{ code_quality() }}
+
+    Print a summary of all files created, dependency installation results, and import verification results.
+
+    {% elif stage == 2 %}
+    ## Stage 2: Implement {{ modules[instance].name }}
+
+    You are implementing one module of the Viral Clip Extractor system.
+    Other modules are being built in parallel by other agents — you cannot see their work.
+
+    ### Context — Read These First
+    - `{{ workspace }}/viral_clip_extractor/models.py` — shared data models (USE THESE EXACTLY)
+    - `{{ workspace }}/viral_clip_extractor/utils/config.py` — configuration
+    - `{{ workspace }}/viral_clip_extractor/utils/video_utils.py` — shared utilities
+    - `{{ workspace }}/viral-clip-extractor-design.md` — system design reference
+    {% if instance == 4 %}
+    - `{{ workspace }}/caption_generator.py` — existing OllamaVideoAnalyzer to adapt from
+    {% endif %}
+    {% if instance == 2 %}
+    - `{{ yt_transcriber_root }}/transcribe.py` — reference for Whisper/transcript patterns
+    {% endif %}
+
+    ### Your Focus: {{ modules[instance].focus }}
+
+    {% if instance == 1 %}
+    **Implement `{{ workspace }}/viral_clip_extractor/{{ modules[instance].src_file }}`**
+
+    `SceneDetector` class:
+    - `__init__(self, threshold: float = 3.0, min_scene_len: float = 7.0, max_scene_len: float = 60.0)`
+    - `detect_scenes(self, video_path: str) -> list[SceneSegment]`
+      - Use PySceneDetect with AdaptiveDetector
+      - ASMR-optimized: lower thresholds (2.0-4.0) for subtle transitions
+      - Merge scenes shorter than min_scene_len with neighbors
+      - Split scenes longer than max_scene_len at midpoints
+      - Return SceneSegment objects from models.py
+    - `_merge_short_scenes(self, scenes: list, min_duration: float) -> list`
+    - `_split_long_scenes(self, scenes: list, max_duration: float) -> list`
+    - Comprehensive logging of detection results
+    - Handle: single-scene videos, very short videos (<7s total), file not found, corrupt files
+    - If scenedetect not installed: clear ImportError with install instructions
+
+    {% elif instance == 2 %}
+    **Implement `{{ workspace }}/viral_clip_extractor/{{ modules[instance].src_file }}`**
+
+    `AudioAnalyzer` class:
+    - `__init__(self, asmr_keywords: Optional[list[str]] = None)`
+      Default keywords: ["tingles", "relax", "sleep", "cozy", "gentle", "dragon", "scales", "whisper", "magic"]
+    - `analyze_segment(self, video_path: str, start_time: float, end_time: float) -> AudioFeatures`
+      - Extract audio from video segment (use video_utils.extract_audio or librosa.load with offset/duration)
+      - Compute features:
+        - **audio_peak_score**: RMS energy, top 10th percentile loudness
+        - **high_freq_score**: spectral centroid > 4kHz fraction (ASMR crisp sounds)
+        - **dynamic_range**: std of RMS (interesting vs boring)
+        - **zcr_score**: zero crossing rate (whispers, crisp sounds)
+        - **overall_energy**: mean RMS
+      - ASMR-specific: detect tapping (onset_detect for sharp transients),
+        crinkles (high-freq spectral flux), mouth sounds (mid-freq patterns)
+    - `_detect_trigger_words(self, audio_path: str, start: float, end: float) -> list[str]`
+      - Try faster-whisper for speech-to-text, match against ASMR keyword dictionary
+      - Graceful fallback: return empty list if faster-whisper unavailable
+      - Reference `{{ yt_transcriber_root }}/transcribe.py` for Whisper patterns
+    - Handle: silent segments, corrupt audio, missing audio stream, librosa import failure
+
+    {% elif instance == 3 %}
+    **Implement TWO files:**
+
+    **1. `{{ workspace }}/viral_clip_extractor/{{ modules[instance].src_file }}`**
+
+    `VisualAnalyzer` class:
+    - `analyze_segment(self, video_path: str, start_time: float, end_time: float) -> VisualFeatures`
+      - Sample 1 frame per second (efficient, not every frame)
+      - **motion_score**: Farneback optical flow between consecutive frames, mean magnitude
+      - **face_presence**: Haar cascade detection, fraction of frames with faces
+      - **visual_interest**: color variance in HSV space
+      - **composition_score**: rule-of-thirds scoring (subject position relative to thirds lines)
+    - `_sample_frames(self, video_path: str, start: float, end: float, fps: int = 1) -> list`
+    - Handle: no video stream, corrupt frames, OpenCV import failure
+
+    **2. `{{ workspace }}/viral_clip_extractor/extractors/smart_cropper.py`**
+
+    `SmartCropper` class:
+    - `get_crop_params(self, video_path: str, start_time: float = 0, target_ratio: float = 9/16) -> dict`
+      Returns dict: crop_x, crop_y, crop_w, crop_h
+    - `get_ffmpeg_filter(self, video_path: str, start_time: float = 0, target_ratio: float = 9/16) -> str`
+      Returns FFmpeg `-vf` filter string
+    - Face-aware: detect face in representative frame, center crop on face
+    - Fallback: center crop if no faces detected
+    - Handle already-vertical or square video
+
+    {% elif instance == 4 %}
+    **Implement `{{ workspace }}/viral_clip_extractor/{{ modules[instance].src_file }}`**
+
+    `SemanticAnalyzer` class (adapt OllamaVideoAnalyzer pattern from caption_generator.py):
+    - `__init__(self, model: str = "qwen2.5-vl:7b", ollama_host: str = "http://localhost:11434")`
+    - `check_availability(self) -> bool` — check Ollama service + model
+    - `analyze_segment(self, video_path: str, start_time: float, end_time: float, title: str = "") -> SemanticFeatures`
+      - Extract segment as temp file via video_utils.extract_segment
+      - Base64 encode the video segment
+      - Send to Qwen2.5-VL with virality-focused prompt asking 0-10 ratings for:
+        emotional_intensity, narrative_interest, hook_potential, asmr_quality, visual_appeal, uniqueness
+      - Parse JSON response (reuse _parse_llm_response pattern from caption_generator.py)
+      - Retry with exponential backoff (max 3 attempts)
+    - `_create_virality_prompt(self, duration: float, title: str) -> str`
+    - Handle: Ollama not running, model not available, timeout, malformed JSON
+    - Return SemanticFeatures with defaults (5.0 for all) on total failure — never crash the pipeline
+
+    {% elif instance == 5 %}
+    **Implement TWO files:**
+
+    **1. `{{ workspace }}/viral_clip_extractor/core/virality_scorer.py`**
+
+    `ViralityScorer` class:
+    - `__init__(self, weights: Optional[dict] = None)` — use default ASMR weights if None
+    - `calculate_score(self, audio: AudioFeatures, visual: VisualFeatures, semantic: Optional[SemanticFeatures], duration: float) -> ViralityScore`
+      - Normalize all inputs to 0-10 scale
+      - Weighted scoring (design doc): hook 20%, emotional 15%, audio_peaks 15%, asmr 12%,
+        motion 12%, narrative 10%, high_freq 10%, uniqueness 8%, visual 7%, duration 5%
+      - Duration bonus: 7-30s=10, 5-7s=linear 5-10, 30-60s=linear 10-5, <5s=linear 0-5, >60s=decay
+      - If semantic is None: redistribute semantic weights to audio+visual proportionally
+      - Return ViralityScore with component breakdown dict
+    - `_normalize(self, value: float, min_val: float, max_val: float) -> float`
+    - `_duration_score(self, duration: float) -> float`
+
+    **2. `{{ workspace }}/viral_clip_extractor/extractors/clip_extractor.py`**
+
+    `ClipExtractor` class:
+    - `__init__(self, vertical: bool = True, context_padding: float = 2.0)`
+    - `extract_clip(self, video_path: str, start_time: float, end_time: float, output_path: str) -> bool`
+      - Pad boundaries by context_padding seconds (clamp to video bounds)
+      - FFmpeg: libx264, CRF 23, AAC 128k
+      - Apply SmartCropper filter if vertical=True
+      - Validate output exists and is >10KB
+    - `batch_extract(self, video_path: str, segments: list[SceneSegment], output_dir: str, scores: Optional[list[float]] = None) -> list[str]`
+      - Naming: clip_NN_scoreXX.mp4
+    - Handle: FFmpeg not found, disk space, encoding failures
+
+    {% endif %}
+
+    ### Testing
+
+    Write tests in `{{ workspace }}/{{ modules[instance].test_file }}`:
+    - Use pytest
+    - Mock external dependencies (scenedetect, librosa, cv2, requests) so tests run without hardware
+    - Test all public methods with mock data
+    - Test edge cases: empty input, corrupt files, missing dependencies, extreme values
+    - Test that methods return correct model types from models.py
+    - At least 5 test functions
+
+    After writing tests, run them:
+    ```bash
+    PYTHONPATH={{ workspace }} python -m pytest {{ workspace }}/{{ modules[instance].test_file }} -v 2>&1 | tail -20
+    ```
+    Fix any failures.
+
+    {{ code_quality() }}
+
+    Print: classes implemented, methods, test results.
+
+    {% elif stage == 3 %}
+    ## Stage 3: Pipeline Integration + YouTube Support + CLI
+
+    **Priority: End-to-end working pipeline.** A user should be able to run one command and get
+    clips + CSV output. Everything must wire together.
+
+    ### Context — Read ALL Module Files
+    - `{{ workspace }}/viral_clip_extractor/models.py`
+    - `{{ workspace }}/viral_clip_extractor/core/scene_detector.py`
+    - `{{ workspace }}/viral_clip_extractor/core/audio_analyzer.py`
+    - `{{ workspace }}/viral_clip_extractor/core/visual_analyzer.py`
+    - `{{ workspace }}/viral_clip_extractor/core/semantic_analyzer.py`
+    - `{{ workspace }}/viral_clip_extractor/core/virality_scorer.py`
+    - `{{ workspace }}/viral_clip_extractor/extractors/clip_extractor.py`
+    - `{{ workspace }}/viral_clip_extractor/extractors/smart_cropper.py`
+    - `{{ workspace }}/viral_clip_extractor/utils/config.py`
+    - `{{ workspace }}/viral_clip_extractor/utils/video_utils.py`
+    - `{{ workspace }}/viral_clip_extractor/youtube_downloader.py`
+    - `{{ workspace }}/caption_generator.py` — for caption integration
+    - `{{ yt_transcriber_root }}/transcribe.py` — for transcript bridge patterns
+
+    ### Task 1: Main Pipeline (`{{ workspace }}/viral_clip_extractor/pipeline.py`)
+
+    `ViralClipPipeline` class — the main orchestrator:
+    - `__init__(self, config: Optional[PipelineConfig] = None)`
+    - `process_video(self, video_path: str, title: str = "", top_n: int = 10, min_score: float = 70.0) -> ProcessingResult`
+      Flow:
+      1. Validate video exists, extract metadata via video_utils
+      2. Detect scenes via SceneDetector
+      3. For each scene: analyze audio, visual, semantic (if enabled)
+      4. Score each via ViralityScorer
+      5. Rank by score, filter by min_score, take top_n
+      6. Extract clips via ClipExtractor
+      7. Generate captions if enabled (use OllamaVideoAnalyzer from caption_generator.py)
+      8. Build and return ProcessingResult
+    - `process_youtube(self, url: str, top_n: int = 10, min_score: float = 70.0) -> ProcessingResult`
+      - Download video via YouTubeDownloader
+      - Extract title from metadata
+      - Call process_video on downloaded file
+      - Clean up downloaded file after processing (optional, configurable)
+    - `_analyze_segment(self, video_path: str, scene: SceneSegment, title: str) -> ClipData`
+    - `_generate_csv(self, result: ProcessingResult, output_path: str)`
+      CSV columns: clip_filename, start_time, end_time, duration, virality_score,
+      hook, description, hashtags, full_caption, category, audio_peak, motion_score,
+      face_presence, asmr_quality, processing_timestamp
+    - Error recovery: log and skip individual segment failures, never abort the whole pipeline
+    - Progress: print "Processing segment X/Y (ZZ%)" at each step
+    - Timing: track and report total processing time
+
+    ### Task 2: CLI (`{{ workspace }}/viral_clip_extractor/cli.py`)
+
+    argparse-based CLI with subcommands:
+
+    **`process` subcommand** — process a local video file:
+    ```
+    python -m viral_clip_extractor process --video /path/to/video.mp4
+      --title "My ASMR Video"
+      --output-dir ./clip_output
+      --top-n 10
+      --min-score 70
+      --model qwen2.5-vl:7b
+      --no-captions
+      --no-semantic
+      --no-vertical
+      --config ./clip_extractor_config.ini
+    ```
+
+    **`youtube` subcommand** — process a YouTube video:
+    ```
+    python -m viral_clip_extractor youtube --url https://www.youtube.com/watch?v=XXXXX
+      --output-dir ./clip_output
+      --top-n 15
+      [same options as process]
+    ```
+
+    **`batch` subcommand** — process all videos in a directory:
+    ```
+    python -m viral_clip_extractor batch --videos-dir /path/to/videos/
+      [same options as process]
+    ```
+
+    **`check` subcommand** — verify system dependencies
+
+    - `def main()` entry point
+    - Also create `{{ workspace }}/viral_clip_extractor/__main__.py` so `python -m viral_clip_extractor` works
+
+    ### Task 3: Transcript Bridge (`{{ workspace }}/viral_clip_extractor/transcript_bridge.py`)
+
+    `TranscriptBridge` class:
+    - `__init__(self, yt_transcriber_path: str = "{{ yt_transcriber_root }}")`
+    - `transcribe_youtube(self, url: str, model: str = "small") -> Optional[dict]`
+      Call yt-transcriber as subprocess, return parsed JSON
+    - `load_transcript(self, json_path: str) -> Optional[dict]`
+    - `get_segment_text(self, transcript: dict, start: float, end: float) -> str`
+      Extract text for time range using segment timestamps
+    - `find_trigger_words(self, transcript: dict, start: float, end: float, keywords: list[str]) -> list[str]`
+    - Graceful: if yt-transcriber not available, all methods return None/empty
+
+    ### Task 4: Config File (`{{ workspace }}/clip_extractor_config.ini`)
+
+    ```ini
+    [Model]
+    model_name = qwen2.5-vl:7b
+    ollama_host = http://localhost:11434
+
+    [Paths]
+    output_directory = ./clip_output
+    transcript_cache = ./transcripts
+
+    [Scene Detection]
+    threshold = 3.0
+    min_scene_length = 7.0
+    max_scene_length = 60.0
+
+    [Analysis]
+    enable_semantic = true
+    enable_captions = true
+    enable_transcript = false
+
+    [Clip Settings]
+    top_n_clips = 10
+    min_virality_score = 70
+    vertical_crop = true
+    context_padding = 2.0
+
+    [Scoring Weights]
+    hook_potential = 0.20
+    emotional_intensity = 0.15
+    audio_peaks = 0.15
+    asmr_quality = 0.12
+    motion = 0.12
+    narrative_interest = 0.10
+    high_freq = 0.10
+    uniqueness = 0.08
+    visual_interest = 0.07
+    duration_optimal = 0.05
+
+    [ASMR]
+    asmr_mode = true
+    trigger_keywords = tingles,relax,sleep,cozy,gentle,dragon,scales,whisper,magic
+
+    [YouTube]
+    download_dir = ./downloads
+    cleanup_after_processing = false
+    ```
+
+    ### Task 5: Entry Points
+
+    Create `{{ workspace }}/run_clip_extractor.py`:
+    ```python
+    #!/usr/bin/env python3
+    """Viral Clip Extractor — entry point"""
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from viral_clip_extractor.cli import main
+    if __name__ == "__main__":
+        main()
+    ```
+
+    Create `{{ workspace }}/viral_clip_extractor/__main__.py`:
+    ```python
+    from viral_clip_extractor.cli import main
+    main()
+    ```
+
+    ### Task 6: Integration Tests (`{{ workspace }}/tests/test_pipeline.py`)
+
+    - Test PipelineConfig loading from INI
+    - Test CLI argument parsing for all subcommands (process, youtube, batch, check)
+    - Test TranscriptBridge with mock transcript JSON
+    - Test YouTubeDownloader URL parsing
+    - Test pipeline initialization with default config
+    - Test _generate_csv produces correct columns
+    - Mock-based test: mock all analyzers, verify pipeline calls them in order
+
+    ### CRITICAL: Integration Verification
+
+    After writing everything, run these and FIX any errors:
+    ```bash
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.pipeline import ViralClipPipeline; print('Pipeline OK')"
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.cli import main; print('CLI OK')"
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.transcript_bridge import TranscriptBridge; print('Bridge OK')"
+    PYTHONPATH={{ workspace }} python -c "from viral_clip_extractor.youtube_downloader import YouTubeDownloader; print('YouTube OK')"
+    PYTHONPATH={{ workspace }} python -m pytest {{ workspace }}/tests/test_pipeline.py -v 2>&1 | tail -20
+    ```
+
+    If imports fail, READ the error traceback, fix the issue, and re-test. Common problems:
+    - Circular imports (reorganize)
+    - Module-to-module type mismatches (they were built by independent agents)
+    - Missing methods that pipeline.py expects but a module doesn't have
+
+    {{ code_quality() }}
+
+    Print: complete system summary, all import results, test results.
+
+    {% elif stage == 4 %}
+    ## Stage 4: End-to-End Verification + Helper Scripts + Documentation
+
+    **Goal: Make sure everything actually works, create user-facing scripts, fix any remaining bugs.**
+
+    ### Context — Read Everything
+    Read ALL Python files in `{{ workspace }}/viral_clip_extractor/` and `{{ workspace }}/tests/`.
+    Also read:
+    - `{{ workspace }}/helper.py` — existing helper script (follow this UX pattern)
+    - `{{ workspace }}/test_system.py` — existing system test (follow this pattern)
+
+    ### Task 1: Comprehensive Import & Integration Verification
+
+    Run ALL of these. For EACH failure, read the traceback, fix the root cause, re-test:
+    ```bash
+    PYTHONPATH={{ workspace }} python -c "
+    from viral_clip_extractor.models import SceneSegment, AudioFeatures, VisualFeatures, SemanticFeatures, ViralityScore, ClipData, PipelineConfig, ProcessingResult
+    print('Models: ALL OK')
+    "
+    PYTHONPATH={{ workspace }} python -c "
+    from viral_clip_extractor.core.scene_detector import SceneDetector
+    from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
+    from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+    from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+    from viral_clip_extractor.core.virality_scorer import ViralityScorer
+    print('Core modules: ALL OK')
+    "
+    PYTHONPATH={{ workspace }} python -c "
+    from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+    from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+    print('Extractors: ALL OK')
+    "
+    PYTHONPATH={{ workspace }} python -c "
+    from viral_clip_extractor.pipeline import ViralClipPipeline
+    from viral_clip_extractor.cli import main
+    from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+    print('Pipeline + CLI + YouTube: ALL OK')
+    "
+    ```
+
+    Also verify NO `NotImplementedError` remains in any implementation file:
+    ```bash
+    grep -rn "NotImplementedError" {{ workspace }}/viral_clip_extractor/ --include="*.py" || echo "No stubs found — good"
+    ```
+    If any NotImplementedError found in non-placeholder code, implement the missing methods.
+
+    ### Task 2: Run ALL Tests
+
+    ```bash
+    PYTHONPATH={{ workspace }} python -m pytest {{ workspace }}/tests/ -v 2>&1
+    ```
+    Fix any failures. If tests reference imports that don't exist, fix the test OR the module.
+
+    ### Task 3: System Verification Script (`{{ workspace }}/test_clip_system.py`)
+
+    Follow pattern from `{{ workspace }}/test_system.py`. Checks:
+    1. Python version >= 3.10
+    2. FFmpeg available
+    3. FFprobe available
+    4. scenedetect installed + importable
+    5. librosa installed + importable
+    6. opencv (cv2) installed + importable
+    7. numpy installed
+    8. requests installed
+    9. yt-dlp installed
+    10. Ollama service running (http://localhost:11434)
+    11. Qwen2.5-VL model available
+    12. Output directory writable
+    13. Disk space > 2GB free
+    14. yt-transcriber available at {{ yt_transcriber_root }} (optional)
+    15. faster-whisper available (optional)
+
+    Print PASS/FAIL for each with fix suggestions for failures.
+
+    ### Task 4: Helper Menu Script (`{{ workspace }}/clip_helper.py`)
+
+    Follow `{{ workspace }}/helper.py` UX pattern. Menu:
+    1. Process a local video file (prompt for path, title)
+    2. Process a YouTube video (prompt for URL)
+    3. Batch process video directory (prompt for directory)
+    4. Run system verification
+    5. View/edit configuration
+    6. View recent results (list clips from output dir, show CSV)
+    7. Quick test (process first 5 minutes of a video)
+    8. Exit
+
+    User-friendly input prompts, validation, progress display.
+
+    ### Task 5: Consistency Review
+
+    Read all module files and fix:
+    - Import consistency (all use `from viral_clip_extractor.models import ...`)
+    - Logging consistency (same format/pattern)
+    - No bare `except:` (always catch specific exceptions)
+    - All public methods have docstrings
+    - Type hints on all signatures
+    - No hardcoded paths
+
+    ### Task 6: README (`{{ workspace }}/CLIP_EXTRACTOR_README.md`)
+
+    Sections (ALL required):
+    - **Overview**: What this system does (2-3 sentences)
+    - **Prerequisites**: Python 3.10+, FFmpeg, Ollama with Qwen2.5-VL, system requirements
+    - **Installation**: pip install from requirements + Ollama setup
+    - **Quick Start**: 3 commands to process your first video
+    - **CLI Reference**: All subcommands (process, youtube, batch, check) with examples
+    - **Configuration**: config.ini sections explained, how to tune scoring weights
+    - **Architecture**: Module diagram showing pipeline flow
+    - **CSV Output**: Column descriptions, how to use with staging tools
+    - **Troubleshooting**: Common issues and fixes
+
+    {{ code_quality() }}
+
+    ### Final Report
+    Print:
+    - All files created or modified (with what was fixed)
+    - Import verification results (all must pass)
+    - Test results
+    - NotImplementedError scan results
+    - What works out of the box vs what needs Ollama/GPU
+    - Quick start instructions for the user
+
+    {% endif %}
+
+validations:
+  # ========================
+  # Stage 1: Environment + Architecture
+  # ========================
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/__init__.py"
+    condition: "stage == 1"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/models.py"
+    condition: "stage == 1"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/utils/config.py"
+    condition: "stage == 1"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/utils/video_utils.py"
+    condition: "stage == 1"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/youtube_downloader.py"
+    condition: "stage == 1"
+    stage: 1
+    description: "YouTube downloader module exists"
+  - type: file_exists
+    path: "{workspace}/requirements-clip-extractor.txt"
+    condition: "stage == 1"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/models.py"
+    pattern: "@dataclass"
+    condition: "stage == 1"
+    stage: 2
+    description: "Models use @dataclass decorator"
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/models.py"
+    pattern: "class SceneSegment"
+    condition: "stage == 1"
+    stage: 2
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/models.py"
+    pattern: "class PipelineConfig"
+    condition: "stage == 1"
+    stage: 2
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/models.py"
+    pattern: "class ProcessingResult"
+    condition: "stage == 1"
+    stage: 2
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/models.py"
+    pattern: "class ClipData"
+    condition: "stage == 1"
+    stage: 2
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -c "from viral_clip_extractor.models import SceneSegment, ClipData, PipelineConfig, ProcessingResult; print(SceneSegment.__dataclass_fields__)"'
+    condition: "stage == 1"
+    stage: 3
+    description: "Models are importable real dataclasses"
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -c "from viral_clip_extractor.utils.config import load_config; c = load_config(); print(c.scoring_weights)"'
+    condition: "stage == 1"
+    stage: 3
+    description: "Config loader works with defaults"
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -c "from viral_clip_extractor.youtube_downloader import YouTubeDownloader; print(YouTubeDownloader)"'
+    condition: "stage == 1"
+    stage: 3
+    description: "YouTube downloader is importable"
+
+  # ========================
+  # Stage 2: Module Implementations
+  # ========================
+
+  # Instance 1: Scene Detector
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/scene_detector.py"
+    pattern: "class SceneDetector"
+    condition: "stage == 2 and instance == 1"
+    stage: 1
+    description: "SceneDetector class exists"
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/scene_detector.py"
+    pattern: "AdaptiveDetector"
+    condition: "stage == 2 and instance == 1"
+    stage: 2
+    description: "Uses PySceneDetect AdaptiveDetector"
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/core/scene_detector.py'
+    condition: "stage == 2 and instance == 1"
+    stage: 2
+    description: "No unimplemented stubs in scene detector"
+  - type: file_exists
+    path: "{workspace}/tests/test_scene_detector.py"
+    condition: "stage == 2 and instance == 1"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/test_scene_detector.py -x -q 2>&1 | tail -5'
+    condition: "stage == 2 and instance == 1"
+    stage: 3
+    description: "Scene detector tests pass"
+
+  # Instance 2: Audio Analyzer
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/audio_analyzer.py"
+    pattern: "class AudioAnalyzer"
+    condition: "stage == 2 and instance == 2"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/audio_analyzer.py"
+    pattern: "librosa"
+    condition: "stage == 2 and instance == 2"
+    stage: 2
+    description: "Uses librosa for audio analysis"
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/core/audio_analyzer.py'
+    condition: "stage == 2 and instance == 2"
+    stage: 2
+    description: "No unimplemented stubs in audio analyzer"
+  - type: file_exists
+    path: "{workspace}/tests/test_audio_analyzer.py"
+    condition: "stage == 2 and instance == 2"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/test_audio_analyzer.py -x -q 2>&1 | tail -5'
+    condition: "stage == 2 and instance == 2"
+    stage: 3
+    description: "Audio analyzer tests pass"
+
+  # Instance 3: Visual Analyzer + Smart Cropper
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/visual_analyzer.py"
+    pattern: "class VisualAnalyzer"
+    condition: "stage == 2 and instance == 3"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/extractors/smart_cropper.py"
+    pattern: "class SmartCropper"
+    condition: "stage == 2 and instance == 3"
+    stage: 1
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/core/visual_analyzer.py'
+    condition: "stage == 2 and instance == 3"
+    stage: 2
+    description: "No stubs in visual analyzer"
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/extractors/smart_cropper.py'
+    condition: "stage == 2 and instance == 3"
+    stage: 2
+    description: "No stubs in smart cropper"
+  - type: file_exists
+    path: "{workspace}/tests/test_visual_analyzer.py"
+    condition: "stage == 2 and instance == 3"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/test_visual_analyzer.py -x -q 2>&1 | tail -5'
+    condition: "stage == 2 and instance == 3"
+    stage: 3
+    description: "Visual analyzer tests pass"
+
+  # Instance 4: Semantic Analyzer
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/semantic_analyzer.py"
+    pattern: "class SemanticAnalyzer"
+    condition: "stage == 2 and instance == 4"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/semantic_analyzer.py"
+    pattern: "ollama"
+    condition: "stage == 2 and instance == 4"
+    stage: 2
+    description: "Uses Ollama for LLM inference"
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/core/semantic_analyzer.py'
+    condition: "stage == 2 and instance == 4"
+    stage: 2
+    description: "No stubs in semantic analyzer"
+  - type: file_exists
+    path: "{workspace}/tests/test_semantic_analyzer.py"
+    condition: "stage == 2 and instance == 4"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/test_semantic_analyzer.py -x -q 2>&1 | tail -5'
+    condition: "stage == 2 and instance == 4"
+    stage: 3
+    description: "Semantic analyzer tests pass"
+
+  # Instance 5: Virality Scorer + Clip Extractor
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/core/virality_scorer.py"
+    pattern: "class ViralityScorer"
+    condition: "stage == 2 and instance == 5"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/extractors/clip_extractor.py"
+    pattern: "class ClipExtractor"
+    condition: "stage == 2 and instance == 5"
+    stage: 1
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/core/virality_scorer.py'
+    condition: "stage == 2 and instance == 5"
+    stage: 2
+    description: "No stubs in virality scorer"
+  - type: command_succeeds
+    command: '! grep -q "NotImplementedError" {workspace}/viral_clip_extractor/extractors/clip_extractor.py'
+    condition: "stage == 2 and instance == 5"
+    stage: 2
+    description: "No stubs in clip extractor"
+  - type: file_exists
+    path: "{workspace}/tests/test_scorer_extractor.py"
+    condition: "stage == 2 and instance == 5"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/test_scorer_extractor.py -x -q 2>&1 | tail -5'
+    condition: "stage == 2 and instance == 5"
+    stage: 3
+    description: "Scorer + extractor tests pass"
+
+  # ========================
+  # Stage 3: Pipeline Integration
+  # ========================
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/pipeline.py"
+    pattern: "class ViralClipPipeline"
+    condition: "stage == 3"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/pipeline.py"
+    pattern: "def process_video"
+    condition: "stage == 3"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/pipeline.py"
+    pattern: "def process_youtube"
+    condition: "stage == 3"
+    stage: 1
+    description: "Pipeline has YouTube processing method"
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/pipeline.py"
+    pattern: "_generate_csv"
+    condition: "stage == 3"
+    stage: 1
+    description: "Pipeline generates CSV output"
+  - type: content_contains
+    path: "{workspace}/viral_clip_extractor/cli.py"
+    pattern: "def main"
+    condition: "stage == 3"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/viral_clip_extractor/cli.py"
+    pattern: "youtube|url"
+    condition: "stage == 3"
+    stage: 2
+    description: "CLI has YouTube/URL support"
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/transcript_bridge.py"
+    condition: "stage == 3"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/clip_extractor_config.ini"
+    condition: "stage == 3"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/run_clip_extractor.py"
+    condition: "stage == 3"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/viral_clip_extractor/__main__.py"
+    condition: "stage == 3"
+    stage: 1
+    description: "python -m entry point exists"
+  - type: file_exists
+    path: "{workspace}/tests/test_pipeline.py"
+    condition: "stage == 3"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -c "from viral_clip_extractor.pipeline import ViralClipPipeline; p = ViralClipPipeline(); print(type(p))"'
+    condition: "stage == 3"
+    stage: 3
+    description: "Pipeline instantiates successfully"
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -c "from viral_clip_extractor.cli import main; print(main)"'
+    condition: "stage == 3"
+    stage: 3
+    description: "CLI main is importable"
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/test_pipeline.py -x -q 2>&1 | tail -10'
+    condition: "stage == 3"
+    stage: 4
+    description: "Pipeline integration tests pass"
+
+  # ========================
+  # Stage 4: Verification + Docs
+  # ========================
+  - type: file_exists
+    path: "{workspace}/test_clip_system.py"
+    condition: "stage == 4"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/clip_helper.py"
+    condition: "stage == 4"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/CLIP_EXTRACTOR_README.md"
+    condition: "stage == 4"
+    stage: 1
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -c "from viral_clip_extractor.pipeline import ViralClipPipeline; from viral_clip_extractor.cli import main; print(\"ALL IMPORTS OK\")"'
+    condition: "stage == 4"
+    stage: 2
+    description: "All critical imports work after fixes"
+  - type: command_succeeds
+    command: '! grep -rq "NotImplementedError" {workspace}/viral_clip_extractor/ --include="*.py" || echo "STUBS_FOUND"'
+    condition: "stage == 4"
+    stage: 2
+    description: "No NotImplementedError stubs remain"
+  - type: content_contains
+    path: "{workspace}/CLIP_EXTRACTOR_README.md"
+    pattern: "## Prerequisites"
+    condition: "stage == 4"
+    stage: 2
+    description: "README has Prerequisites section"
+  - type: content_contains
+    path: "{workspace}/CLIP_EXTRACTOR_README.md"
+    pattern: "## Installation"
+    condition: "stage == 4"
+    stage: 2
+    description: "README has Installation section"
+  - type: content_contains
+    path: "{workspace}/CLIP_EXTRACTOR_README.md"
+    pattern: "## Quick Start"
+    condition: "stage == 4"
+    stage: 2
+    description: "README has Quick Start section"
+  - type: content_contains
+    path: "{workspace}/CLIP_EXTRACTOR_README.md"
+    pattern: "## CLI Reference"
+    condition: "stage == 4"
+    stage: 2
+    description: "README has CLI Reference section"
+  - type: command_succeeds
+    command: 'PYTHONPATH={workspace} python -m pytest {workspace}/tests/ -x -q 2>&1 | tail -10'
+    condition: "stage == 4"
+    stage: 3
+    description: "All tests pass after fixes"
