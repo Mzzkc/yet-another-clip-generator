@@ -1,0 +1,1195 @@
+# vce-tdf-remediation.yaml
+#
+# Pattern: Multi-round remediation with preprocessing, TDF review cycles, docs update
+# Goal: Fix ALL remaining P1/P2/P3 issues with iterative review/fix cycles
+#
+# Execution Flow (11 stages, 34 sheets):
+#   Stage 1:  Preprocess — dual-LLM context gathering per worker (fan-out x6)
+#   Stage 2:  Remediation Round 1 — 6 parallel workers (fan-out x6)
+#   Stage 3:  TDF Review — 5 persona lenses (fan-out x5)
+#   Stage 4:  TDF Synthesis — collide perspectives (1 sheet)
+#   Stage 5:  Remediation Round 2 — 6 parallel workers (fan-out x6)
+#   Stage 6:  Review Round 2 — 3 adversarial lenses (fan-out x3)
+#   Stage 7:  Review 2 Synthesis — merge reviews (1 sheet)
+#   Stage 8:  Final Remediation — conditional, skip if 0 issues (1 sheet)
+#   Stage 9:  Docs Research — 3 parallel workers (fan-out x3)
+#   Stage 10: Docs Write — update documentation (1 sheet)
+#   Stage 11: Docs Review — verify docs build + accuracy (1 sheet)
+
+name: "vce-tdf-remediation"
+workspace: "/home/emzi/Projects/yacg/workspaces/vce-tdf-remediation-workspace"
+
+backend:
+  type: claude_cli
+  skip_permissions: true
+  disable_mcp: true
+  timeout_seconds: 3600
+  output_format: text
+
+sheet:
+  size: 1
+  total_items: 11
+  fan_out:
+    1: 6    # 6 preprocessors (one per remediation worker)
+    2: 6    # 6 remediation workers (2 per priority tier)
+    3: 5    # 5 TDF persona reviewers
+    5: 6    # 6 remediation workers round 2
+    6: 3    # 3 adversarial reviewers
+    9: 3    # 3 docs research workers
+  dependencies:
+    2: [1]
+    3: [2]
+    4: [3]
+    5: [4]
+    6: [5]
+    7: [6]
+    8: [7]
+    9: [8]
+    10: [9]
+    11: [10]
+  skip_when_command:
+    8:
+      command: 'grep -q "Issue count: 0" "{workspace}/score-artifacts/synthesis2.md"'
+      description: "Skip final remediation if review 2 synthesis found zero issues"
+      timeout_seconds: 10
+  prelude:
+    - file: "{{ workspace }}/score-artifacts/tdf-synthesis.md"
+      as: context
+
+parallel:
+  enabled: true
+  max_concurrent: 6
+
+cross_sheet:
+  auto_capture_stdout: true
+  max_output_chars: 5000
+  lookback_sheets: 10
+  capture_files:
+    - "{{ workspace }}/score-artifacts/synthesis1.md"
+    - "{{ workspace }}/score-artifacts/synthesis2.md"
+
+retry:
+  max_retries: 2
+  base_delay_seconds: 15
+  max_completion_attempts: 3
+  completion_threshold_percent: 100
+
+rate_limit:
+  wait_minutes: 60
+  max_waits: 12
+
+stale_detection:
+  enabled: true
+  idle_timeout_seconds: 3600
+
+prompt:
+  variables:
+    project: "/home/emzi/Projects/yacg"
+    tdf_synthesis: "/home/emzi/Projects/yacg/workspaces/vce-complete-workspace/score-artifacts/08-tdf-synthesis.md"
+    original_workspace: "/home/emzi/Projects/yacg/workspaces/vce-complete-workspace"
+
+    # Issue-to-file mapping for preprocessing
+    worker_domains:
+      1:
+        name: "P1 First Half"
+        issues: "P1-1, P1-2, P1-3"
+        primary_files:
+          - "core/semantic_analyzer.py"
+          - "transcript_segmenter.py"
+          - "core/audio_analyzer.py"
+          - "models.py"
+        secondary_files:
+          - "caption_generator.py"
+        concern: "ML pipeline correctness — wrong inputs to VLM, wrong model, redundant transcription"
+      2:
+        name: "P1 Second Half"
+        issues: "P1-4, P1-5, P1-6"
+        primary_files:
+          - "subtitle_burner.py"
+          - "pipeline.py"
+          - "caption_generator.py"
+          - "transcript_segmenter.py"
+        secondary_files:
+          - "cli.py"
+        concern: "UX and progress feedback — missing fonts, silent processing"
+      3:
+        name: "P2 First Half"
+        issues: "P2-1 through P2-13"
+        primary_files:
+          - "pipeline.py"
+          - "models.py"
+          - "transcript_segmenter.py"
+          - "caption_generator.py"
+          - "extractors/clip_extractor.py"
+        secondary_files:
+          - "core/semantic_analyzer.py"
+        concern: "Architecture, config, typing, defaults — DI, monolith, validation"
+      4:
+        name: "P2 Second Half"
+        issues: "P2-14 through P2-25"
+        primary_files:
+          - "cli.py"
+          - "subtitle_burner.py"
+          - "core/semantic_analyzer.py"
+          - "extractors/clip_extractor.py"
+          - "pipeline.py"
+        secondary_files:
+          - "transcript_segmenter.py"
+          - "models.py"
+        concern: "Robustness, UX, features — errors, cleanup, dry-run, async"
+      5:
+        name: "P3 First Half"
+        issues: "P3-1 through P3-15"
+        primary_files:
+          - "core/visual_analyzer.py"
+          - "extractors/smart_cropper.py"
+          - "pipeline.py"
+          - "cli.py"
+          - "subtitle_burner.py"
+          - "caption_generator.py"
+          - "__init__.py"
+        secondary_files:
+          - "models.py"
+        concern: "Minor improvements — detection, filenames, config knobs, public API"
+      6:
+        name: "P3 Second Half"
+        issues: "P3-16 through P3-30"
+        primary_files:
+          - "transcript_segmenter.py"
+          - "models.py"
+          - "cli.py"
+          - "pipeline.py"
+          - "core/visual_analyzer.py"
+          - "extractors/clip_extractor.py"
+        secondary_files:
+          - "youtube_downloader.py"
+        concern: "Minor improvements — validation, caching, progress, exit codes"
+
+    tdf_lenses:
+      1:
+        name: "youtube-creator"
+        voice: >-
+          You are a YouTube creator with 500K subscribers who can barely
+          use a command line. You know what makes good short-form content
+          but you're not technical. You care about: does this tool actually
+          produce clips I can post? Are the subtitles readable? Is the
+          error output gibberish or helpful? Would I use this over OpusClip?
+        focus: "Usability, output quality, subtitle readability, error clarity, competitive value"
+        question: "Would I actually use this tool, or would I give up and go back to OpusClip?"
+      2:
+        name: "ai-builder"
+        voice: >-
+          You are an AI engineer who builds cool shit and ships fast.
+          You care about clean APIs, extensibility, and whether the
+          architecture lets you hack on it. You want to fork this and
+          add features. You hate over-engineering but love good abstractions.
+        focus: "API design, extensibility, code quality, developer experience, hackability"
+        question: "Can I fork this and build on it, or is the architecture going to fight me?"
+      3:
+        name: "graduate-professor"
+        voice: >-
+          You are a graduate-level computer science professor evaluating
+          this as a student project submission. You grade on rigor,
+          methodology, correctness, and whether the approach is sound.
+          You're not impressed by volume — you want to see clear thinking.
+        focus: "Algorithmic correctness, methodology, code structure, documentation quality, rigor"
+        question: "Is this well-engineered, or is it duct tape that happens to run?"
+      4:
+        name: "systems-engineer"
+        voice: >-
+          You are a systems engineer who happened across this project.
+          You think about reliability, resource usage, failure modes,
+          deployment, and what happens at 3am when nobody is watching.
+          You've been burned by tools that work in demos but break in
+          production.
+        focus: "Reliability, resource management, failure handling, deployment, monitoring, scalability"
+        question: "Will this run reliably on someone else's machine, or only on the developer's?"
+      5:
+        name: "ml-expert"
+        voice: >-
+          You are an ML engineer who works with speech models, vision
+          models, and multimodal pipelines daily. You know faster-whisper
+          internals, Ollama quirks, and where ML pipelines silently
+          degrade. You care about model selection, inference quality,
+          and whether the ML components are used correctly.
+        focus: "Whisper usage, Ollama integration, model selection, inference quality, ML pipeline correctness"
+        question: "Are the ML components used correctly, or is this cargo-culting API calls?"
+
+    reviewers:
+      1:
+        name: "completeness"
+        focus: "Did every issue from the TDF synthesis get addressed? What was skipped or half-fixed?"
+        question: "Is every issue genuinely resolved, or are some just claimed as fixed?"
+      2:
+        name: "correctness"
+        focus: "Do the fixes actually work? Are there regressions? Run the code, test edge cases."
+        question: "Does the code actually do what it claims to do after these changes?"
+      3:
+        name: "robustness"
+        focus: "Try to break it — edge cases, missing dependencies, resource cleanup, error paths."
+        question: "What happens when things go wrong? Are failure paths handled correctly?"
+
+    docs_workers:
+      1:
+        name: "code-audit"
+        focus: "Audit current code against existing docs. Find inaccuracies, missing features, stale content."
+        report: "docs-audit.md"
+      2:
+        name: "feature-inventory"
+        focus: "Inventory all features, CLI commands, config options, and API surface. Compare against docs."
+        report: "docs-inventory.md"
+      3:
+        name: "architecture-review"
+        focus: "Review pipeline architecture, module relationships, and data flow. Update architecture docs."
+        report: "docs-architecture.md"
+
+  template: |
+    {# ── Reusable macros ── #}
+    {% macro ctx() %}
+    Project directory: {{ project }} (source code lives here)
+    Workspace: {{ workspace }} (score artifacts/reports only)
+    Package: {{ project }}/viral_clip_extractor/ (Python package)
+    Tests: {{ project }}/tests/ (root level, NOT inside the package)
+    Reports: {{ workspace }}/score-artifacts/ (create if missing)
+    Original TDF Synthesis: {{ tdf_synthesis }}
+
+    IMPORTANT: Run all code commands from {{ project }}, NOT {{ workspace }}.
+    Write reports to {{ workspace }}/score-artifacts/.
+    {% endmacro %}
+
+    {% macro output_spec(filename) %}
+    ## Output
+    - **File**: {{ workspace }}/score-artifacts/{{ filename }}
+    - **Format**: Markdown with clear section headers
+    - Write a complete, well-structured document
+    {% endmacro %}
+
+    {% macro quality_bar(level) %}
+    {% if level == "high" %}
+    Quality: Be thorough. Cite specific file paths and line numbers.
+    No hedging. If uncertain, state what you'd need to verify.
+    {% elif level == "draft" %}
+    Quality: Prioritize coverage over polish. Mark uncertainties with [?].
+    {% endif %}
+    {% endmacro %}
+
+    {% macro failure_rule() %}
+    CRITICAL DESIGN PRINCIPLE: Every feature is mandatory. There are NO
+    optional features, NO --no-* flags, NO silent fallbacks. If semantic
+    analysis fails, the clip fails. If caption generation fails, the clip
+    fails. If subtitle generation fails, the clip fails. If transcript
+    segmentation fails, the pipeline fails. Failure = error, not degraded
+    output. The user HATES silent fallbacks.
+    {% endmacro %}
+
+    {% macro pipeline_rule() %}
+    PIPELINE ARCHITECTURE: The pipeline is transcript-first. The flow is:
+    1. Whisper full-video transcription (word-level timestamps)
+    2. LLM segmentation (send transcript to Ollama, get clip boundaries)
+    3. Snap boundaries to speech pauses
+    4. Analyze segments (audio + visual + semantic)
+    5. Score virality
+    6. Rank + filter + select
+    7. Extract clips (always vertical 9:16, face-aware crop)
+    8. Burn subtitles (reuse Whisper words from step 1)
+    9. Generate captions (Ollama — hook, description, hashtags)
+    10. Write CSV (filename → full_caption mapping)
+
+    PySceneDetect is NOT the primary segmenter. Ollama LLM analysis of
+    the transcript text determines clip boundaries.
+    {% endmacro %}
+
+    {% macro no_defer_rule() %}
+    ABSOLUTE GROUND RULES — READ CAREFULLY:
+
+    1. **"Defer" is NOT an option.** Every assigned issue gets fixed with
+       actual code changes. No "needs architectural refactor" excuses. No
+       "owned by another agent" excuses. You ARE the agent.
+
+    2. **"Verify only" is only valid if the fix is genuinely complete.**
+       Read the code. Run it. If the fix is partial, incomplete, or wrong,
+       it's YOUR job to complete it.
+
+    3. **Minimum viable beats perfect.** If an issue "needs" a full rewrite,
+       implement the minimum viable version. One-line changes get no excuses.
+       Multi-file changes get done methodically.
+
+    4. **Tests must pass after ALL your changes.** Run the full test suite.
+       Fix any failures you introduce. Iterate until green.
+
+    5. **If you touch a file another worker might also touch**, make your
+       changes surgical and targeted. Don't restructure — just fix the
+       specific issue.
+    {% endmacro %}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 1: PREPROCESSING (fan-out x6)
+       Dual-LLM context gathering: analyze issues + analyze code
+       ════════════════════════════════════════════════════════════════ #}
+    {% if stage == 1 %}
+    {% set domain = worker_domains[instance] %}
+    # Preprocessing: {{ domain.name }} (Worker {{ instance }}/6)
+
+    {{ ctx() }}
+    {{ pipeline_rule() }}
+
+    ## Your Role
+
+    You are a PREPROCESSING agent. You do NOT make code changes.
+    Your job is to gather and analyze context so that the REMEDIATION
+    worker who reads your report can hit the ground running.
+
+    ## Dual Analysis
+
+    Perform two independent analyses and then synthesize:
+
+    ### Analysis 1: Issue Specification Review
+
+    Read the full TDF synthesis: {{ tdf_synthesis }}
+
+    Focus on these issues: **{{ domain.issues }}**
+
+    For EACH issue in your set:
+    1. Quote the exact issue description from the synthesis
+    2. Note the priority, source reviewer, and affected file(s)
+    3. Identify the specific fix that was described
+    4. Note any dependencies on other issues (within or outside your set)
+
+    ### Analysis 2: Current Code State Audit
+
+    Read each of these files from `{{ project }}/viral_clip_extractor/`:
+
+    **Primary files** (read in full):
+    {% for f in domain.primary_files %}
+    - `{{ f }}`
+    {% endfor %}
+
+    **Secondary files** (scan relevant sections):
+    {% for f in domain.secondary_files %}
+    - `{{ f }}`
+    {% endfor %}
+
+    For EACH issue, assess the current code:
+    1. **Status**: UNFIXED / PARTIALLY FIXED / ALREADY FIXED
+    2. **Evidence**: Quote the relevant code lines (with line numbers)
+    3. **If partially fixed**: What's done and what's missing?
+    4. **If unfixed**: What exactly needs to change? How many lines?
+    5. **Complexity**: ONE-LINER / SMALL (< 20 lines) / MEDIUM (20-50) / LARGE (50+)
+
+    ### Analysis 3: Test Coverage Check
+
+    Run the test suite to establish baseline:
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -x --tb=short -q 2>&1
+    ```
+
+    Check for existing tests covering the affected code:
+    ```bash
+    cd {{ project }} && grep -rn "{{ domain.primary_files[0] | replace('.py', '') | replace('/', '.') }}" tests/ 2>/dev/null | head -20
+    ```
+
+    ### Synthesis: Implementation Brief
+
+    Produce a structured implementation plan:
+    1. **Recommended fix order** (dependencies first, quick wins first)
+    2. **File conflict warnings** — which files might be touched by
+       other workers? Note surgical-only zones.
+    3. **Risk assessment** — which fixes might break existing tests?
+    4. **Estimated scope** — total lines of change across all issues
+
+    Domain concern: **{{ domain.concern }}**
+
+    {{ output_spec("preprocess-" ~ instance ~ ".md") }}
+    {{ quality_bar("high") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 2: REMEDIATION ROUND 1 (fan-out x6)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 2 %}
+    {% set domain = worker_domains[instance] %}
+
+    {% if instance == 1 %}
+    # Remediation Round 1: P1 First Half (Worker 1/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Preprocessing Brief
+    Read your preprocessing report FIRST:
+    {{ workspace }}/score-artifacts/preprocess-{{ instance }}.md
+
+    Then read the full TDF synthesis: {{ tdf_synthesis }}
+
+    ## Your Assignment: P1-1, P1-2, P1-3
+
+    These are ML pipeline correctness bugs — the highest-impact issues.
+
+    ### P1-1: Semantic analyzer sends raw MP4 bytes as "image" to VLM
+    **File**: `core/semantic_analyzer.py`
+    **Fix**: Extract 3 representative JPEG frames at evenly-spaced timestamps
+    from the segment, base64-encode them, send as separate images.
+    **Verify**: `_analyze_segment` sends JPEG data (not raw MP4) to Ollama.
+
+    ### P1-2: Wrong model type for transcript segmentation
+    **Files**: `transcript_segmenter.py`, `models.py`
+    **Fix**: Add `segmentation_model: str = "qwen2.5:7b"` to PipelineConfig.
+    Use it in TranscriptSegmenter. Fall back to `model_name` if not set.
+
+    ### P1-3: Audio analyzer re-transcribes every segment with Whisper tiny
+    **File**: `core/audio_analyzer.py`
+    **Fix**: Accept `words: list[WordTimestamp]` parameter. When provided,
+    skip Whisper — extract trigger words from passed timestamps.
+
+    {% elif instance == 2 %}
+    # Remediation Round 1: P1 Second Half (Worker 2/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Preprocessing Brief
+    Read your preprocessing report FIRST:
+    {{ workspace }}/score-artifacts/preprocess-{{ instance }}.md
+
+    Then read the full TDF synthesis: {{ tdf_synthesis }}
+
+    ## Your Assignment: P1-4, P1-5, P1-6
+
+    These are UX and operational robustness issues.
+
+    ### P1-4: Font `Liberation Sans` hardcoded — missing on macOS/Windows
+    **File**: `subtitle_burner.py`
+    **Fix**: Create `_find_system_font()` — probe with `fc-list`, fall back
+    through Liberation Sans → DejaVu Sans → Arial → Helvetica → default.
+
+    ### P1-5: No progress feedback during Whisper transcription
+    **Files**: `transcript_segmenter.py`, `pipeline.py`
+    **Fix**: Progress logging every N segments. Log before starting.
+
+    ### P1-6: No progress feedback during Ollama calls
+    **Files**: `pipeline.py`, `caption_generator.py`
+    **Fix**: Per-clip progress: "Generating caption for clip N/total..."
+
+    {% elif instance == 3 %}
+    # Remediation Round 1: P2 First Half (Worker 3/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Preprocessing Brief
+    Read your preprocessing report FIRST:
+    {{ workspace }}/score-artifacts/preprocess-{{ instance }}.md
+
+    Then read the full TDF synthesis: {{ tdf_synthesis }}
+
+    ## Your Assignment: P2-1 through P2-13
+
+    ### P2-1: No dependency injection in pipeline
+    **File**: `pipeline.py` — Define Protocol classes for 4 components.
+
+    ### P2-2: `process_video()` is a 250-line monolith
+    **File**: `pipeline.py` — Extract into helper methods.
+
+    ### P2-3: Whisper `base` default undersized
+    **File**: `models.py` — Change default to `"small"`.
+
+    ### P2-4: Caption generator analyzes single midpoint frame
+    **File**: `caption_generator.py` — Extract 3 frames instead of 1.
+
+    ### P2-5: Subtitle failures non-fatal
+    **File**: `pipeline.py` — Remove swallowing try/except. Re-raise.
+
+    ### P2-6: Word boundary filtering lacks tolerance
+    **File**: `pipeline.py` — Add 50ms tolerance.
+
+    ### P2-7: `ClipData.caption` is `Optional[dict]`
+    **Files**: `models.py`, `pipeline.py` — Use `Optional[CaptionData]`.
+
+    ### P2-8: Whisper device/compute hardcoded
+    **Files**: `models.py`, `transcript_segmenter.py` — Config fields.
+
+    ### P2-9: Segmentation constants not configurable
+    **File**: `transcript_segmenter.py` — Constructor params.
+
+    ### P2-10: No language detection gating
+    **File**: `transcript_segmenter.py` — Check probability, warn/raise.
+
+    ### P2-11: `scoring_weights` untyped dict
+    **File**: `models.py` — Validate keys in `__post_init__`.
+
+    ### P2-12: LLM segmentation prompt ambiguous
+    **File**: `transcript_segmenter.py` — Fix format.
+
+    ### P2-13: `_get_video_duration` returns infinity
+    **File**: `extractors/clip_extractor.py` — Return 86400 with warning.
+
+    {% elif instance == 4 %}
+    # Remediation Round 1: P2 Second Half (Worker 4/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Preprocessing Brief
+    Read your preprocessing report FIRST:
+    {{ workspace }}/score-artifacts/preprocess-{{ instance }}.md
+
+    Then read the full TDF synthesis: {{ tdf_synthesis }}
+
+    ## Your Assignment: P2-14 through P2-25
+
+    ### P2-14: CSV generation failure swallowed
+    **File**: `pipeline.py` — Append to errors, don't drop.
+
+    ### P2-15: Caption retry fixed 2s backoff
+    **File**: `caption_generator.py` — Exponential backoff.
+
+    ### P2-16: `time.sleep()` uninterruptible
+    **Files**: `transcript_segmenter.py`, `semantic_analyzer.py` — Loop.
+
+    ### P2-17: No cleanup of partial output
+    **File**: `pipeline.py` — Temp dir + move on success.
+
+    ### P2-18: `check` doesn't verify Whisper model
+    **File**: `cli.py` — Check HuggingFace cache.
+
+    ### P2-19: No preview/dry-run mode
+    **Files**: `cli.py`, `pipeline.py` — `--dry-run` flag.
+
+    ### P2-20: Ollama errors developer-speak
+    **Files**: `semantic_analyzer.py`, `transcript_segmenter.py` — Human msgs.
+
+    ### P2-21: FFmpeg errors raw
+    **Files**: `subtitle_burner.py`, `clip_extractor.py` — Parse + re-raise.
+
+    ### P2-22: Semantic analyzer base64 video in memory
+    **File**: `core/semantic_analyzer.py` — Verify P1-1 fix covers this.
+
+    ### P2-23: beam_size inconsistency
+    **File**: `core/audio_analyzer.py` — Verify P1-3 fix covers this.
+
+    ### P2-24: Subtitle styling not configurable
+    **Files**: `subtitle_burner.py`, `models.py` — SubtitleStyle dataclass.
+
+    ### P2-25: No async clip extraction
+    **File**: `pipeline.py` — ThreadPoolExecutor for FFmpeg calls.
+
+    {% elif instance == 5 %}
+    # Remediation Round 1: P3 First Half (Worker 5/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Preprocessing Brief
+    Read your preprocessing report FIRST:
+    {{ workspace }}/score-artifacts/preprocess-{{ instance }}.md
+
+    Then read the full TDF synthesis: {{ tdf_synthesis }}
+
+    ## Your Assignment: P3-1 through P3-15
+
+    Fix ALL. They are minor — most are one-liners.
+
+    **P3-1**: Haar cascade outdated → try cv2.dnn, else keep with TODO
+    **P3-2**: Smart cropper opens video 2-3x → single VideoCapture
+    **P3-3**: `print()` instead of logging → `logger.info()`
+    **P3-4**: Caption docstring stale → update to mandatory
+    **P3-5**: `--min-score` unexplained → help text with range
+    **P3-6**: CSV columns developer-oriented → human-readable
+    **P3-7**: Clip filenames generic → include title slug + score
+    **P3-8**: Subtitle position → verify 62% safe, add comment
+    **P3-9**: No thumbnails → FFmpeg extract at midpoint
+    **P3-10**: INI config undocumented → `--show-config` subcommand
+    **P3-11**: Whisper tradeoffs → expand CLI help
+    **P3-12**: Temperature inconsistency → document or consolidate
+    **P3-13**: No public API → export from `__init__.py`
+    **P3-14**: Subtitle magic numbers → named constants
+    **P3-15**: CLI missing knobs → add flags
+
+    {% elif instance == 6 %}
+    # Remediation Round 1: P3 Second Half (Worker 6/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Preprocessing Brief
+    Read your preprocessing report FIRST:
+    {{ workspace }}/score-artifacts/preprocess-{{ instance }}.md
+
+    Then read the full TDF synthesis: {{ tdf_synthesis }}
+
+    ## Your Assignment: P3-16 through P3-30
+
+    Fix ALL. They are minor.
+
+    **P3-16**: LLM timestamps not validated → validate, warn OOB
+    **P3-17**: Scoring weights sum 1.14 → explanatory comment
+    **P3-18**: No FFmpeg retry → single retry 2s delay
+    **P3-19**: CSV timestamps per-row → single from start
+    **P3-20**: `bootstrap.ensure_ready()` every time → cache marker
+    **P3-21**: Batch config rebuilds → build once before loop
+    **P3-22**: Optical flow params → document, adjust for 1 FPS
+    **P3-23**: Whisper model not cached → cache on instance
+    **P3-24**: VAD filter ASMR → configurable, default True
+    **P3-25**: Batch exit code → 0/1/2 with summary
+    **P3-26**: Errors hard to spot → "=== ERRORS ===" summary
+    **P3-27**: No manual boundary adjustment → TODO comment
+    **P3-28**: YouTube no progress → wire yt-dlp hook
+    **P3-29**: No HTTP reuse → requests.Session()
+    **P3-30**: Whisper download no progress → log before model creation
+    {% endif %}
+
+    After ALL changes, run tests:
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -x --tb=short 2>&1
+    ```
+    Fix any failures. Iterate until tests pass.
+
+    {{ output_spec("remediation-" ~ instance ~ ".md") }}
+
+    Report: For each issue, status (FIXED/ALREADY FIXED) with file paths
+    and code changes. Test results must show all passing.
+    Remaining MUST be empty.
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 3: TDF REVIEW (fan-out x5)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 3 %}
+    # TDF Review: {{ tdf_lenses[instance].name | replace("-", " ") | title }}
+
+    {{ ctx() }}
+    {{ pipeline_rule() }}
+    {{ failure_rule() }}
+
+    {{ tdf_lenses[instance].voice }}
+
+    ## Your Task
+
+    The codebase just went through a major remediation pass that attempted
+    to fix 61 issues (6 P1, 25 P2, 30 P3) identified in a prior TDF review.
+
+    Read the remediation reports to understand what was claimed fixed:
+    {% for i in range(1, 7) %}
+    - {{ workspace }}/score-artifacts/remediation-{{ i }}.md
+    {% endfor %}
+
+    Read the preprocessing briefs for additional context:
+    {% for i in range(1, 7) %}
+    - {{ workspace }}/score-artifacts/preprocess-{{ i }}.md
+    {% endfor %}
+
+    Read the original TDF synthesis for the full issue list:
+    - {{ tdf_synthesis }}
+
+    Now review the ACTUAL CODE at {{ project }}/viral_clip_extractor/.
+    Run the tests: `cd {{ project }} && python -m pytest tests/ -x --tb=short`
+
+    ## Evaluation Criteria
+
+    Focus: **{{ tdf_lenses[instance].focus }}**
+
+    Answer your key question: **{{ tdf_lenses[instance].question }}**
+
+    ### Part 1: Remediation Audit
+    For each original issue relevant to your lens, verify:
+    - Was it actually fixed (not just claimed)?
+    - Is the fix complete and correct?
+    - Did the fix introduce new issues?
+
+    ### Part 2: Fresh Review
+    With fresh eyes, review the codebase from your persona's perspective.
+    Find issues the original TDF review missed. Find issues introduced
+    BY the remediation. Be specific: cite file paths and line numbers.
+
+    ### Part 3: Issue List
+    Produce a prioritized issue list:
+    - **P1**: Prevents shipping or produces wrong results
+    - **P2**: Significantly hurts quality, usability, or reliability
+    - **P3**: Polish, documentation, minor improvements
+
+    Format each issue as a table row:
+    | # | Issue | File(s) | Summary |
+
+    End with:
+    ```
+    Issue count: N (P1: X, P2: Y, P3: Z)
+    ```
+
+    Report the issue but do NOT fix it — that's for remediation (stage 5).
+
+    {{ output_spec("review1-" ~ instance ~ ".md") }}
+    {{ quality_bar("high") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 4: TDF SYNTHESIS (1 sheet)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 4 %}
+    # TDF Synthesis
+
+    {{ ctx() }}
+    {{ pipeline_rule() }}
+
+    Read all five TDF reviews:
+    {% for i in range(1, 6) %}
+    - {{ workspace }}/score-artifacts/review1-{{ i }}.md ({{ tdf_lenses[i].name }})
+    {% endfor %}
+
+    Also read the original TDF synthesis for context:
+    - {{ tdf_synthesis }}
+
+    ## Your Task
+
+    Perform a collision analysis of the five reviews.
+
+    ### Part 1: Collision Analysis
+
+    **Convergences**: Where did independent reviewers reach the same
+    conclusion? This is signal — it wasn't coordinated.
+
+    **Tensions**: Where do they disagree? Don't resolve by averaging.
+    Find a reading that makes both positions true.
+
+    **Blind Spots**: What did ALL five reviewers miss?
+
+    **Emergence**: What insight exists in the collision of perspectives
+    that no single reviewer stated?
+
+    ### Part 2: Unified Priority Queue
+
+    Merge all issues into a single deduplicated priority queue.
+    Use tables with columns: #, Issue, Source, File(s), Summary.
+
+    Priority definitions:
+    - **P1**: Prevents shipping or produces wrong results
+    - **P2**: Significantly hurts quality, usability, or reliability
+    - **P3**: Polish, documentation, minor improvements
+
+    Where reviewers assigned different priorities to the same issue,
+    keep the HIGHER priority if justified.
+
+    ### Part 3: Issue Count
+    ```
+    Issue count: N (P1: X, P2: Y, P3: Z)
+    ```
+    If N is 0: `Issue count: 0`
+
+    This determines Remediation Round 2 scope. Be honest.
+
+    {{ output_spec("synthesis1.md") }}
+    {{ quality_bar("high") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 5: REMEDIATION ROUND 2 (fan-out x6)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 5 %}
+    {% if instance <= 2 %}{% set prio = "P1" %}{% set half = "first" if instance == 1 else "second" %}
+    {% elif instance <= 4 %}{% set prio = "P2" %}{% set half = "first" if instance == 3 else "second" %}
+    {% else %}{% set prio = "P3" %}{% set half = "first" if instance == 5 else "second" %}
+    {% endif %}
+    # Remediation Round 2: {{ prio }} {{ half | title }} Half (Worker {{ instance }}/6)
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    ## Read the Synthesis
+
+    Read the TDF synthesis from the review round:
+    {{ workspace }}/score-artifacts/synthesis1.md
+
+    This contains a unified priority queue of remaining issues.
+
+    ## Your Assignment
+
+    You handle **{{ prio }}** issues, **{{ half }} half**.
+
+    1. Read the synthesis's {{ prio }} table
+    2. Count the {{ prio }} issues
+    3. {% if half == "first" %}Take issues 1 through ceil(count/2){% else %}Take issues ceil(count/2)+1 through end{% endif %}
+    4. Fix each one with actual code changes
+    5. If the synthesis lists 0 {{ prio }} issues, verify that no {{ prio }}
+       issues remain by reading the review reports
+
+    If odd number: {% if half == "first" %}you take the extra{% else %}first-half worker takes it{% endif %}.
+
+    After ALL changes, run tests:
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -x --tb=short 2>&1
+    ```
+
+    {{ output_spec("remediation2-" ~ instance ~ ".md") }}
+
+    Report: Issue number from synthesis, status (FIXED/NO ISSUES ASSIGNED),
+    changes with file paths, test results.
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 6: REVIEW ROUND 2 (fan-out x3)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 6 %}
+    # Review Round 2: {{ reviewers[instance].name | title }}
+
+    {{ ctx() }}
+    {{ pipeline_rule() }}
+    {{ failure_rule() }}
+
+    ## Context
+
+    The codebase has been through TWO remediation rounds:
+    - Round 1: 6 workers fixed issues from original TDF synthesis
+    - Round 2: 6 workers fixed issues from a fresh TDF review
+
+    Read the TDF synthesis from the latest review:
+    {{ workspace }}/score-artifacts/synthesis1.md
+
+    Read the Round 2 remediation reports:
+    {% for i in range(1, 7) %}
+    - {{ workspace }}/score-artifacts/remediation2-{{ i }}.md
+    {% endfor %}
+
+    ## Your Role: {{ reviewers[instance].name | title }} Reviewer
+
+    Focus: **{{ reviewers[instance].focus }}**
+    Key question: **{{ reviewers[instance].question }}**
+
+    ## Review the Code
+
+    Review the ACTUAL CODE at {{ project }}/viral_clip_extractor/.
+    Run tests: `cd {{ project }} && python -m pytest tests/ -x --tb=short`
+
+    Verify each issue from synthesis1.md was genuinely fixed. Look for:
+    - Regressions from remediation
+    - Incomplete or superficial fixes
+    - New issues not previously identified
+
+    Produce a prioritized issue list ending with:
+    ```
+    Issue count: N (P1: X, P2: Y, P3: Z)
+    ```
+
+    {{ output_spec("review2-" ~ instance ~ ".md") }}
+    {{ quality_bar("high") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 7: REVIEW 2 SYNTHESIS (1 sheet)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 7 %}
+    # Review Round 2 Synthesis
+
+    {{ ctx() }}
+
+    Read all three Round 2 reviews:
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/review2-{{ i }}.md ({{ reviewers[i].name }})
+    {% endfor %}
+
+    Read prior synthesis: {{ workspace }}/score-artifacts/synthesis1.md
+
+    ## Your Task
+
+    Merge the three reviews into a unified assessment.
+
+    ### Part 1: Status Assessment
+    **Convergences**: Where did reviewers agree?
+    **Tensions**: Where do they disagree?
+    **Overall**: How much has improved?
+
+    ### Part 2: Remaining Issues
+    If issues remain, produce a deduplicated priority queue table.
+
+    ### Part 3: Issue Count
+    ```
+    Issue count: N (P1: X, P2: Y, P3: Z)
+    ```
+    If zero: `Issue count: 0`
+
+    This determines whether Final Remediation runs. Be honest.
+
+    {{ output_spec("synthesis2.md") }}
+    {{ quality_bar("high") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 8: FINAL REMEDIATION (conditional)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 8 %}
+    # Final Remediation
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+    {{ no_defer_rule() }}
+
+    Read the Review 2 synthesis:
+    {{ workspace }}/score-artifacts/synthesis2.md
+
+    This is the FINAL remediation pass. Fix every remaining issue.
+    No more review cycles. P1, P2, P3 — all of them.
+
+    1. Read ALL issues from synthesis2.md
+    2. Fix each one
+    3. Run tests, fix failures, iterate until green
+
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -x --tb=short 2>&1
+    ```
+
+    {{ output_spec("final-remediation.md") }}
+
+    Report: For each issue, status + code changes + file paths.
+    Test results must show all passing.
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 9: DOCS RESEARCH (fan-out x3)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 9 %}
+    # Docs Research: {{ docs_workers[instance].name | replace("-", " ") | title }}
+
+    {{ ctx() }}
+    {{ pipeline_rule() }}
+
+    ## Context
+
+    The project has existing documentation:
+    - `{{ project }}/docs/` — Markdown docs (index, getting-started,
+      architecture, cli-reference, api-reference)
+    - `{{ project }}/mkdocs.yml` — MkDocs configuration
+    - `{{ project }}/site/` — Built site output
+
+    The codebase has been through extensive remediation. Features added,
+    removed, and changed. The docs are STALE.
+
+    ## Your Task: {{ docs_workers[instance].focus }}
+
+    {% if instance == 1 %}
+    Audit every doc file against the current code:
+    - Read each doc in `{{ project }}/docs/`
+    - Compare against code in `{{ project }}/viral_clip_extractor/`
+    - List every inaccuracy, missing feature, stale reference
+    {% elif instance == 2 %}
+    Create a complete inventory:
+    - All CLI commands and flags (read `cli.py`)
+    - All PipelineConfig fields (read `models.py`)
+    - All public API surface
+    - All environment dependencies
+    - Compare against what docs currently cover
+    {% elif instance == 3 %}
+    Review the pipeline architecture:
+    - Read `pipeline.py` and trace data flow
+    - Document module relationships
+    - Compare against `{{ project }}/docs/architecture.md`
+    {% endif %}
+
+    {{ output_spec(docs_workers[instance].report) }}
+    {{ quality_bar("high") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 10: DOCS WRITE (1 sheet)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 10 %}
+    # Docs Update
+
+    {{ ctx() }}
+    {{ pipeline_rule() }}
+
+    Read the three docs research reports:
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/{{ docs_workers[i].report }}
+    {% endfor %}
+
+    Read the existing docs: `{{ project }}/docs/` and `{{ project }}/mkdocs.yml`
+
+    ## Your Task
+
+    Update all documentation to reflect the current codebase.
+
+    1. **Fix inaccuracies** found by the audit
+    2. **Add missing features** found by the inventory
+    3. **Update architecture** to match current pipeline
+    4. **Update CLI reference** — all commands, flags, options
+    5. **Update API reference** — all public classes and config fields
+    6. **Update getting-started** — installation, deps, first run
+    7. **Update mkdocs.yml** if new pages needed
+
+    DO NOT rewrite from scratch — update what exists.
+
+    After updating, verify the docs build:
+    ```bash
+    cd {{ project }} && pip install mkdocs mkdocs-material -q 2>/dev/null
+    cd {{ project }} && mkdocs build --strict 2>&1
+    ```
+
+    {{ output_spec("docs-write.md") }}
+
+    {# ════════════════════════════════════════════════════════════════
+       STAGE 11: DOCS REVIEW (1 sheet)
+       ════════════════════════════════════════════════════════════════ #}
+    {% elif stage == 11 %}
+    # Docs Review
+
+    {{ ctx() }}
+
+    1. **Build check**: `cd {{ project }} && mkdocs build --strict 2>&1`
+       Fix any errors.
+
+    2. **Accuracy**: Spot-check 3-5 claims per doc against actual code.
+
+    3. **Completeness**: Is every major feature documented?
+       - Transcript-first segmentation, subtitles, smart cropper
+       - Dry-run mode, thumbnails, SubtitleStyle config
+       - Batch processing, all CLI commands
+
+    4. **Fix anything wrong** — edit docs directly.
+
+    {{ output_spec("docs-review.md") }}
+    {% endif %}
+
+validations:
+  # === Stage 1: Preprocessing ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/preprocess-{instance}.md"
+    condition: "stage == 1"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/preprocess-{instance}.md") -ge 300'
+    condition: "stage == 1"
+    stage: 2
+    description: "Preprocessing report has substantive content (300+ words)"
+
+  # === Stage 2: Remediation Round 1 ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/remediation-{instance}.md"
+    condition: "stage == 2"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/remediation-{instance}.md") -ge 200'
+    condition: "stage == 2"
+    stage: 2
+    description: "Remediation report has substantive content"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -x --tb=line --override-ini="addopts="'
+    condition: "stage == 2"
+    stage: 3
+    description: "Tests pass after remediation round 1"
+
+  # === Stage 3: TDF Review ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/review1-{instance}.md"
+    condition: "stage == 3"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/review1-{instance}.md") -ge 500'
+    condition: "stage == 3"
+    stage: 2
+    description: "TDF review has substantive content (500+ words)"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/review1-{instance}.md"
+    pattern: "(?si)Issue count:\\s*\\d+"
+    condition: "stage == 3"
+    stage: 2
+    description: "TDF review has issue count"
+
+  # === Stage 4: TDF Synthesis ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/synthesis1.md"
+    condition: "stage == 4"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/synthesis1.md"
+    pattern: "(?si)Issue count:\\s*\\d+"
+    condition: "stage == 4"
+    stage: 2
+    description: "Synthesis has issue count"
+
+  # === Stage 5: Remediation Round 2 ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/remediation2-{instance}.md"
+    condition: "stage == 5"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/remediation2-{instance}.md") -ge 100'
+    condition: "stage == 5"
+    stage: 2
+    description: "Remediation 2 report has content"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -x --tb=line --override-ini="addopts="'
+    condition: "stage == 5"
+    stage: 3
+    description: "Tests pass after remediation round 2"
+
+  # === Stage 6: Review Round 2 ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/review2-{instance}.md"
+    condition: "stage == 6"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/review2-{instance}.md") -ge 300'
+    condition: "stage == 6"
+    stage: 2
+    description: "Review 2 has substantive content"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/review2-{instance}.md"
+    pattern: "(?si)Issue count:\\s*\\d+"
+    condition: "stage == 6"
+    stage: 2
+    description: "Review 2 has issue count"
+
+  # === Stage 7: Review 2 Synthesis ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/synthesis2.md"
+    condition: "stage == 7"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/synthesis2.md"
+    pattern: "(?si)Issue count:\\s*\\d+"
+    condition: "stage == 7"
+    stage: 2
+    description: "Synthesis 2 has issue count"
+
+  # === Stage 8: Final Remediation (conditional) ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/final-remediation.md"
+    condition: "stage == 8"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -x --tb=line --override-ini="addopts="'
+    condition: "stage == 8"
+    stage: 2
+    description: "Tests pass after final remediation"
+
+  # === Stage 9: Docs Research ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/docs-audit.md"
+    condition: "stage == 9 and instance == 1"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/score-artifacts/docs-inventory.md"
+    condition: "stage == 9 and instance == 2"
+    stage: 1
+  - type: file_exists
+    path: "{workspace}/score-artifacts/docs-architecture.md"
+    condition: "stage == 9 and instance == 3"
+    stage: 1
+
+  # === Stage 10: Docs Write ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/docs-write.md"
+    condition: "stage == 10"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && pip install mkdocs mkdocs-material -q 2>/dev/null && mkdocs build --strict 2>&1'
+    condition: "stage == 10"
+    stage: 2
+    description: "MkDocs builds without errors"
+
+  # === Stage 11: Docs Review ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/docs-review.md"
+    condition: "stage == 11"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && mkdocs build --strict 2>&1'
+    condition: "stage == 11"
+    stage: 2
+    description: "MkDocs still builds after review fixes"

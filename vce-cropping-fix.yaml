@@ -1,0 +1,1102 @@
+# vce-cropping-fix.yaml
+#
+# Pattern: TDD Implementation Pipeline (11 stages, 13 sheets)
+# Goal: Fix false-positive face detection on furry ASMR content.
+#       Haar cascade detects fur textures as faces → bad crop to x=1191.
+#       Three-phase fix: (1) validation layer, (2) empirical benchmark,
+#       (3) person detection cascade. Uses TDD throughout.
+#
+# Execution Flow:
+#   Stage 1:  Frame — success criteria, file map                    (1 sheet)
+#   Stage 2:  Preprocess — read code, run baseline, verify state    (1 sheet)
+#   Stage 3:  TDD: Write Validation Tests — tests first for Phase 1 (1 sheet)
+#   Stage 4:  Implement Validation Layer — make tests pass          (1 sheet)
+#   Stage 5:  Empirical Benchmark — MobileNet-SSD on fursuit frames (1 sheet)
+#   Stage 6:  TDD: Write Cascade Tests — tests first for Phase 3    (1 sheet, CONDITIONAL)
+#   Stage 7:  Implement Detection Cascade — make tests pass         (1 sheet, CONDITIONAL)
+#   Stage 8:  Adversarial Review — 3 parallel lenses                (3 sheets, fan-out x3)
+#   Stage 9:  Remediation — fix review findings                     (1 sheet)
+#   Stage 10: Live E2E — real video + full pytest                   (1 sheet)
+#   Stage 11: Final Fix — conditional, skip if E2E clean            (1 sheet)
+#
+# Skip Conditions:
+#   Stages 6-7: Skip if empirical benchmark ABORTs (detection rate < 60%)
+#   Stage 11: Skip if live E2E passes clean
+
+name: "vce-cropping-fix"
+workspace: "/home/emzi/Projects/yacg/workspaces/vce-cropping-workspace"
+
+backend:
+  type: claude_cli
+  skip_permissions: true
+  disable_mcp: true
+  timeout_seconds: 2400
+  output_format: text
+  timeout_overrides:
+    2: 3600    # Preprocess: reads many files, runs tests
+    4: 3600    # Implementation: significant code changes
+    5: 5400    # Empirical: model download + video processing
+    7: 3600    # Cascade implementation
+    8: 3600    # Reviewers: run full suite + real video
+    9: 3600    # Remediation: fix review findings + retest
+    10: 5400   # E2E: real video processing
+
+sheet:
+  size: 1
+  total_items: 11
+  fan_out:
+    8: 3    # 3 adversarial reviewers
+  dependencies:
+    2: [1]
+    3: [2]
+    4: [3]
+    5: [4]
+    6: [5]
+    7: [6]
+    8: [7]
+    9: [8]
+    10: [9]
+    11: [10]
+  skip_when_command:
+    6:
+      command: 'grep -q "ABORT" "{workspace}/score-artifacts/05-empirical.md"'
+      description: "Skip cascade TDD tests if empirical benchmark ABORTed"
+      timeout_seconds: 10
+    7:
+      command: 'grep -q "ABORT" "{workspace}/score-artifacts/05-empirical.md"'
+      description: "Skip cascade implementation if empirical benchmark ABORTed"
+      timeout_seconds: 10
+    11:
+      command: 'grep -q "LIVE E2E: ALL PASS" "{workspace}/score-artifacts/10-live-e2e.md"'
+      description: "Skip final fix if live E2E passed clean"
+      timeout_seconds: 10
+
+parallel:
+  enabled: true
+  max_concurrent: 3
+
+cross_sheet:
+  auto_capture_stdout: true
+  max_output_chars: 10000
+  lookback_sheets: 8
+  capture_files:
+    - "{{ workspace }}/score-artifacts/02-preprocessing.md"
+    - "{{ workspace }}/score-artifacts/05-empirical.md"
+
+retry:
+  max_retries: 2
+  base_delay_seconds: 15
+  max_completion_attempts: 3
+  completion_threshold_percent: 100
+
+rate_limit:
+  wait_minutes: 60
+  max_waits: 12
+
+stale_detection:
+  enabled: true
+  idle_timeout_seconds: 2400
+
+prompt:
+  variables:
+    project: "/home/emzi/Projects/yacg"
+    test_video: "/mnt/c/Users/mckys/Videos/test_clips/downloads/-Zds0V0kg94.mp4"
+    model_dir: "~/.vce/models"
+    integration_report: "/home/emzi/Projects/yacg/coordination-workspace/integration-report.md"
+
+    reviewers:
+      1:
+        name: "regression"
+        focus: "Do ALL existing tests still pass? Did we break talking-head detection? Pipeline still works?"
+      2:
+        name: "correctness"
+        focus: "Does validation catch false positives? Cascade work on real video? Thresholds correct?"
+      3:
+        name: "robustness"
+        focus: "Edge cases: corrupt video, model files missing, all-black frame, resource cleanup."
+
+  template: |
+    {# ── Reusable macros ────────────────────────────────────── #}
+    {% macro ctx() %}
+    Project directory: {{ project }} (source code lives here)
+    Workspace: {{ workspace }} (score artifacts/reports only)
+    Package: {{ project }}/viral_clip_extractor/ (Python modules)
+    Tests: {{ project }}/tests/ (root level, NOT inside the package)
+    Reports: {{ workspace }}/score-artifacts/ (create if missing)
+    Integration report: {{ integration_report }} (TDF research findings)
+    Test video: {{ test_video }} (furry ASMR video that triggered the bug)
+
+    IMPORTANT: Run all code commands from {{ project }}, NOT {{ workspace }}.
+    Write reports to {{ workspace }}/score-artifacts/.
+    {% endmacro %}
+
+    {% macro output_spec(filename) %}
+    ## Output
+    - **File**: {{ workspace }}/score-artifacts/{{ filename }}
+    - **Format**: Markdown with clear section headers
+    - Write a complete, well-structured document
+    {% endmacro %}
+
+    {% macro quality_bar(level) %}
+    {% if level == "high" %}
+    Quality: Be thorough. Cite specific file paths and line numbers.
+    No hedging. If uncertain, state what you'd need to verify.
+    {% elif level == "draft" %}
+    Quality: Prioritize coverage over polish. Mark uncertainties with [?].
+    {% endif %}
+    {% endmacro %}
+
+    {% macro crop_rule() %}
+    CRITICAL CROPPING RULE: Vertical crop must be face-aware or center-focused — NEVER arbitrary offset.
+    Detection cascade: person detection → saliency → center crop.
+    Silent fallbacks are FORBIDDEN — log every detection decision with which detector was used,
+    what was detected, and why it was accepted or rejected.
+    If detection confidence is low, center crop IS the correct answer (not a failure).
+    The existing `except Exception: pass` patterns MUST be replaced with logged warnings.
+    {% endmacro %}
+
+    {# ── Stage logic ────────────────────────────────────────── #}
+    {% if stage == 1 %}
+    # Stage 1: Frame the Cropping Fix
+
+    {{ ctx() }}
+
+    ## Context
+    Running VCE on a furry ASMR video produced 6 clips where 4/6 cropped to x=1191
+    (far right of frame) due to Haar cascade false-positive "face" detections on fur
+    textures. A TDF research team (4 specialists + integration PM) identified the root
+    cause and a 3-phase fix. This score implements the fix using TDD.
+
+    ## Your Task
+    Read these files and produce a framing document:
+
+    1. Read the integration report at {{ integration_report }}
+    2. Read `{{ project }}/viral_clip_extractor/extractors/smart_cropper.py`
+    3. Read `{{ project }}/viral_clip_extractor/core/visual_analyzer.py`
+    4. Read `{{ project }}/viral_clip_extractor/extractors/clip_extractor.py`
+    5. Read `{{ project }}/tests/test_visual_analyzer.py`
+
+    Then produce:
+
+    ### Success Criteria
+    Define what "done" looks like:
+    - Phase 1: Validation layer catches implausible face detections (too small, too large,
+      bad aspect ratio, spatially inconsistent across frames)
+    - Phase 2: Empirical benchmark determines if MobileNet-SSD person detection works on fursuits
+    - Phase 3 (conditional): Detection cascade replaces Haar in crop path (person → saliency → center)
+    - All existing tests still pass (no regressions)
+    - No bare `except Exception: pass` remains in visual_analyzer.py
+    - Every detection decision is logged (detector used, accepted/rejected, reason)
+
+    ### File Change Map
+    Map every file that will be modified across all 3 phases, with specific changes per file.
+
+    ### Risk Assessment
+    What could go wrong? What are the wolf patterns to watch for?
+
+    {{ crop_rule() }}
+    {{ output_spec("01-framing.md") }}
+    {{ quality_bar("high") }}
+
+    {% elif stage == 2 %}
+    # Stage 2: Preprocess
+
+    {{ ctx() }}
+
+    Read the framing at {{ workspace }}/score-artifacts/01-framing.md.
+
+    ## Your Task
+    Gather all raw material so downstream stages can focus on implementation.
+
+    ### 1. Read all affected source files
+    Read and understand these files completely:
+    - `{{ project }}/viral_clip_extractor/core/visual_analyzer.py`
+    - `{{ project }}/viral_clip_extractor/extractors/smart_cropper.py`
+    - `{{ project }}/viral_clip_extractor/extractors/clip_extractor.py`
+    - `{{ project }}/tests/test_visual_analyzer.py`
+
+    ### 2. Run baseline tests
+    ```bash
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -v --tb=short 2>&1
+    ```
+    Record the full output. How many tests pass? How many fail?
+
+    ### 3. Verify DNN model files are missing
+    ```bash
+    ls -la {{ model_dir }}/ 2>&1 || echo "MODEL DIR DOES NOT EXIST"
+    ls -la {{ project }}/viral_clip_extractor/models/ 2>&1 || echo "PACKAGE MODELS DIR DOES NOT EXIST"
+    ```
+    Confirm the DNN SSD face detector has NEVER run (model files absent).
+
+    ### 4. Verify test video is accessible
+    ```bash
+    ls -la "{{ test_video }}" 2>&1
+    ffprobe -v quiet -show_entries stream=width,height,duration -of csv=p=0 "{{ test_video }}" 2>&1
+    ```
+
+    ### 5. Verify cv2.dnn is available
+    ```bash
+    cd {{ project }} && python3 -c "import cv2; print('cv2.dnn:', hasattr(cv2, 'dnn')); print('OpenCV:', cv2.__version__)" 2>&1
+    ```
+
+    ### 6. Document all silent exception handling
+    ```bash
+    cd {{ project }} && grep -n "except Exception" viral_clip_extractor/core/visual_analyzer.py
+    cd {{ project }} && grep -n "except Exception" viral_clip_extractor/extractors/smart_cropper.py
+    ```
+    For each `except Exception` found, document: line number, what it catches, what it does
+    (pass? log? fallback?), and whether this is a silent swallow.
+
+    ### 7. Document current face detection flow
+    Trace the call path from `SmartCropper.get_crop_params()` → `_detect_face_center_x_from_frame()`
+    → `_detect_faces_in_gray()` → Haar cascade. Document each step.
+
+    {{ output_spec("02-preprocessing.md") }}
+    {{ quality_bar("high") }}
+
+    The report MUST have these sections:
+    - **Baseline Test Results** (verbatim pytest output)
+    - **Model File Status** (confirmed missing)
+    - **Test Video Status** (accessible, dimensions, duration)
+    - **cv2.dnn Availability** (version, dnn module present)
+    - **Silent Exception Inventory** (every `except Exception` with line numbers)
+    - **Detection Flow Trace** (call path from crop to detection)
+
+    {% elif stage == 3 %}
+    # Stage 3: TDD — Write Validation Tests
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    Read the preprocessing report at {{ workspace }}/score-artifacts/02-preprocessing.md.
+
+    ## Your Task
+    Write tests FIRST (TDD). These tests define the validation behavior we need.
+    Implementation comes in Stage 4. The new tests MUST FAIL now (no implementation yet).
+    Existing tests MUST still PASS.
+
+    ### Tests to Write
+    Add these test functions to `{{ project }}/tests/test_visual_analyzer.py`:
+
+    **Face validation tests (in a new TestFaceValidation class):**
+
+    1. `test_reject_face_too_small` — A face bbox covering < 3% of frame area must be rejected.
+       Test with a 1920x1080 frame and a 30x30 bbox (0.14% area).
+
+    2. `test_reject_face_too_large` — A face bbox covering > 70% of frame area must be rejected.
+       Test with a 1920x1080 frame and a 1500x1000 bbox (72% area).
+
+    3. `test_reject_face_bad_aspect_ratio` — A bbox with width/height > 2:1 must be rejected.
+       Test with a 300x100 bbox (3:1 ratio).
+
+    4. `test_accept_face_plausible` — A reasonable face (200x250, ~2.4% of 1920x1080) must be accepted.
+
+    5. `test_reject_inconsistent_face_positions` — If face center X positions across frames
+       spread > 30% of frame width, reject them. Test with centers at [100, 960, 1800] on
+       a 1920-wide frame (spread = 1700, which is 88% of frame width → reject).
+
+    6. `test_accept_consistent_face_positions` — Centers at [900, 950, 920] on 1920-wide
+       frame (spread = 50, which is 2.6% → accept).
+
+    **Exception handling tests:**
+
+    7. `test_dnn_exception_logs_warning` — When DNN detection throws an exception, it must
+       log a warning (not silently pass). Mock the DNN net to raise RuntimeError, verify
+       logger.warning is called.
+
+    8. `test_detection_logging_shows_detector` — When a face is detected, the log must
+       indicate which detector was used (DNN or Haar).
+
+    **Integration test:**
+
+    9. `test_validation_filters_in_crop_params` — End-to-end: mock Haar to return an
+       implausible face (30x30 on 1920x1080 frame), verify that `get_crop_params` produces
+       a CENTER crop (not face-aware), because validation rejected the detection.
+
+    ### Implementation Notes
+    - The validation function to test is: `_validate_face_detection(bbox, frame_w, frame_h) -> bool`
+      It will live in `visual_analyzer.py` but doesn't exist yet. Import it and call it.
+    - The spatial consistency function is: `validate_spatial_consistency(face_centers, frame_w) -> list[int]`
+      It will also live in `visual_analyzer.py`.
+    - Tests should import these functions and call them directly.
+    - For test 9, mock at the smart_cropper level (mock cv2 as existing tests do).
+
+    ### Verification
+    After writing tests:
+    ```bash
+    # Existing tests must still pass
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -k "not (test_reject_ or test_accept_ or test_dnn_exception or test_detection_logging or test_validation_filters)" -v --tb=short 2>&1
+
+    # New tests should fail (ImportError or AttributeError — functions don't exist yet)
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -k "test_reject_face_too_small" -v --tb=short 2>&1 || echo "EXPECTED FAILURE — TDD working"
+
+    # Count total test functions
+    grep -c "def test_" {{ project }}/tests/test_visual_analyzer.py
+    ```
+
+    {{ output_spec("03-tdd-validation.md") }}
+    Document: which tests written, verification results, any design decisions.
+
+    {% elif stage == 4 %}
+    # Stage 4: Implement Validation Layer
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    Read the TDD test report at {{ workspace }}/score-artifacts/03-tdd-validation.md.
+
+    ## Your Task
+    Make ALL tests pass. Implement the validation layer that the TDD tests define.
+
+    ### Changes to `{{ project }}/viral_clip_extractor/core/visual_analyzer.py`:
+
+    1. **New function: `_validate_face_detection(bbox, frame_w, frame_h) -> bool`**
+       - `bbox` is a tuple/list of (x, y, w, h)
+       - Reject if face area < 3% of frame area
+       - Reject if face area > 70% of frame area
+       - Reject if face aspect ratio (w/h) > 2.0 or (h/w) > 2.0
+       - Log the reason for rejection at DEBUG level
+       - Return True if face is plausible, False if not
+
+    2. **New function: `validate_spatial_consistency(face_centers, frame_w) -> list[int]`**
+       - Takes a list of face center X coordinates and frame width
+       - If the spread (max - min) exceeds 30% of frame_w, return empty list
+       - Otherwise return the original list unchanged
+       - Log when rejecting for inconsistency
+
+    3. **Fix line ~61: `except Exception: pass`** in `_get_dnn_net()`
+       - Replace with: `except Exception as e: logger.warning("DNN model loading failed: %s", e)`
+
+    4. **Fix line ~114: `except Exception: pass`** in `_detect_faces_in_gray()`
+       - Replace with: `except Exception as e: logger.warning("DNN detection failed: %s", e)`
+       - Do NOT fall through to Haar silently — log that Haar is being used as fallback
+
+    5. **Add detection logging** in `_detect_faces_in_gray()`:
+       - Log which detector was used (DNN or Haar)
+       - Log how many faces were found
+
+    ### Changes to `{{ project }}/viral_clip_extractor/extractors/smart_cropper.py`:
+
+    1. **In `_detect_face_center_x_from_frame()`:**
+       - After getting faces from `_detect_faces_in_gray()`, filter each face through
+         `_validate_face_detection(face_bbox, frame_w, frame_h)`
+       - Only use faces that pass validation
+       - Import `_validate_face_detection` from `visual_analyzer`
+
+    2. **In `get_crop_params()`:**
+       - After collecting `face_centers`, run them through `validate_spatial_consistency()`
+         before computing the median
+       - Import `validate_spatial_consistency` from `visual_analyzer`
+       - Update logging to show "detections_rejected" vs "face_detected" vs "center_crop"
+
+    ### Verification
+    ```bash
+    # ALL tests must pass (including the new TDD tests from Stage 3)
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -v --tb=short 2>&1
+
+    # Verify no bare except-pass remains
+    grep -n "except Exception" {{ project }}/viral_clip_extractor/core/visual_analyzer.py
+
+    # Verify _validate_face_detection exists
+    grep -n "_validate_face_detection" {{ project }}/viral_clip_extractor/core/visual_analyzer.py
+
+    # Verify validate_spatial_consistency exists
+    grep -n "validate_spatial_consistency" {{ project }}/viral_clip_extractor/core/visual_analyzer.py
+    ```
+
+    {{ output_spec("04-validation-impl.md") }}
+    Document: what changed, test results, any design decisions.
+
+    {% elif stage == 5 %}
+    # Stage 5: Empirical Benchmark
+
+    {{ ctx() }}
+
+    ## Context
+    The integration report recommends MobileNet-SSD person detection (COCO/VOC person class)
+    as the primary detector for vertical cropping. But NO ONE has tested whether it actually
+    detects a person wearing a fursuit. This stage tests that empirically.
+
+    ## Your Task
+
+    ### 1. Download MobileNet-SSD model files
+    Download the Caffe MobileNet-SSD model (trained on PASCAL VOC, which includes "person"
+    as class index 15) to `{{ model_dir }}/`:
+
+    ```bash
+    mkdir -p {{ model_dir }}
+
+    # MobileNet-SSD deploy prototxt
+    wget -q -O {{ model_dir }}/MobileNetSSD_deploy.prototxt \
+      "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/deploy.prototxt" 2>&1
+
+    # MobileNet-SSD caffemodel (~23MB)
+    # Try the chuanqi305 repo first, then alternative sources
+    wget -q -O {{ model_dir }}/MobileNetSSD_deploy.caffemodel \
+      "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/mobilenet_iter_73000.caffemodel" 2>&1
+
+    ls -la {{ model_dir }}/
+    ```
+
+    If download fails, try alternative sources (search for "MobileNetSSD_deploy.caffemodel download"
+    or use the TensorFlow model zoo converted weights). The model must work with `cv2.dnn.readNetFromCaffe()`.
+
+    ### 2. Write and run benchmark script
+    Create a Python script at `{{ workspace }}/benchmark_person_detection.py` that:
+
+    a) Opens the test video: `{{ test_video }}`
+    b) Extracts 20 frames evenly spaced across the video
+    c) For each frame, runs MobileNet-SSD person detection:
+       - Load model with `cv2.dnn.readNetFromCaffe(prototxt, caffemodel)`
+       - Create blob: `cv2.dnn.blobFromImage(frame, 0.007843, (300, 300), 127.5)`
+       - Run forward pass
+       - Check detections for class 15 (person) with confidence > 0.3
+       - Record: frame index, detected (yes/no), confidence, bbox
+    d) Also runs Haar cascade face detection on each frame for comparison
+    e) Reports:
+       - Person detection rate: X/20 frames
+       - Haar face detection rate: X/20 frames (for comparison — expect high false positives)
+       - Average person detection confidence
+       - Bbox positions (where does it think the person is?)
+
+    ```bash
+    cd {{ project }} && python {{ workspace }}/benchmark_person_detection.py 2>&1
+    ```
+
+    ### 3. Go/No-Go Decision
+    Based on the benchmark results:
+    - If MobileNet-SSD detects a person in > 60% of frames (12+/20): **PROCEED**
+      Person detection works on fursuits. Phase 3 (cascade implementation) should proceed.
+    - If detection rate is ≤ 60%: **ABORT**
+      Person detection fails on fursuits. Skip Phase 3. The validation layer from Phase 1
+      combined with center crop is the final architecture.
+
+    Write the decision clearly in the report.
+
+    {{ output_spec("05-empirical.md") }}
+    {{ quality_bar("high") }}
+
+    The report MUST contain:
+    - **Model Download Status** (file sizes, paths)
+    - **Detection Results Table** (frame-by-frame: person detected? confidence? Haar false positives?)
+    - **Summary Statistics** (detection rate, avg confidence, Haar comparison)
+    - **Decision: PROCEED** or **Decision: ABORT** (with rationale)
+
+    {% elif stage == 6 %}
+    # Stage 6: TDD — Write Cascade Tests
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    This stage only runs if the empirical benchmark (Stage 5) concluded PROCEED.
+    Read {{ workspace }}/score-artifacts/05-empirical.md for benchmark results.
+
+    ## Your Task
+    Write tests FIRST for the detection cascade (Phase 3). These tests define the cascade
+    behavior. Implementation comes in Stage 7. New tests MUST FAIL now. Existing tests
+    (including Phase 1 validation tests) MUST still PASS.
+
+    ### Tests to Write
+    Add these to `{{ project }}/tests/test_visual_analyzer.py` in a new `TestDetectionCascade` class:
+
+    1. `test_person_detection_returns_bbox` — When MobileNet-SSD detects a person,
+       `_detect_person_center_x_from_frame()` returns a valid X coordinate.
+
+    2. `test_person_detection_fallback_to_saliency` — When no person detected,
+       falls through to saliency detection.
+
+    3. `test_saliency_spectral_residual` — `_saliency_center_x_from_frame()` returns
+       a center X for a frame with a bright region.
+
+    4. `test_cascade_order` — Detection cascade tries person → saliency → center in order.
+       Mock person to return None, saliency to return a value. Verify saliency value is used.
+
+    5. `test_model_download_creates_directory` — `_ensure_model_files()` creates
+       `~/.vce/models/` if it doesn't exist.
+
+    6. `test_model_download_failure_clear_error` — If model download fails,
+       a clear error is logged (not silent).
+
+    7. `test_center_crop_when_no_detection` — When both person detection and saliency
+       return None, center crop is used.
+
+    8. `test_haar_not_used_in_crop_path` — After cascade implementation, the crop path
+       in `get_crop_params()` should NOT call `_detect_face_center_x_from_frame()` or
+       `_detect_faces_in_gray()`. Haar is only for scoring (face_presence), not cropping.
+
+    ### Verification
+    ```bash
+    # Phase 1 tests must still pass
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -k "TestFaceValidation or TestSmartCropper or TestVisualAnalyzer" -v --tb=short 2>&1
+
+    # New cascade tests should fail (functions don't exist yet)
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -k "TestDetectionCascade" -v --tb=short 2>&1 || echo "EXPECTED FAILURE — TDD working"
+
+    # Total test count
+    grep -c "def test_" {{ project }}/tests/test_visual_analyzer.py
+    ```
+
+    {{ output_spec("06-tdd-cascade.md") }}
+    Document: which tests written, verification results, any design decisions.
+
+    {% elif stage == 7 %}
+    # Stage 7: Implement Detection Cascade
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    This stage only runs if the empirical benchmark (Stage 5) concluded PROCEED.
+    Read the cascade TDD tests at {{ workspace }}/score-artifacts/06-tdd-cascade.md
+    and the empirical results at {{ workspace }}/score-artifacts/05-empirical.md.
+
+    ## Your Task
+    Make ALL cascade tests pass. Implement the person detection cascade.
+
+    ### Changes to `{{ project }}/viral_clip_extractor/extractors/smart_cropper.py`:
+
+    1. **New: `_detect_person_center_x_from_frame(self, frame) -> Optional[int]`**
+       - Load MobileNet-SSD model via `cv2.dnn.readNetFromCaffe()`
+       - Use prototxt and caffemodel from `~/.vce/models/`
+       - Create blob: `cv2.dnn.blobFromImage(frame, 0.007843, (300, 300), 127.5)`
+       - Run forward pass, look for class 15 (person) with confidence > 0.3
+       - Return center X of the largest person bbox, or None
+       - Cache the model (load once)
+       - Log detection results
+
+    2. **New: `_saliency_center_x_from_frame(self, frame) -> Optional[int]`**
+       - Implement spectral residual saliency using pure NumPy FFT
+       - Convert frame to grayscale, resize to manageable size
+       - FFT → log amplitude → smooth → spectral residual → IFFT → saliency map
+       - Find the peak saliency region, return its center X
+       - ~20 lines of NumPy, no new dependencies
+       - Return None if saliency is ambiguous (peak near center already)
+
+    3. **New: `_ensure_model_files(self) -> bool`**
+       - Check if `~/.vce/models/MobileNetSSD_deploy.prototxt` and
+         `~/.vce/models/MobileNetSSD_deploy.caffemodel` exist
+       - If not, attempt download from known URLs
+       - Return True if files available, False if not
+       - Log clearly on failure (never silent)
+
+    4. **Refactor `get_crop_params()`:**
+       - Replace the face detection loop with the cascade:
+         For each sample frame:
+           a) Try `_detect_person_center_x_from_frame(frame)` → if result, use it
+           b) Try `_saliency_center_x_from_frame(frame)` → if result, use it
+           c) Neither? → no center for this frame (will fall to center crop)
+       - Still collect centers, still use median, still validate spatial consistency
+       - Log which detector produced each center
+       - Haar/face detection is NOT used in this path anymore
+
+    5. **Keep `_detect_face_center_x_from_frame()` for backward compat**
+       but it should NOT be called from `get_crop_params()`.
+
+    ### Verification
+    ```bash
+    # ALL tests must pass
+    cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -v --tb=short 2>&1
+
+    # Run full test suite to check for regressions
+    cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
+
+    # Verify saliency exists in smart_cropper
+    grep -n "saliency" {{ project }}/viral_clip_extractor/extractors/smart_cropper.py
+
+    # Verify person detection exists
+    grep -n "_detect_person_center_x" {{ project }}/viral_clip_extractor/extractors/smart_cropper.py
+    ```
+
+    {{ output_spec("07-cascade-impl.md") }}
+    Document: what changed, test results, cascade architecture, any design decisions.
+
+    {% elif stage == 8 %}
+    # Adversarial Review: {{ reviewers[instance].name | title }}
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    ## CRITICAL: Do Not Trust Prior Reports
+    Previous stages may claim success while leaving real issues. Your job is to find
+    problems by RUNNING CODE, not by reading reports.
+
+    ## KNOWN GAP FROM STAGE 4
+    `validate_spatial_consistency()` was imported in smart_cropper.py but NEVER CALLED
+    in `get_crop_params()`. It must be called on `face_centers` BEFORE the median
+    computation (between collecting centers and `if face_centers:`). This is the check
+    that rejects scattered false positives across frames. FIX THIS if it's still missing.
+
+    ## Your Review Focus
+    {{ reviewers[instance].focus }}
+
+    **Note:** If `{{ workspace }}/score-artifacts/07-cascade-impl.md` does NOT exist,
+    Phase 3 (person detection cascade) was skipped because the empirical benchmark
+    found MobileNet-SSD does not reliably detect fursuits. The validation layer
+    (Phase 1) is the sole fix in that case. Review accordingly.
+
+    Read all prior artifacts:
+    - {{ workspace }}/score-artifacts/01-framing.md
+    - {{ workspace }}/score-artifacts/02-preprocessing.md
+    - {{ workspace }}/score-artifacts/04-validation-impl.md
+    - {{ workspace }}/score-artifacts/05-empirical.md (check PROCEED vs ABORT)
+
+    Read the actual source code:
+    - `{{ project }}/viral_clip_extractor/core/visual_analyzer.py`
+    - `{{ project }}/viral_clip_extractor/extractors/smart_cropper.py`
+    - `{{ project }}/tests/test_visual_analyzer.py`
+
+    {% if instance == 1 %}
+    ## Regression Review
+
+    Your focus: ensure NOTHING was broken by the changes.
+
+    1. Run the FULL test suite (not just visual analyzer tests):
+       ```bash
+       cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
+       ```
+
+    2. Verify talking-head detection still works:
+       - Create a test with a mock face at a plausible position (center of frame,
+         reasonable size). Verify `get_crop_params()` still produces a face-aware crop.
+       - The validation layer should ACCEPT legitimate faces, not just reject everything.
+
+    3. Verify pipeline integration:
+       ```bash
+       cd {{ project }} && python -c "
+       from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+       from viral_clip_extractor.models import PipelineConfig
+       sc = SmartCropper(PipelineConfig())
+       print('SmartCropper instantiates OK')
+       print('Methods:', [m for m in dir(sc) if not m.startswith('_')])
+       " 2>&1
+       ```
+
+    4. If any test fails, FIX IT. Don't just report.
+
+    {% elif instance == 2 %}
+    ## Correctness Review
+
+    Your focus: verify the validation layer actually catches false positives.
+
+    1. Run the test suite:
+       ```bash
+       cd {{ project }} && python -m pytest tests/test_visual_analyzer.py -v --tb=short 2>&1
+       ```
+
+    2. Verify validation thresholds are correct:
+       - Is 3% area minimum reasonable? (A face at 1920x1080 should be at least ~60x60)
+       - Is 70% area maximum reasonable? (A face shouldn't cover most of the frame)
+       - Is 2:1 aspect ratio limit reasonable? (Real faces are roughly 1:1.3)
+       - Is 30% spatial spread threshold reasonable? (Genuine face should be consistent)
+
+    3. Run VCE on the test video in quick mode:
+       ```bash
+       cd {{ project }} && python -m viral_clip_extractor process \
+         --video "{{ test_video }}" \
+         --title "Correctness Review" \
+         --output-dir /tmp/vce_correctness_review \
+         --whisper-model tiny --top-n 2 --min-score 0 2>&1
+       ```
+       Check the logs: are validation messages present? Did any detections get rejected?
+
+    4. Clean up:
+       ```bash
+       rm -rf /tmp/vce_correctness_review
+       ```
+
+    5. If thresholds are wrong or validation doesn't work, FIX IT.
+
+    {% elif instance == 3 %}
+    ## Robustness Review
+
+    Your focus: try to break the system with edge cases.
+
+    1. Run the test suite:
+       ```bash
+       cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
+       ```
+
+    2. Test edge cases:
+       - What happens with an all-black frame? Does detection fail gracefully?
+       - What happens if the model files are missing? (Remove them temporarily)
+       - What happens with a corrupt/empty video file?
+       - What happens if cv2.dnn throws an unexpected error?
+       - Are all OpenCV resources (VideoCapture) properly released?
+
+    3. Write tests for any edge cases that aren't covered:
+       Add to `{{ project }}/tests/test_visual_analyzer.py`.
+
+    4. Verify resource cleanup:
+       ```bash
+       cd {{ project }} && python -c "
+       import gc
+       from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+       from viral_clip_extractor.models import PipelineConfig
+       sc = SmartCropper(PipelineConfig())
+       params = sc.get_crop_params('/nonexistent/video.mp4')
+       print('Nonexistent video params:', params)
+       gc.collect()
+       print('No resource leaks')
+       " 2>&1
+       ```
+
+    5. Fix anything broken. Don't just report.
+    {% endif %}
+
+    ## Produce
+    - **Problems Found**: Specific issues with evidence (file paths, line numbers, error output)
+    - **Fixes Applied**: What you repaired (include diffs or descriptions)
+    - **Remaining Concerns**: What worries you
+    - **Issue count: N (P1: X, P2: Y, P3: Z)**
+      - P1: Must fix (blocks release)
+      - P2: Should fix (quality issue)
+      - P3: Nice to fix (polish)
+
+    {{ output_spec("08-review-" ~ instance ~ ".md") }}
+
+    {% elif stage == 9 %}
+    # Stage 9: Remediation
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    Read all 3 review reports:
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/08-review-{{ i }}.md ({{ reviewers[i].name }})
+    {% endfor %}
+
+    ## Your Task
+    Fix every P1 and P2 issue found by the reviewers.
+
+    1. Read each review report carefully
+    2. For each P1 issue: fix it immediately
+    3. For each P2 issue: fix it
+    4. For P3 issues: fix if straightforward, skip if complex
+    5. Run the full test suite after all fixes:
+       ```bash
+       cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
+       ```
+    6. If any test fails after your fixes, fix the test or the code (never skip a test)
+
+    {{ output_spec("09-remediation.md") }}
+    Document: each issue addressed, what was fixed, final test results.
+
+    {% elif stage == 10 %}
+    # Stage 10: Live E2E Verification
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    ## Your Task
+    Full end-to-end verification on real video and full test suite.
+
+    ### 1. Full extraction on test video
+    Run VCE with normal settings (not quick mode) on the furry ASMR video:
+    ```bash
+    cd {{ project }} && python -m viral_clip_extractor process \
+      --video "{{ test_video }}" \
+      --title "Cropping Fix E2E" \
+      --output-dir /tmp/vce_cropping_e2e \
+      --top-n 3 --min-score 0 2>&1
+    ```
+
+    ### 2. Inspect the output
+    - Check logs for validation messages (detections accepted/rejected)
+    - Check logs for detector identification (which detector used per frame)
+    - Check crop parameters: are any clips still cropping to the far right (x > 1500)?
+    - If clips were produced, check their crop_x values
+
+    ### 3. Run full test suite with coverage
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -v --tb=short \
+      --cov=viral_clip_extractor \
+      --cov-report=term-missing \
+      --cov-branch 2>&1
+    ```
+
+    ### 4. Cleanup
+    ```bash
+    rm -rf /tmp/vce_cropping_e2e
+    ```
+
+    ### 5. Verdict
+    Based on the E2E results and test suite:
+    - If ALL tests pass AND no clips have obviously bad cropping (x > 1500 on a
+      1920-wide video when subject is centered): **LIVE E2E: ALL PASS**
+    - If ANY test fails OR cropping is still bad: **LIVE E2E: FAILURES FOUND**
+      followed by a list of failures
+
+    {{ output_spec("10-live-e2e.md") }}
+    {{ quality_bar("high") }}
+
+    The report MUST contain:
+    - **E2E Output** (command output, clip info)
+    - **Log Analysis** (validation messages, detector decisions)
+    - **Crop Parameter Check** (crop_x values for each clip)
+    - **Test Suite Results** (pass/fail counts, coverage)
+    - **Verdict: LIVE E2E: ALL PASS** or **Verdict: LIVE E2E: FAILURES FOUND**
+
+    {% elif stage == 11 %}
+    # Stage 11: Final Fix
+
+    {{ ctx() }}
+    {{ crop_rule() }}
+
+    This stage only runs if Stage 10 found failures.
+    Read {{ workspace }}/score-artifacts/10-live-e2e.md for the failure details.
+
+    ## Your Task
+    Fix whatever Stage 10 found broken.
+
+    1. Read the E2E report to understand what failed
+    2. Fix each failure
+    3. Re-run the affected tests:
+       ```bash
+       cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
+       ```
+    4. If the failure was in the E2E run, re-run a quick extraction:
+       ```bash
+       cd {{ project }} && python -m viral_clip_extractor process \
+         --video "{{ test_video }}" \
+         --title "Final Fix Verify" \
+         --output-dir /tmp/vce_final_fix \
+         --whisper-model tiny --top-n 2 --min-score 0 2>&1
+       rm -rf /tmp/vce_final_fix
+       ```
+    5. Verify all tests pass
+
+    {{ output_spec("11-final-fix.md") }}
+    Document: what was broken, how it was fixed, final test results.
+    {% endif %}
+
+validations:
+  # === Stage 1: Framing ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/01-framing.md"
+    condition: "stage == 1"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/01-framing.md") -ge 400'
+    condition: "stage == 1"
+    stage: 2
+    description: "Framing has substantive content (400+ words)"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/01-framing.md"
+    pattern: "(?si)(success criteria|file change|risk)"
+    condition: "stage == 1"
+    stage: 2
+    description: "Framing has required sections"
+
+  # === Stage 2: Preprocessing ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/02-preprocessing.md"
+    condition: "stage == 2"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/02-preprocessing.md") -ge 500'
+    condition: "stage == 2"
+    stage: 2
+    description: "Preprocessing has substantive content (500+ words)"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/02-preprocessing.md"
+    pattern: "(?si)(baseline test|model file|test video|except exception)"
+    condition: "stage == 2"
+    stage: 2
+    description: "Preprocessing has required data sections"
+
+  # === Stage 3: TDD Validation Tests ===
+  - type: command_succeeds
+    command: 'grep -q "test_reject_face_too_small" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_reject_face_too_small exists"
+  - type: command_succeeds
+    command: 'grep -q "test_reject_face_too_large" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_reject_face_too_large exists"
+  - type: command_succeeds
+    command: 'grep -q "test_accept_face_plausible" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_accept_face_plausible exists"
+  - type: command_succeeds
+    command: 'grep -q "test_reject_inconsistent_face_positions" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_reject_inconsistent_face_positions exists"
+  - type: command_succeeds
+    command: 'grep -q "test_validation_filters_in_crop_params" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_validation_filters_in_crop_params exists"
+  - type: command_succeeds
+    command: 'grep -q "test_reject_face_bad_aspect_ratio" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_reject_face_bad_aspect_ratio exists"
+  - type: command_succeeds
+    command: 'grep -q "test_accept_consistent_face_positions" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_accept_consistent_face_positions exists"
+  - type: command_succeeds
+    command: 'grep -q "test_dnn_exception_logs_warning" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_dnn_exception_logs_warning exists"
+  - type: command_succeeds
+    command: 'grep -q "test_detection_logging_shows_detector" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 3"
+    stage: 1
+    description: "test_detection_logging_shows_detector exists"
+  - type: command_succeeds
+    command: 'test $(grep -c "def test_" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py") -ge 20'
+    condition: "stage == 3"
+    stage: 2
+    description: "At least 20 total test functions"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/03-tdd-validation.md"
+    condition: "stage == 3"
+    stage: 2
+
+  # === Stage 4: Implement Validation Layer ===
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/test_visual_analyzer.py -v --tb=short 2>&1'
+    condition: "stage == 4"
+    stage: 1
+    description: "All visual analyzer tests pass (including TDD tests)"
+  - type: command_succeeds
+    command: 'grep -q "_validate_face_detection" "/home/emzi/Projects/yacg/viral_clip_extractor/core/visual_analyzer.py"'
+    condition: "stage == 4"
+    stage: 2
+    description: "_validate_face_detection function exists in visual_analyzer.py"
+  - type: command_succeeds
+    command: 'grep -q "validate_spatial_consistency" "/home/emzi/Projects/yacg/viral_clip_extractor/core/visual_analyzer.py"'
+    condition: "stage == 4"
+    stage: 2
+    description: "validate_spatial_consistency function exists in visual_analyzer.py"
+  - type: command_succeeds
+    command: 'grep -A1 "except Exception" "/home/emzi/Projects/yacg/viral_clip_extractor/core/visual_analyzer.py" | grep -q "^[[:space:]]*pass" && exit 1 || exit 0'
+    condition: "stage == 4"
+    stage: 2
+    description: "No silent except-pass in visual_analyzer.py"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/04-validation-impl.md"
+    condition: "stage == 4"
+    stage: 2
+
+  # === Stage 5: Empirical Benchmark ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/05-empirical.md"
+    condition: "stage == 5"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/05-empirical.md"
+    pattern: "(?i)(PROCEED|ABORT)"
+    condition: "stage == 5"
+    stage: 2
+    description: "Empirical report contains go/no-go decision"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/05-empirical.md"
+    pattern: "(?si)(detection rate|detection result)"
+    condition: "stage == 5"
+    stage: 2
+    description: "Empirical report contains detection rate data"
+
+  # === Stage 6: TDD Cascade Tests (CONDITIONAL) ===
+  - type: command_succeeds
+    command: 'grep -q "test_person_detection_returns_bbox" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 6"
+    stage: 1
+    description: "test_person_detection_returns_bbox exists"
+  - type: command_succeeds
+    command: 'grep -q "test_cascade_order" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 6"
+    stage: 1
+    description: "test_cascade_order exists"
+  - type: command_succeeds
+    command: 'grep -q "test_saliency_spectral_residual" "/home/emzi/Projects/yacg/tests/test_visual_analyzer.py"'
+    condition: "stage == 6"
+    stage: 1
+    description: "test_saliency_spectral_residual exists"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/06-tdd-cascade.md"
+    condition: "stage == 6"
+    stage: 2
+
+  # === Stage 7: Implement Detection Cascade (CONDITIONAL) ===
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -v --tb=short 2>&1'
+    condition: "stage == 7"
+    stage: 1
+    description: "Full test suite passes after cascade implementation"
+  - type: command_succeeds
+    command: 'grep -q "saliency" "/home/emzi/Projects/yacg/viral_clip_extractor/extractors/smart_cropper.py"'
+    condition: "stage == 7"
+    stage: 2
+    description: "Saliency detection implemented in smart_cropper"
+  - type: command_succeeds
+    command: 'grep -q "_detect_person_center_x" "/home/emzi/Projects/yacg/viral_clip_extractor/extractors/smart_cropper.py"'
+    condition: "stage == 7"
+    stage: 2
+    description: "Person detection function exists in smart_cropper"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/07-cascade-impl.md"
+    condition: "stage == 7"
+    stage: 2
+
+  # === Stage 8: Adversarial Review (fan-out x3) ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/08-review-{instance}.md"
+    condition: "stage == 8"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/08-review-{instance}.md"
+    pattern: "Issue count: \\d+"
+    condition: "stage == 8"
+    stage: 2
+    description: "Review includes prioritized issue count"
+
+  # === Stage 9: Remediation ===
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -v --tb=short 2>&1'
+    condition: "stage == 9"
+    stage: 1
+    description: "Full test suite passes after remediation"
+  - type: command_succeeds
+    command: 'grep -q "validate_spatial_consistency(" "/home/emzi/Projects/yacg/viral_clip_extractor/extractors/smart_cropper.py"'
+    condition: "stage == 9"
+    stage: 2
+    description: "validate_spatial_consistency is CALLED (not just imported) in smart_cropper.py"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/09-remediation.md"
+    condition: "stage == 9"
+    stage: 2
+
+  # === Stage 10: Live E2E ===
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -v --tb=short 2>&1'
+    condition: "stage == 10"
+    stage: 1
+    description: "Full test suite passes in E2E verification"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/10-live-e2e.md"
+    condition: "stage == 10"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/10-live-e2e.md"
+    pattern: "(?i)(LIVE E2E: ALL PASS|LIVE E2E: FAILURES FOUND)"
+    condition: "stage == 10"
+    stage: 2
+    description: "Live E2E report contains a verdict"
+
+  # === Stage 11: Final Fix (CONDITIONAL) ===
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -v --tb=short 2>&1'
+    condition: "stage == 11"
+    stage: 1
+    description: "Full test suite passes after final fix"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/11-final-fix.md"
+    condition: "stage == 11"
+    stage: 2

@@ -20,7 +20,7 @@
 #   Stage 7: Final — incorporate review, full E2E verification (1 sheet)
 
 name: "vce-hardening"
-workspace: "/home/emzi/Projects/yacg"
+workspace: "/home/emzi/Projects/yacg/hardening-workspace"
 
 backend:
   type: claude_cli
@@ -78,6 +78,7 @@ stale_detection:
 
 prompt:
   variables:
+    project: "/home/emzi/Projects/yacg"
     rickroll_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     yt_transcriber: "/home/emzi/Projects/yt-transcriber"
     test_video_dir: "/tmp/vce_test_fixtures"
@@ -134,12 +135,16 @@ prompt:
   template: |
     {# ── Reusable macros ────────────────────────────────────── #}
     {% macro ctx() %}
-    Working directory: {{ workspace }}
-    Package: viral_clip_extractor/ (15+ Python modules)
-    Tests: tests/ (root level, NOT inside the package)
+    Project directory: {{ project }} (source code lives here)
+    Workspace: {{ workspace }} (score artifacts/reports only)
+    Package: {{ project }}/viral_clip_extractor/ (15+ Python modules)
+    Tests: {{ project }}/tests/ (root level, NOT inside the package)
     Reports: {{ workspace }}/score-artifacts/ (create if missing)
     Reference: {{ yt_transcriber }} (working bootstrap pattern to study)
     Test fixtures: {{ test_video_dir }} (shared across stages)
+
+    IMPORTANT: Run all code commands from {{ project }}, NOT {{ workspace }}.
+    Write reports to {{ workspace }}/score-artifacts/.
     {% endmacro %}
 
     {% macro output_spec(filename) %}
@@ -223,7 +228,7 @@ prompt:
     mkdir -p {{ test_video_dir }}
 
     # Download full rickroll
-    cd {{ workspace }} && python -c "
+    cd {{ project }} && python -c "
     from viral_clip_extractor.youtube_downloader import YouTubeDownloader
     dl = YouTubeDownloader(output_dir='{{ test_video_dir }}')
     result = dl.download('{{ rickroll_url }}')
@@ -251,7 +256,7 @@ prompt:
 
     ### 3. Run every CLI command and capture output
     ```bash
-    cd {{ workspace }}
+    cd {{ project }}
     python -m viral_clip_extractor check 2>&1
     python -m viral_clip_extractor --help 2>&1
     python -m viral_clip_extractor process --help 2>&1
@@ -267,7 +272,7 @@ prompt:
 
     ### 4. Import every module with warning capture
     ```bash
-    cd {{ workspace }} && python -W all -c "
+    cd {{ project }} && python -W all -c "
     import warnings, sys
     warnings.simplefilter('always')
     with warnings.catch_warnings(record=True) as w:
@@ -296,7 +301,7 @@ prompt:
 
     ### 5. Run existing test suite
     ```bash
-    cd {{ workspace }} && python -m pytest tests/ -v --tb=short 2>&1
+    cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
     ```
 
     ### 6. Check dependency versions
@@ -306,13 +311,13 @@ prompt:
 
     ### 7. Inventory all code
     ```bash
-    cd {{ workspace }} && find viral_clip_extractor -name "*.py" -exec wc -l {} + | sort -n
-    cd {{ workspace }} && grep -rn "def \|class " viral_clip_extractor/ --include="*.py" | wc -l
+    cd {{ project }} && find viral_clip_extractor -name "*.py" -exec wc -l {} + | sort -n
+    cd {{ project }} && grep -rn "def \|class " viral_clip_extractor/ --include="*.py" | wc -l
     ```
 
     ### 8. Check bootstrap wiring
     ```bash
-    cd {{ workspace }}
+    cd {{ project }}
     grep -n "ensure_ready\|bootstrap" viral_clip_extractor/__main__.py
     grep -n "ensure_ready\|bootstrap" viral_clip_extractor/cli.py
     ```
@@ -496,7 +501,7 @@ prompt:
 
     After all fixes, verify:
     ```bash
-    cd {{ workspace }}
+    cd {{ project }}
     python -m viral_clip_extractor check
     python -W error -c "
     import warnings
@@ -525,7 +530,7 @@ prompt:
     ### Required Work
     1. **Audit existing tests** per synthesis instructions — keep meaningful
        ones, rewrite decorative ones, delete useless ones
-    2. **Write integration tests** ({{ workspace }}/tests/test_integration.py):
+    2. **Write integration tests** ({{ project }}/tests/test_integration.py):
        - Test ALL 8 option combinations with real video
        - Test each analyzer against real video
        - Test YouTube download
@@ -533,7 +538,7 @@ prompt:
        - Test CSV output structure
        - Test CLI check command
        - Mark with @pytest.mark.integration
-    3. **Write adversarial tests** ({{ workspace }}/tests/test_adversarial.py):
+    3. **Write adversarial tests** ({{ project }}/tests/test_adversarial.py):
        - Invalid inputs, malformed URLs, edge case videos
        - Config edge cases, resource cleanup
        - Bootstrap resilience, pipeline error recovery
@@ -545,7 +550,7 @@ prompt:
 
     After writing, run:
     ```bash
-    cd {{ workspace }} && python -m pytest tests/ -v --tb=short 2>&1
+    cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
     ```
 
     {{ output_spec(workers[instance].report) }}
@@ -556,7 +561,7 @@ prompt:
     Execute every setup change listed in Track 3 of the synthesis.
 
     ### 1. Create setup.sh
-    Study {{ yt_transcriber }}/setup.sh carefully. Create {{ workspace }}/setup.sh:
+    Study {{ yt_transcriber }}/setup.sh carefully. Create {{ project }}/setup.sh:
     - OS detection (Ubuntu/Debian, Fedora/RHEL, Arch, macOS, WSL)
     - Check and install ffmpeg with OS-specific commands
     - Install Python deps from requirements-clip-extractor.txt
@@ -583,7 +588,7 @@ prompt:
 
     ### 4. Verify setup.sh
     ```bash
-    bash -n {{ workspace }}/setup.sh && echo "Syntax OK"
+    bash -n {{ project }}/setup.sh && echo "Syntax OK"
     ```
 
     {{ output_spec(workers[instance].report) }}
@@ -620,7 +625,7 @@ prompt:
     ## Correctness Review
     Run commands and verify things actually work:
     ```bash
-    cd {{ workspace }}
+    cd {{ project }}
     # Bootstrap works
     python -m viral_clip_extractor check
     # No warnings
@@ -646,7 +651,7 @@ prompt:
     ## Robustness Review
     Try to break things:
     ```bash
-    cd {{ workspace }}
+    cd {{ project }}
     # Edge case: non-existent file
     python -m viral_clip_extractor process --video /nonexistent 2>&1 || true
     # Edge case: all features disabled
@@ -704,7 +709,7 @@ prompt:
 
     ### 3. Run full test suite with coverage
     ```bash
-    cd {{ workspace }} && python -m pytest tests/ -v --tb=short \
+    cd {{ project }} && python -m pytest tests/ -v --tb=short \
       --cov=viral_clip_extractor \
       --cov-report=term-missing \
       --cov-report=html:{{ workspace }}/score-artifacts/coverage-html \
@@ -716,7 +721,7 @@ prompt:
     Run every CLI command and option:
 
     ```bash
-    cd {{ workspace }}
+    cd {{ project }}
 
     # check
     python -m viral_clip_extractor check
@@ -773,7 +778,7 @@ prompt:
 
     ### 6. Verify clean output (no warnings in stderr)
     ```bash
-    cd {{ workspace }} && python -m viral_clip_extractor process \
+    cd {{ project }} && python -m viral_clip_extractor process \
       --video {{ test_video_dir }}/rickroll_30s.mp4 \
       --title "Clean Check" \
       --output-dir /tmp/vce_smoke/clean_check \
@@ -789,12 +794,12 @@ prompt:
 
     ### 7. Verify setup.sh
     ```bash
-    bash -n {{ workspace }}/setup.sh && echo "setup.sh syntax OK"
+    bash -n {{ project }}/setup.sh && echo "setup.sh syntax OK"
     ```
 
     ### 8. Final test run
     ```bash
-    cd {{ workspace }} && python -m pytest tests/ -q --tb=short 2>&1
+    cd {{ project }} && python -m pytest tests/ -q --tb=short 2>&1
     ```
 
     ### 9. Cleanup
@@ -844,7 +849,7 @@ validations:
     stage: 2
     description: "Preprocessing has substantive content"
   - type: command_succeeds
-    command: 'test -f "{workspace}/../vce_test_fixtures/rickroll_30s.mp4" -o -f "/tmp/vce_test_fixtures/rickroll_30s.mp4"'
+    command: 'test -f "/tmp/vce_test_fixtures/rickroll_30s.mp4"'
     condition: "stage == 2"
     stage: 2
     retry_count: 5
@@ -899,12 +904,12 @@ validations:
   # === Stage 5: Execution ===
   # Worker 1: Code fixes
   - type: command_succeeds
-    command: 'cd {workspace} && python -m viral_clip_extractor check 2>&1'
+    command: 'cd /home/emzi/Projects/yacg && python -m viral_clip_extractor check 2>&1'
     condition: "stage == 5 and instance == 1"
     stage: 1
     description: "check command works after code fixes"
   - type: command_succeeds
-    command: 'PYTHONPATH={workspace} python -c "import warnings; warnings.filterwarnings(\"error\", module=\"viral_clip_extractor\"); from viral_clip_extractor.pipeline import ViralClipPipeline; print(\"OK\")"'
+    command: 'PYTHONPATH=/home/emzi/Projects/yacg python -c "import warnings; warnings.filterwarnings(\"error\", module=\"viral_clip_extractor\"); from viral_clip_extractor.pipeline import ViralClipPipeline; print(\"OK\")"'
     condition: "stage == 5 and instance == 1"
     stage: 2
     description: "No warnings from our code"
@@ -916,32 +921,32 @@ validations:
 
   # Worker 2: Tests
   - type: file_exists
-    path: "{workspace}/tests/test_integration.py"
+    path: "/home/emzi/Projects/yacg/tests/test_integration.py"
     condition: "stage == 5 and instance == 2"
     stage: 1
     description: "Integration test file exists"
   - type: file_exists
-    path: "{workspace}/tests/test_adversarial.py"
+    path: "/home/emzi/Projects/yacg/tests/test_adversarial.py"
     condition: "stage == 5 and instance == 2"
     stage: 1
     description: "Adversarial test file exists"
   - type: command_succeeds
-    command: 'test $(grep -c "def test_" "{workspace}/tests/test_integration.py") -ge 8'
+    command: 'test $(grep -c "def test_" "/home/emzi/Projects/yacg/tests/test_integration.py") -ge 8'
     condition: "stage == 5 and instance == 2"
     stage: 2
     description: "At least 8 integration test functions"
   - type: command_succeeds
-    command: 'test $(grep -c "def test_" "{workspace}/tests/test_adversarial.py") -ge 10'
+    command: 'test $(grep -c "def test_" "/home/emzi/Projects/yacg/tests/test_adversarial.py") -ge 10'
     condition: "stage == 5 and instance == 2"
     stage: 2
     description: "At least 10 adversarial test functions"
   - type: command_succeeds
-    command: 'cd {workspace} && python -m pytest tests/test_adversarial.py -v --tb=short 2>&1'
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/test_adversarial.py -v --tb=short 2>&1'
     condition: "stage == 5 and instance == 2"
     stage: 2
     description: "Adversarial tests actually pass"
   - type: content_contains
-    path: "{workspace}/pytest.ini"
+    path: "/home/emzi/Projects/yacg/pytest.ini"
     pattern: "integration"
     condition: "stage == 5 and instance == 2"
     stage: 2
@@ -954,12 +959,12 @@ validations:
 
   # Worker 3: Setup
   - type: file_exists
-    path: "{workspace}/setup.sh"
+    path: "/home/emzi/Projects/yacg/setup.sh"
     condition: "stage == 5 and instance == 3"
     stage: 1
     description: "setup.sh exists"
   - type: command_succeeds
-    command: 'bash -n "{workspace}/setup.sh"'
+    command: 'bash -n "/home/emzi/Projects/yacg/setup.sh"'
     condition: "stage == 5 and instance == 3"
     stage: 2
     description: "setup.sh is syntactically valid"
@@ -993,18 +998,18 @@ validations:
     stage: 2
     description: "Final report documents review integration"
   - type: command_succeeds
-    command: 'cd {workspace} && python -m viral_clip_extractor check 2>&1'
+    command: 'cd /home/emzi/Projects/yacg && python -m viral_clip_extractor check 2>&1'
     condition: "stage == 7"
     stage: 2
     description: "check command passes in final verification"
   - type: command_succeeds
-    command: 'cd {workspace} && python -m pytest tests/ -q --tb=short --cov=viral_clip_extractor --cov-branch --cov-fail-under=80 2>&1'
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -q --tb=short --cov=viral_clip_extractor --cov-branch --cov-fail-under=80 2>&1'
     condition: "stage == 7"
     stage: 2
     description: "Full test suite passes with >= 80% line coverage"
   - type: content_regex
     path: "{workspace}/score-artifacts/07-final.md"
-    pattern: "(?i)final verdict.*pass"
+    pattern: "(?si)final verdict.*pass"
     condition: "stage == 7"
     stage: 2
     description: "Final verdict is PASS"

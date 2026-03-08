@@ -1,0 +1,1066 @@
+# vce-content-profiles.yaml
+#
+# Pattern: Research-driven implementation with adversarial review
+# Goal: Add ContentProfile system — presets, content-aware prompts,
+#       transcript injection into captions, ASMR-as-default removal.
+#
+# Execution Flow:
+#   Stage 1:  Research — web-search competitors' content config systems
+#   Stage 2:  Audit — read all 3 YACG prompts, map config, identify gaps
+#   Stage 3:  Design — synthesize into ContentProfile spec
+#   Stage 4:  Implement — 3 parallel workers (fan-out x3)
+#   Stage 5:  Integration — merge workers, resolve conflicts, pytest
+#   Stage 6:  Adversarial Review — 3 lenses (fan-out x3)
+#   Stage 7:  Remediation — fix CRITICAL/MODERATE issues
+#   Stage 8:  E2E Verification — full verification suite
+#   Stage 9:  Final Remediation — skip if E2E clean
+
+name: "vce-content-profiles"
+workspace: "/home/emzi/Projects/yacg/workspaces/vce-content-profiles-workspace"
+
+backend:
+  type: claude_cli
+  skip_permissions: true
+  disable_mcp: false
+  timeout_seconds: 2400
+  output_format: text
+  timeout_overrides:
+    4: 3600     # Implementation workers: significant code changes
+    5: 3600     # Integration: merge + test
+    7: 3600     # Remediation: may need substantial fixes
+    8: 3600     # E2E verification: runs full test suite
+    9: 3600     # Final remediation
+
+sheet:
+  size: 1
+  total_items: 9
+  fan_out:
+    4: 3    # 3 implementation workers
+    6: 3    # 3 review lenses
+  dependencies:
+    2: [1]
+    3: [2]
+    4: [3]
+    5: [4]
+    6: [5]
+    7: [6]
+    8: [7]
+    9: [8]
+  skip_when_command:
+    9:
+      command: 'grep -q "E2E: ALL PASS" "{workspace}/score-artifacts/08-e2e-verification.md"'
+      description: "Skip final remediation if E2E passed clean"
+      timeout_seconds: 10
+  cadenzas:
+    2:  # Audit needs research findings
+      - file: "{{ workspace }}/score-artifacts/01-competitive-research.md"
+        as: context
+    3:  # Design needs research + audit
+      - file: "{{ workspace }}/score-artifacts/01-competitive-research.md"
+        as: context
+      - file: "{{ workspace }}/score-artifacts/02-prompt-audit.md"
+        as: context
+    4:  # All workers need design spec + audit for current state
+      - file: "{{ workspace }}/score-artifacts/03-content-profile-design.md"
+        as: skill
+      - file: "{{ workspace }}/score-artifacts/02-prompt-audit.md"
+        as: context
+    5:  # Integration needs all 3 worker reports
+      - file: "{{ workspace }}/score-artifacts/04-impl-models-config-cli.md"
+        as: context
+      - file: "{{ workspace }}/score-artifacts/04-impl-prompt-overhaul.md"
+        as: context
+      - file: "{{ workspace }}/score-artifacts/04-impl-tests-pipeline.md"
+        as: context
+    7:  # Remediation needs all 3 review reports
+      - file: "{{ workspace }}/score-artifacts/06-review-prompt-quality.md"
+        as: context
+      - file: "{{ workspace }}/score-artifacts/06-review-config.md"
+        as: context
+      - file: "{{ workspace }}/score-artifacts/06-review-tests.md"
+        as: context
+    9:  # Final remediation needs E2E report
+      - file: "{{ workspace }}/score-artifacts/08-e2e-verification.md"
+        as: context
+
+parallel:
+  enabled: true
+  max_concurrent: 3
+
+cross_sheet:
+  auto_capture_stdout: true
+  max_output_chars: 5000
+  lookback_sheets: 3
+
+retry:
+  max_retries: 2
+  base_delay_seconds: 15
+  max_completion_attempts: 3
+  completion_threshold_percent: 100
+
+rate_limit:
+  wait_minutes: 60
+  max_waits: 12
+
+stale_detection:
+  enabled: true
+  idle_timeout_seconds: 1800
+
+prompt:
+  variables:
+    project: "/home/emzi/Projects/yacg"
+
+    workers:
+      1:
+        name: "models-config-cli"
+        focus: "ContentProfile dataclass in models.py, config.py loading/saving, CLI args in cli.py"
+        files: "models.py, utils/config.py, cli.py"
+        report: "04-impl-models-config-cli.md"
+      2:
+        name: "prompt-overhaul"
+        focus: "All 3 LLM prompts — transcript_segmenter.py, semantic_analyzer.py, caption_generator.py"
+        files: "transcript_segmenter.py, core/semantic_analyzer.py, caption_generator.py"
+        report: "04-impl-prompt-overhaul.md"
+      3:
+        name: "tests-and-pipeline"
+        focus: "Pipeline threading in pipeline.py, new and updated test files in tests/"
+        files: "pipeline.py, tests/"
+        report: "04-impl-tests-pipeline.md"
+
+    reviewers:
+      1:
+        name: "prompt-quality"
+        focus: "Do the 3 rewritten prompts actually produce different output with different content profiles? Does caption prompt receive transcript text?"
+        report: "06-review-prompt-quality.md"
+      2:
+        name: "config-correctness"
+        focus: "Does ContentProfile load/save via INI? Are CLI args wired? Does generate-config include [ContentProfile]? Does show-config display it?"
+        report: "06-review-config.md"
+      3:
+        name: "test-coverage"
+        focus: "Do tests cover all presets, custom overrides, prompt rendering differences, transcript injection, edge cases?"
+        report: "06-review-tests.md"
+
+  template: |
+    {# ── Reusable macros ────────────────────────────────────── #}
+    {% macro ctx() %}
+    ## Context
+    Project directory: {{ project }} (source code lives here)
+    Workspace: {{ workspace }} (score artifacts/reports only — NEVER modify project files here)
+    Package: {{ project }}/viral_clip_extractor/ (Python package)
+    Tests: {{ project }}/tests/ (pytest suite — root level, NOT inside package)
+    Reports: {{ workspace }}/score-artifacts/ (create if missing)
+
+    IMPORTANT: Run all code commands from {{ project }}, NOT {{ workspace }}.
+    Write reports to {{ workspace }}/score-artifacts/.
+    {% endmacro %}
+
+    {% macro rules() %}
+    ## Project Rules (MANDATORY — violations are bugs)
+    - Every feature is mandatory — no optional flags, no silent fallbacks
+    - Failure = error — if something fails, raise, don't hide
+    - Never skip, exclude, or make optional without understanding why it exists
+    - Always assume the app code is broken before assuming tests are wrong
+    - Don't add unnecessary comments/docstrings to code you didn't change
+    - ASMR is ONE content type among many, not the default — "general" is the default
+    {% endmacro %}
+
+    {% macro output_spec(filename) %}
+    ## Output
+    Write your report to: {{ workspace }}/score-artifacts/{{ filename }}
+    The report must be complete, well-structured markdown.
+    {% endmacro %}
+
+    {# ── Stage routing ──────────────────────────────────────── #}
+
+    {% if stage == 1 %}
+    {# ═══ STAGE 1: Competitive Research ═══ #}
+
+    # Stage 1: Competitive Research — Content Profile Systems
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    Research how competing AI clip tools handle content configuration, caption
+    generation, and content-type awareness. We need this data to design a better
+    ContentProfile system for YACG.
+
+    ## Research Targets
+    Search the web for current documentation, blog posts, and user guides for these tools:
+    1. **OpusClip** — content type config, caption customization, brand voice
+    2. **Munch** — content profiles, audience targeting
+    3. **Vizard** — content customization, platform-specific output
+    4. **Kapwing** — AI caption features, content types
+    5. **Descript** — content-aware features for short-form
+
+    For each tool, document:
+    - What content configuration options exist (content type, tone, audience, etc.)
+    - How captions are generated — transcript-based vs frame-based?
+    - Preset/template systems for different content genres
+    - Brand voice / channel description features
+    - Platform-specific adaptations (TikTok vs Reels vs Shorts)
+    - What they do BETTER than simple "pick a category" systems
+
+    ## What We're Looking For
+    Patterns and principles, not feature-by-feature copies. What makes a good
+    content configuration system? What data does the prompt need to produce
+    content-aware output?
+
+    {{ output_spec("01-competitive-research.md") }}
+
+    {% elif stage == 2 %}
+    {# ═══ STAGE 2: Audit Current System ═══ #}
+
+    # Stage 2: Audit YACG's Current Prompt & Config System
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    Read and document the exact current state of YACG's 3 LLM prompts and
+    configuration system. Map every gap against the competitive research.
+
+    ## Tasks
+
+    ### 1. Read all 3 prompt-generating methods VERBATIM
+    - `{{ project }}/viral_clip_extractor/transcript_segmenter.py` → `_create_segmentation_prompt()`
+    - `{{ project }}/viral_clip_extractor/core/semantic_analyzer.py` → `_create_virality_prompt()`
+    - `{{ project }}/viral_clip_extractor/caption_generator.py` → `_create_caption_prompt()`
+
+    For each, document:
+    - The EXACT prompt text (quote it)
+    - What context it receives (title? duration? frames? transcript text?)
+    - How `content_type` currently affects it (the asmr vs general branching)
+    - What's MISSING compared to competitors
+
+    ### 2. Map the config/data flow
+    - `{{ project }}/viral_clip_extractor/models.py` → PipelineConfig fields
+    - `{{ project }}/viral_clip_extractor/utils/config.py` → INI sections
+    - `{{ project }}/viral_clip_extractor/cli.py` → CLI args
+    - `{{ project }}/viral_clip_extractor/pipeline.py` → how content_type flows to components
+
+    ### 3. Critical finding: transcript text availability
+    The pipeline already has `all_words: list[WordTimestamp]` from transcription.
+    During caption generation (Step 7 in pipeline), the clip's words are available
+    (they're used for subtitle burning in Step 6). But the caption generator
+    `analyze_video()` method NEVER receives transcript text — it only gets frames.
+
+    Document exactly where transcript text IS available but NOT passed to captions.
+
+    ### 4. Gap analysis
+    The competitive research from Stage 1 is injected below as context.
+    Compare current state against those findings. What do competitors
+    do that YACG doesn't? What's the biggest single improvement we could make?
+
+    {{ output_spec("02-prompt-audit.md") }}
+
+    {% elif stage == 3 %}
+    {# ═══ STAGE 3: Design ContentProfile ═══ #}
+
+    # Stage 3: Design the ContentProfile System
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    Design a complete ContentProfile system based on the research and audit.
+    This document is the IMPLEMENTATION BLUEPRINT — Stage 4 workers will
+    follow it exactly.
+
+    ## Context
+    The competitive research and prompt audit from Stages 1-2 are injected
+    below as context. Use them as your primary input for this design.
+
+    ## Design Requirements
+
+    ### 1. ContentProfile dataclass (in models.py)
+    Design the fields. Required minimum:
+    - `content_type: str` — preset name. Values: "general", "gaming", "cooking",
+      "asmr", "educational", "fitness", "comedy", "music", "beauty", "tech", "vlog"
+    - `channel_description: str` — free text describing the channel/creator
+    - `target_audience: str` — who watches this content
+    - `tone: str` — e.g. "energetic", "calm", "professional", "casual", "humorous"
+    - `platform: str` — "tiktok", "reels", "shorts", "all"
+    - `caption_length: str` — "short", "medium", "long"
+    - `hashtag_count: int` — 3-7
+    - `custom_instructions: str` — free-text injected into all 3 prompts
+
+    ### 2. CONTENT_PRESETS dictionary
+    `CONTENT_PRESETS: dict[str, ContentProfile]` — mapping preset names to
+    pre-filled ContentProfile instances with sensible defaults for each genre.
+    Define at least 7 presets: general, gaming, cooking, asmr, educational,
+    fitness, comedy.
+
+    Each preset should have appropriate defaults for ALL fields (tone, audience,
+    platform preferences, caption style).
+
+    ### 3. PipelineConfig changes
+    - Add `content_profile: ContentProfile` field (default: `ContentProfile()`)
+    - Change `content_type` default from `"asmr"` to `"general"`
+    - Change `asmr_mode` default from `True` to `False`
+    - When `content_profile.content_type == "asmr"`, automatically set `asmr_mode = True`
+    - Remove or deprecate the standalone `content_type` field (it lives in ContentProfile now)
+
+    ### 4. Prompt injection strategy
+    For EACH of the 3 prompts, specify EXACTLY what content-aware context
+    gets injected and HOW. Be specific — write example prompt fragments:
+
+    **Segmentation prompt** (`_create_segmentation_prompt`):
+    - Content type affects what "viral-worthy" means (gaming highlights ≠ cooking steps ≠ educational points)
+    - The method needs content profile parameters
+
+    **Semantic prompt** (`_create_virality_prompt`):
+    - Content type affects rating criteria (what "hook potential" means differs by genre)
+    - Channel description provides context
+    - Must still produce same JSON schema
+
+    **Caption prompt** (`_create_caption_prompt`):
+    - MUST receive transcript text (the actual words spoken in the clip)
+    - Tone/audience shape the caption voice
+    - Platform affects length and hashtag style
+    - `analyze_video()` needs a new `transcript_text: str` parameter
+    - Must still produce same JSON schema
+
+    ### 5. Config format
+    - `[ContentProfile]` INI section with all fields
+    - CLI args: `--content-type` (choices = all preset names), `--channel-description`,
+      `--target-audience`, `--tone`, `--platform`, `--caption-length`, `--hashtag-count`,
+      `--custom-instructions`
+    - Preset resolution: `--content-type gaming` fills ContentProfile from CONTENT_PRESETS["gaming"],
+      then individual `--tone calm` overrides the preset's tone
+
+    ### 6. File ownership for parallel workers
+    Workers MUST only modify their assigned files to avoid conflicts:
+    - **Worker 1** (models-config-cli): `models.py`, `utils/config.py`, `cli.py`
+    - **Worker 2** (prompt-overhaul): `transcript_segmenter.py`, `core/semantic_analyzer.py`, `caption_generator.py`
+    - **Worker 3** (tests-pipeline): `pipeline.py`, `tests/` (all test files)
+
+    Workers 2 and 3 should NOT import ContentProfile directly — they receive
+    individual string/int fields. Worker 3 (pipeline) converts ContentProfile
+    to individual params when constructing components.
+
+    ### 7. Component parameter design
+    Since Workers run in parallel, Worker 2 can't import ContentProfile (Worker 1
+    creates it). Instead, the prompt methods and component __init__ methods
+    should accept individual parameters:
+
+    ```python
+    # SemanticAnalyzer.__init__ gains:
+    def __init__(self, ..., content_type="general", channel_description="",
+                 target_audience="", tone="", custom_instructions=""):
+
+    # OllamaVideoAnalyzer.__init__ gains:
+    def __init__(self, ..., content_type="general", channel_description="",
+                 target_audience="", tone="", platform="all",
+                 caption_length="medium", hashtag_count=5, custom_instructions=""):
+
+    # OllamaVideoAnalyzer.analyze_video gains:
+    def analyze_video(self, video_path, title, transcript_text="", ...):
+    ```
+
+    Worker 3 (pipeline.py) then passes ContentProfile fields to these constructors.
+
+    {{ output_spec("03-content-profile-design.md") }}
+
+    {% elif stage == 4 %}
+    {# ═══ STAGE 4: Implementation (fan-out x3) ═══ #}
+
+    {% set worker = workers[instance] %}
+
+    # Stage 4: Implementation — {{ worker.name }} (Worker {{ instance }}/{{ fan_count }})
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Context
+    The design spec (injected as a skill above) is your implementation blueprint —
+    follow it exactly. The prompt audit (injected below as context) shows current state.
+
+    ## Your Focus
+    **{{ worker.focus }}**
+    **Files you may modify**: {{ worker.files }} (ONLY these — other files belong to other workers)
+
+    {% if instance == 1 %}
+    ## Worker 1: Models + Config + CLI
+
+    ### models.py
+    1. Add `ContentProfile` dataclass with all fields from the design doc
+    2. Add `CONTENT_PRESETS: dict[str, ContentProfile]` with 7+ preset definitions
+    3. Add `content_profile: ContentProfile` field to `PipelineConfig`
+    4. Change defaults: `content_type="general"` (in ContentProfile), `asmr_mode=False` (in PipelineConfig)
+    5. In PipelineConfig `__post_init__`, if `content_profile.content_type == "asmr"`, set `asmr_mode = True`
+    6. Remove or deprecate the standalone `content_type` field from PipelineConfig
+       (it now lives inside ContentProfile)
+
+    ### utils/config.py
+    1. Add `[ContentProfile]` section parsing to `load_config()`
+    2. Add `[ContentProfile]` section writing to `save_default_config()`
+    3. Preset resolution: if only `content_type` is set in INI, fill from CONTENT_PRESETS
+    4. Individual field overrides in INI take precedence over preset defaults
+
+    ### cli.py
+    1. Add CLI args: `--content-type` (choices = all preset names from CONTENT_PRESETS),
+       `--channel-description`, `--target-audience`, `--tone`, `--platform`,
+       `--caption-length`, `--hashtag-count`, `--custom-instructions`
+    2. Wire them in `_build_config()` to construct ContentProfile on the config
+    3. Update `_cmd_show_config()` to display all ContentProfile fields
+    4. Preset + override: `--content-type gaming --tone calm` starts from gaming preset, overrides tone
+
+    ### Key constraints
+    - Backwards compatible: existing configs WITHOUT [ContentProfile] must still work
+      (they get ContentProfile with "general" defaults)
+    - Old `--content-type asmr` must work (it's now a preset)
+    - `from viral_clip_extractor.models import ContentProfile, CONTENT_PRESETS` must work
+
+    {% elif instance == 2 %}
+    ## Worker 2: Prompt Overhaul (All 3 LLM Prompts)
+
+    You are modifying the actual LLM prompts that drive clip quality. This is the
+    most important worker. Bad prompts = bad clips regardless of infrastructure.
+
+    ### CRITICAL: Do NOT import ContentProfile
+    Worker 1 creates ContentProfile in parallel with you. Instead, extend
+    component `__init__` methods with individual string/int parameters per the
+    design doc. Worker 3 (pipeline) will convert ContentProfile to these params.
+
+    ### transcript_segmenter.py — `_create_segmentation_prompt()`
+    The segmentation prompt tells the LLM what makes a "good clip" for this
+    content type. Currently it's generic.
+
+    Changes:
+    1. Add parameters to `__init__`: `content_type`, `channel_description`,
+       `target_audience`, `custom_instructions` (all str, all default to "")
+    2. Inject content context into the segmentation prompt:
+       - Content type affects what "viral-worthy" means (gaming: highlight plays,
+         kills, reactions. cooking: complete recipes, techniques. educational:
+         key insights, aha moments)
+       - Channel description gives context about the creator
+       - Custom instructions can override defaults
+    3. Keep the JSON output schema identical
+    4. Keep the existing min/max duration rules
+
+    ### core/semantic_analyzer.py — `_create_virality_prompt()`
+    The semantic prompt rates video segments. Currently has a binary asmr/general
+    branch.
+
+    Changes:
+    1. Add parameters to `__init__`: `channel_description`, `target_audience`,
+       `tone`, `custom_instructions` (all str, default "")
+    2. Replace binary asmr/general with content-type-aware rating guidance:
+       - What "emotional intensity" means for gaming vs cooking vs educational
+       - What "hook potential" means for different audiences
+       - Content type context helps the VLM understand what it's looking at
+    3. Keep ALL 6 JSON fields identical (emotional_intensity, narrative_interest,
+       hook_potential, asmr_quality, visual_appeal, uniqueness, brief_description)
+    4. The asmr_quality field stays but is reframed by content type:
+       - asmr: "ASMR trigger intensity"
+       - gaming: "Sensory excitement and immersion"
+       - cooking: "Sensory appeal (sights, sounds, textures)"
+       - general: "Sensory engagement and immersive quality"
+
+    ### caption_generator.py — `_create_caption_prompt()`
+    THIS IS THE MOST CRITICAL CHANGE. Current captions are bad because the
+    prompt only sees frames, not what was SAID.
+
+    Changes:
+    1. Add parameters to `__init__`: `channel_description`, `target_audience`,
+       `tone`, `platform`, `caption_length`, `hashtag_count`, `custom_instructions`
+    2. Add `transcript_text: str = ""` parameter to `analyze_video()`
+    3. INJECT TRANSCRIPT TEXT into the caption prompt — the LLM must know what
+       was said in the clip, not just what frames look like
+    4. Content type shapes the persona (gaming creator vs chef vs educator)
+    5. Tone shapes the caption voice (energetic vs calm vs professional)
+    6. Platform affects length and hashtag style
+    7. hashtag_count controls how many hashtags to request
+    8. Keep the JSON output schema identical (hook, description, hashtags,
+       category, virality_score)
+
+    ### Testing your changes
+    After modifying each file, verify it parses without syntax errors:
+    ```
+    cd {{ project }} && python -c "import viral_clip_extractor.transcript_segmenter"
+    cd {{ project }} && python -c "import viral_clip_extractor.core.semantic_analyzer"
+    cd {{ project }} && python -c "import viral_clip_extractor.caption_generator"
+    ```
+
+    {% elif instance == 3 %}
+    ## Worker 3: Tests + Pipeline Threading
+
+    ### Pipeline threading (pipeline.py)
+    Thread ContentProfile from PipelineConfig to all component initializers.
+
+    1. Update `_get_semantic_analyzer()`: pass content profile fields from
+       `self.config.content_profile` (or `self.config`) to SemanticAnalyzer constructor
+    2. Update `_get_caption_analyzer()`: pass content profile fields to
+       OllamaVideoAnalyzer constructor
+    3. Update `_get_transcript_segmenter()`: pass content profile fields to
+       TranscriptSegmenter constructor
+    4. In `_generate_captions()`: extract transcript text for each clip from
+       `all_words` (filter to clip time range, join into text) and pass it to
+       `caption_analyzer.analyze_video(clip_path, title, transcript_text=text)`
+    5. Update `_get_audio_analyzer()`: use `self.config.content_profile.content_type`
+       instead of `self.config.content_type`
+
+    IMPORTANT: The component constructors accept individual string parameters
+    (content_type, channel_description, tone, etc.), NOT a ContentProfile object.
+    Worker 2 adds these parameters. You extract values from ContentProfile and
+    pass them as individual args.
+
+    To handle the parallel worker timing issue: write your pipeline changes
+    assuming the parameter names from the design doc. If Worker 2 hasn't finished,
+    the integration stage (Stage 5) will fix any mismatches.
+
+    ### Tests
+    Write tests FIRST (failing), then verify they match the implementation.
+
+    Required test files:
+
+    **tests/test_content_profile.py** (NEW):
+    - ContentProfile creation with defaults (content_type="general")
+    - All preset loading from CONTENT_PRESETS (gaming, cooking, asmr, etc.)
+    - Preset override: gaming preset with tone="calm" overrides gaming's default tone
+    - ContentProfile embedded in PipelineConfig
+    - content_type="asmr" triggers asmr_mode=True on PipelineConfig
+    - content_type="general" has asmr_mode=False
+    - Invalid content_type handling (if applicable)
+
+    **tests/test_prompt_rendering.py** (NEW):
+    - Segmentation prompt differs for gaming vs cooking vs general
+    - Semantic prompt differs for different content types
+    - Caption prompt includes transcript text when provided
+    - Caption prompt differs for different tones/audiences
+    - Custom instructions appear in all 3 prompts when set
+    - All prompts still request valid JSON output format
+
+    **Update existing tests:**
+    - `tests/test_semantic_analyzer.py`: update mock constructor calls for new params
+    - `tests/test_pipeline.py`: update pipeline construction for ContentProfile
+    - `tests/test_cli_coverage.py`: add tests for new CLI args
+      - `--content-type gaming` creates correct profile
+      - `--content-type gaming --tone calm` overrides preset
+      - `generate-config` outputs [ContentProfile] section
+      - `show-config` displays profile fields
+
+    ### Key constraints
+    - Tests must use mocking (no real Ollama/Whisper calls)
+    - Tests must be deterministic
+    - Follow existing test patterns in {{ project }}/tests/conftest.py
+    - Import ContentProfile and CONTENT_PRESETS from models (Worker 1 creates these)
+    - If imports fail because Worker 1 hasn't finished, write the test code anyway —
+      Stage 5 integration will fix import issues
+
+    {% endif %}
+
+    {{ output_spec(worker.report) }}
+    Include: what files you changed, key decisions, anything that needs integration attention.
+
+    {% elif stage == 5 %}
+    {# ═══ STAGE 5: Integration ═══ #}
+
+    # Stage 5: Integration — Merge Workers and Verify
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    3 workers made changes to the same codebase in parallel. Verify everything
+    integrates correctly and all tests pass.
+
+    ## Context
+    All 3 worker reports are injected below. Review them for conflicts.
+
+    ## Integration Tasks
+
+    ### 1. Check for conflicts
+    Workers had separated file ownership, but verify:
+    - `{{ project }}/viral_clip_extractor/pipeline.py` — Worker 3 updated this
+      to pass ContentProfile fields to components that Worker 2 modified.
+      Do the parameter names match?
+    - `{{ project }}/viral_clip_extractor/models.py` — Worker 1 created
+      ContentProfile. Do Worker 3's test imports work?
+    - Are all new symbols consistently named across files?
+
+    ### 2. Fix any integration issues
+    Common problems:
+    - Parameter name mismatches (Worker 2 used `audience` but Worker 3 passes `target_audience`)
+    - Missing imports
+    - Test files importing symbols that Worker 1 named differently
+    - Pipeline passing wrong field names to component constructors
+
+    ### 3. Verify integration
+    Run these commands from {{ project }}:
+    ```
+    python -c "from viral_clip_extractor.models import ContentProfile, CONTENT_PRESETS; print('Presets:', list(CONTENT_PRESETS.keys()))"
+    python -c "from viral_clip_extractor.models import PipelineConfig; p = PipelineConfig(); print('content_type:', p.content_profile.content_type, 'asmr_mode:', p.asmr_mode)"
+    python -m viral_clip_extractor generate-config --output /tmp/vce_integ_test.ini && grep -A10 'ContentProfile' /tmp/vce_integ_test.ini && rm /tmp/vce_integ_test.ini
+    python -m viral_clip_extractor process --help 2>&1 | grep -E '(content-type|channel-desc|tone|target-aud|platform)'
+    ```
+
+    ### 4. Run full test suite
+    ```
+    cd {{ project }} && python -m pytest tests/ -x -v 2>&1 | tail -60
+    ```
+    Fix ANY failures. All tests must pass before this stage completes.
+
+    ### 5. Verify prompt differentiation
+    ```
+    cd {{ project }} && python -c "
+    from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+    s1 = SemanticAnalyzer(content_type='gaming')
+    s2 = SemanticAnalyzer(content_type='cooking')
+    p1 = s1._create_virality_prompt(30.0, 'Test')
+    p2 = s2._create_virality_prompt(30.0, 'Test')
+    assert p1 != p2, 'Semantic prompts MUST differ for different content types'
+    print('PASS: prompts differ by content type')
+    "
+    ```
+
+    {{ output_spec("05-integration.md") }}
+    Include: conflicts found, fixes applied, final test results.
+
+    {% elif stage == 6 %}
+    {# ═══ STAGE 6: Adversarial Review (fan-out x3) ═══ #}
+
+    {% set reviewer = reviewers[instance] %}
+
+    # Stage 6: Adversarial Review — {{ reviewer.name }} ({{ instance }}/{{ fan_count }})
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Your Review Focus
+    **{{ reviewer.focus }}**
+
+    ## Read ALL relevant source files
+    Read every file in {{ project }}/viral_clip_extractor/ and {{ project }}/tests/
+    that relates to ContentProfile, content types, or LLM prompts.
+
+    {% if instance == 1 %}
+    ## Prompt Quality Review
+
+    For each of the 3 prompts (segmentation, semantic, caption), answer:
+
+    1. Does the prompt actually USE ContentProfile fields in the prompt text,
+       or does it accept parameters and ignore them?
+    2. Would this prompt produce MEANINGFULLY different output for
+       "gaming" vs "cooking" vs "educational"? Be specific — quote the
+       prompt fragments that differ.
+    3. Does the caption prompt receive and use transcript text? Quote the
+       relevant prompt section.
+    4. Are the prompts still requesting valid JSON in the same schema?
+    5. Is there any content type where the prompt would produce nonsensical
+       or contradictory output?
+    6. Does `custom_instructions` actually get injected into all 3 prompts?
+    7. Are the prompt changes backwards-compatible (empty/default ContentProfile
+       produces reasonable generic prompts)?
+
+    ### Test by simulation
+    For each prompt, mentally render it with 3 different content profiles:
+    - Gaming creator, energetic tone, young audience
+    - Cooking channel, calm tone, home cooks
+    - Educational, professional tone, students
+
+    Would the outputs actually differ? If they look the same, the prompt
+    changes are cosmetic, not functional.
+
+    {% elif instance == 2 %}
+    ## Config Correctness Review
+
+    Verify each of these by reading the code:
+
+    1. `load_config()` correctly parses [ContentProfile] from INI file
+    2. `save_default_config()` writes complete [ContentProfile] section
+    3. CLI args create ContentProfile correctly via `_build_config()`
+    4. Preset system: `--content-type gaming` fills ALL profile fields from preset
+    5. Override system: `--content-type gaming --tone calm` overrides only tone
+    6. Backwards compatibility: old configs WITHOUT [ContentProfile] still load
+       and produce a valid PipelineConfig with content_type="general"
+    7. `show-config` displays ALL ContentProfile fields with descriptions
+    8. Invalid content_type is rejected (not silently defaulted)
+    9. Default content_type is "general", NOT "asmr"
+    10. Default asmr_mode is False, NOT True
+    11. content_type="asmr" correctly sets asmr_mode=True
+
+    {% elif instance == 3 %}
+    ## Test Coverage Review
+
+    Check the test suite:
+
+    1. Are ALL ContentProfile fields tested (not just content_type)?
+    2. Are ALL presets tested (each preset produces valid ContentProfile)?
+    3. Are prompt rendering DIFFERENCES tested — not just "prompt generates
+       without error" but "gaming prompt differs from cooking prompt"?
+    4. Is transcript text injection into captions tested?
+    5. Are edge cases covered?
+       - Empty channel_description, target_audience
+       - Unknown content_type (should error or fall back?)
+       - Missing [ContentProfile] section in INI
+       - ContentProfile with only content_type set (rest default)
+    6. Are existing tests updated (not broken by content_type default change)?
+    7. Is the pipeline's ContentProfile→component threading tested?
+    8. Are there tests for the CLI args (parse correctly, override presets)?
+
+    {% endif %}
+
+    ## Issue Rating
+    Rate each issue:
+    - **CRITICAL** — will cause runtime failures, data corruption, or violates project rules
+    - **MODERATE** — produces incorrect results, missing coverage, or poor UX
+    - **LOW** — style, naming, minor improvements
+
+    End your report with a summary count: `Issue count: X CRITICAL, Y MODERATE, Z LOW`
+
+    {{ output_spec(reviewer.report) }}
+
+    {% elif stage == 7 %}
+    {# ═══ STAGE 7: Remediation ═══ #}
+
+    # Stage 7: Remediation — Fix Review Issues
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    Fix all CRITICAL and MODERATE issues from the 3 adversarial reviews.
+    Use root-cause investigation, not guess-and-fix.
+
+    ## Context
+    All 3 adversarial review reports are injected below. Fix the issues they found.
+
+    ## Process
+    1. List ALL CRITICAL issues from all 3 reviews — fix these first
+    2. List ALL MODERATE issues — fix these second
+    3. LOW issues — fix only if trivial and risk-free
+    4. After each batch of fixes, run: `cd {{ project }} && python -m pytest tests/ -x -v`
+    5. Verify specific claims from each review (don't just trust the fix works)
+
+    ## Verification
+    After all fixes, run and confirm:
+    ```
+    cd {{ project }} && python -m pytest tests/ -x -v
+    ```
+    ALL tests must pass.
+
+    {{ output_spec("07-remediation.md") }}
+    Include: issues fixed (quote the review), what you changed, what was deferred, final test results.
+
+    {% elif stage == 8 %}
+    {# ═══ STAGE 8: E2E Verification ═══ #}
+
+    # Stage 8: End-to-End Verification
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    Comprehensive verification that everything works. Run EVERY check.
+    Do NOT claim success without running the commands and reading the output.
+
+    ## Verification Checklist
+
+    ### 1. Full test suite
+    ```
+    cd {{ project }} && python -m pytest tests/ -x -v
+    ```
+    ALL tests must pass. Zero failures. Zero errors.
+
+    ### 2. Import check
+    ```
+    cd {{ project }} && python -c "
+    from viral_clip_extractor.models import ContentProfile, CONTENT_PRESETS, PipelineConfig
+    print('ContentProfile fields:', list(ContentProfile.__dataclass_fields__.keys()))
+    print('Presets:', sorted(CONTENT_PRESETS.keys()))
+    p = PipelineConfig()
+    print('Default content_type:', p.content_profile.content_type)
+    print('Default asmr_mode:', p.asmr_mode)
+    assert p.content_profile.content_type == 'general', f'Default must be general, got {p.content_profile.content_type}'
+    assert p.asmr_mode == False, f'Default asmr_mode must be False, got {p.asmr_mode}'
+    print('PASS: imports and defaults correct')
+    "
+    ```
+
+    ### 3. Config generation
+    ```
+    rm -f /tmp/vce_e2e_test.ini
+    cd {{ project }} && python -m viral_clip_extractor generate-config --output /tmp/vce_e2e_test.ini
+    echo "--- [ContentProfile] section ---"
+    grep -A 20 '\[ContentProfile\]' /tmp/vce_e2e_test.ini
+    rm -f /tmp/vce_e2e_test.ini
+    ```
+    Must contain [ContentProfile] section with all fields.
+
+    ### 4. Show config
+    ```
+    cd {{ project }} && python -m viral_clip_extractor show-config 2>&1
+    ```
+    Must display ContentProfile fields (content_type, channel_description, tone, etc.).
+
+    ### 5. CLI help
+    ```
+    cd {{ project }} && python -m viral_clip_extractor process --help 2>&1
+    ```
+    Must show: --content-type, --channel-description, --tone, --target-audience, --platform
+
+    ### 6. Prompt rendering verification
+    ```
+    cd {{ project }} && python -c "
+    from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+    s1 = SemanticAnalyzer(content_type='gaming')
+    s2 = SemanticAnalyzer(content_type='cooking')
+    s3 = SemanticAnalyzer(content_type='general')
+    p1 = s1._create_virality_prompt(30.0, 'Test')
+    p2 = s2._create_virality_prompt(30.0, 'Test')
+    p3 = s3._create_virality_prompt(30.0, 'Test')
+    assert p1 != p2 and p1 != p3 and p2 != p3, 'All semantic prompts must differ pairwise'
+    print('PASS: semantic prompts differ across content types')
+    "
+    ```
+
+    ### 7. Caption prompt transcript injection
+    ```
+    cd {{ project }} && python -c "
+    from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+    analyzer = OllamaVideoAnalyzer(content_type='gaming')
+    prompt_with = analyzer._create_caption_prompt('Test', transcript_text='Hello world this is a test')
+    prompt_without = analyzer._create_caption_prompt('Test', transcript_text='')
+    assert 'Hello world' in prompt_with, 'Transcript text must appear in caption prompt'
+    assert 'Hello world' not in prompt_without, 'No transcript text when empty'
+    print('PASS: transcript text injected into caption prompt')
+    "
+    ```
+
+    ## Final Status
+    Write a status line at the END of your report:
+    - If ALL 7 checks pass: `E2E: ALL PASS`
+    - If ANY check fails: `E2E: FAILURES` followed by which checks failed
+
+    {{ output_spec("08-e2e-verification.md") }}
+
+    {% elif stage == 9 %}
+    {# ═══ STAGE 9: Final Remediation ═══ #}
+
+    # Stage 9: Final Remediation
+
+    {{ ctx() }}
+    {{ rules() }}
+
+    ## Goal
+    Fix any issues found in E2E verification (Stage 8).
+
+    ## Context
+    The E2E verification report is injected below. Fix the failures it found.
+
+    ## Process
+    1. Identify which E2E checks failed
+    2. Investigate root causes (read the actual code, don't guess)
+    3. Fix root causes
+    4. Re-run ALL 7 verification checks from Stage 8
+    5. All must pass
+
+    ## Verification
+    ```
+    cd {{ project }} && python -m pytest tests/ -x -v
+    ```
+
+    {{ output_spec("09-final-remediation.md") }}
+    Include: what failed, root cause, fix applied, re-verification results.
+
+    {% endif %}
+
+# ── Validations ──────────────────────────────────────────────
+
+validations:
+  # ── Stage 1: Research ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/01-competitive-research.md"
+    condition: "stage == 1"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/01-competitive-research.md") -ge 500'
+    condition: "stage == 1"
+    stage: 2
+    description: "Research report has substantive content (500+ words)"
+
+  # ── Stage 2: Audit ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/02-prompt-audit.md"
+    condition: "stage == 2"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/02-prompt-audit.md") -ge 500'
+    condition: "stage == 2"
+    stage: 2
+    description: "Audit report has substantive content"
+
+  # ── Stage 3: Design ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/03-content-profile-design.md"
+    condition: "stage == 3"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/03-content-profile-design.md"
+    pattern: "(?si)content.?type.*channel.?description.*target.?audience"
+    condition: "stage == 3"
+    stage: 2
+    description: "Design covers core ContentProfile fields"
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/03-content-profile-design.md") -ge 800'
+    condition: "stage == 3"
+    stage: 2
+    description: "Design spec has substantial detail (800+ words)"
+
+  # ── Stage 4: Implementation workers ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/04-impl-models-config-cli.md"
+    condition: "stage == 4 and instance == 1"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.models import ContentProfile, CONTENT_PRESETS; assert len(CONTENT_PRESETS) >= 5"'
+    condition: "stage == 4 and instance == 1"
+    stage: 2
+    description: "ContentProfile and CONTENT_PRESETS are importable with 5+ presets"
+
+  - type: file_exists
+    path: "{workspace}/score-artifacts/04-impl-prompt-overhaul.md"
+    condition: "stage == 4 and instance == 2"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "import viral_clip_extractor.transcript_segmenter; import viral_clip_extractor.core.semantic_analyzer; import viral_clip_extractor.caption_generator; print(\"OK\")"'
+    condition: "stage == 4 and instance == 2"
+    stage: 2
+    description: "All 3 prompt modules import without errors"
+
+  - type: file_exists
+    path: "{workspace}/score-artifacts/04-impl-tests-pipeline.md"
+    condition: "stage == 4 and instance == 3"
+    stage: 1
+  - type: file_exists
+    path: "/home/emzi/Projects/yacg/tests/test_content_profile.py"
+    condition: "stage == 4 and instance == 3"
+    stage: 2
+    description: "ContentProfile test file created"
+  - type: file_exists
+    path: "/home/emzi/Projects/yacg/tests/test_prompt_rendering.py"
+    condition: "stage == 4 and instance == 3"
+    stage: 2
+    description: "Prompt rendering test file created"
+
+  # ── Stage 5: Integration ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/05-integration.md"
+    condition: "stage == 5"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -x -q'
+    condition: "stage == 5"
+    stage: 2
+    description: "All tests pass after integration"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.models import ContentProfile, CONTENT_PRESETS, PipelineConfig; p = PipelineConfig(); assert p.content_profile.content_type == \"general\"; assert p.asmr_mode == False; assert len(CONTENT_PRESETS) >= 5; print(\"PASS\")"'
+    condition: "stage == 5"
+    stage: 2
+    description: "ContentProfile defaults correct and 5+ presets exist"
+
+  # ── Stage 6: Review reports ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/06-review-prompt-quality.md"
+    condition: "stage == 6 and instance == 1"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/06-review-prompt-quality.md"
+    pattern: "(?si)issue count:"
+    condition: "stage == 6 and instance == 1"
+    stage: 2
+    description: "Prompt review includes issue count summary"
+
+  - type: file_exists
+    path: "{workspace}/score-artifacts/06-review-config.md"
+    condition: "stage == 6 and instance == 2"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/06-review-config.md"
+    pattern: "(?si)issue count:"
+    condition: "stage == 6 and instance == 2"
+    stage: 2
+    description: "Config review includes issue count summary"
+
+  - type: file_exists
+    path: "{workspace}/score-artifacts/06-review-tests.md"
+    condition: "stage == 6 and instance == 3"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/06-review-tests.md"
+    pattern: "(?si)issue count:"
+    condition: "stage == 6 and instance == 3"
+    stage: 2
+    description: "Test review includes issue count summary"
+
+  # ── Stage 7: Remediation ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/07-remediation.md"
+    condition: "stage == 7"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -x -q'
+    condition: "stage == 7"
+    stage: 2
+    description: "All tests pass after remediation"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.models import ContentProfile, CONTENT_PRESETS, PipelineConfig; p = PipelineConfig(); assert p.content_profile.content_type == \"general\"; assert p.asmr_mode == False; assert len(CONTENT_PRESETS) >= 5; print(\"PASS\")"'
+    condition: "stage == 7"
+    stage: 2
+    description: "ContentProfile defaults still correct after remediation"
+
+  # ── Stage 8: E2E Verification ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/08-e2e-verification.md"
+    condition: "stage == 8"
+    stage: 1
+  - type: content_contains
+    path: "{workspace}/score-artifacts/08-e2e-verification.md"
+    pattern: "E2E: ALL PASS"
+    condition: "stage == 8"
+    stage: 2
+    description: "E2E verification reports all checks passed"
+  # Outcome: default is general
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.models import PipelineConfig; p = PipelineConfig(); assert p.content_profile.content_type == \"general\", f\"got {p.content_profile.content_type}\"; assert p.asmr_mode == False, f\"got {p.asmr_mode}\""'
+    condition: "stage == 8"
+    stage: 2
+    description: "Default content_type is general and asmr_mode is False"
+  # Outcome: generate-config includes [ContentProfile]
+  - type: command_succeeds
+    command: 'rm -f /tmp/vce_val_test.ini && cd /home/emzi/Projects/yacg && python -m viral_clip_extractor generate-config --output /tmp/vce_val_test.ini && grep -q "ContentProfile" /tmp/vce_val_test.ini && rm -f /tmp/vce_val_test.ini'
+    condition: "stage == 8"
+    stage: 2
+    description: "generate-config outputs [ContentProfile] section"
+  # Outcome: CLI shows new args
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m viral_clip_extractor process --help 2>&1 | grep -q "content-type"'
+    condition: "stage == 8"
+    stage: 2
+    description: "CLI help shows --content-type argument"
+  # Outcome: prompts differ by content type
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer; s1 = SemanticAnalyzer(content_type=\"gaming\"); s2 = SemanticAnalyzer(content_type=\"cooking\"); assert s1._create_virality_prompt(30.0, \"T\") != s2._create_virality_prompt(30.0, \"T\")"'
+    condition: "stage == 8"
+    stage: 2
+    description: "Semantic prompts render differently for different content types"
+  # Outcome: transcript text injection into caption prompt
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer; a = OllamaVideoAnalyzer(content_type=\"gaming\"); p = a._create_caption_prompt(\"Test\", transcript_text=\"hello world spoken text\"); assert \"hello world spoken text\" in p, \"transcript not in prompt\""'
+    condition: "stage == 8"
+    stage: 2
+    description: "Caption prompt includes transcript text when provided"
+
+  # ── Stage 9: Final Remediation ──
+  - type: file_exists
+    path: "{workspace}/score-artifacts/09-final-remediation.md"
+    condition: "stage == 9"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -x -q'
+    condition: "stage == 9"
+    stage: 2
+    description: "All tests pass after final remediation"

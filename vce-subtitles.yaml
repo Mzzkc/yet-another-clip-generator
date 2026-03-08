@@ -1,0 +1,1250 @@
+# vce-subtitles.yaml
+#
+# Pattern: Tier 5 Complex Implementation (11 stages, 21 sheets)
+# Goal: Add TikTok word-pop burned-in subtitles + remove optional feature
+#       flags + harden all failure paths. No silent fallbacks.
+#
+# Execution Flow:
+#   Stage 1:  Frame — success criteria, change manifest
+#   Stage 2:  Preprocess — read all files, grep refs, verify deps
+#   Stage 3:  Execute — 3 parallel workers implement changes (fan-out x3)
+#   Stage 4:  Test Rewrite — update test suite for new behavior
+#   Stage 5:  Adversarial Review 1 — 3 lenses verify (fan-out x3)
+#   Stage 6:  Remediation 1 — fix review 1 issues (fan-out x3)
+#   Stage 7:  TDF Review — 5 persona lenses deep-review (fan-out x5)
+#   Stage 8:  TDF Synthesis — collide perspectives, priority queue
+#   Stage 9:  Remediation 2 — optional, skip if synthesis found 0 issues
+#   Stage 10: Live E2E — run the actual tool on real video + pytest
+#   Stage 11: Final Remediation — optional, skip if E2E clean
+
+name: "vce-subtitles"
+workspace: "/home/emzi/Projects/yacg/workspaces/vce-subtitles-workspace"
+
+backend:
+  type: claude_cli
+  skip_permissions: true
+  disable_mcp: true
+  timeout_seconds: 2400
+  output_format: text
+  timeout_overrides:
+    2: 3600     # Preprocess: reads many files, runs dep checks
+    3: 3600     # Execute workers: significant code changes
+    4: 3600     # Test rewrite: many files to update
+    9: 3600     # Remediation 2: may need substantial fixes
+    10: 5400    # Live E2E: downloads video, processes, verifies
+    11: 3600    # Final remediation
+
+sheet:
+  size: 1
+  total_items: 11
+  fan_out:
+    3: 3    # 3 execution workers
+    5: 3    # 3 adversarial reviewers
+    6: 3    # 3 remediators
+    7: 5    # 5 TDF persona reviewers
+  dependencies:
+    2: [1]
+    3: [2]
+    4: [3]
+    5: [4]
+    6: [5]
+    7: [6]
+    8: [7]
+    9: [8]
+    10: [9]
+    11: [10]
+  skip_when_command:
+    9:
+      command: 'grep -q "Issue count: 0" "{workspace}/score-artifacts/08-tdf-synthesis.md"'
+      description: "Skip remediation 2 if TDF synthesis found zero issues"
+      timeout_seconds: 10
+    11:
+      command: 'grep -q "LIVE E2E: ALL PASS" "{workspace}/score-artifacts/10-live-e2e.md"'
+      description: "Skip final remediation if live E2E passed clean"
+      timeout_seconds: 10
+
+parallel:
+  enabled: true
+  max_concurrent: 5
+
+cross_sheet:
+  auto_capture_stdout: true
+  max_output_chars: 10000
+  lookback_sheets: 8
+  capture_files:
+    - "{{ workspace }}/score-artifacts/02-preprocessing.md"
+    - "{{ workspace }}/score-artifacts/08-tdf-synthesis.md"
+
+retry:
+  max_retries: 2
+  base_delay_seconds: 15
+  max_completion_attempts: 3
+  completion_threshold_percent: 100
+
+rate_limit:
+  wait_minutes: 60
+  max_waits: 12
+
+stale_detection:
+  enabled: true
+  idle_timeout_seconds: 3600
+
+prompt:
+  variables:
+    project: "/home/emzi/Projects/yacg"
+    design_doc: "/home/emzi/Projects/yacg/docs/plans/2026-03-05-subtitles-and-hardening-design.md"
+    test_video_dir: "/tmp/vce_test_fixtures"
+    rickroll_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+    workers:
+      1:
+        name: "foundation-and-subtitles"
+        focus: "models.py, config.py, bootstrap.py, new subtitle_burner.py"
+        report: "03-exec-foundation.md"
+      2:
+        name: "core-hardening"
+        focus: "semantic_analyzer.py, caption_generator.py, clip_extractor.py — remove all fallbacks"
+        report: "03-exec-hardening.md"
+      3:
+        name: "cli-and-pipeline"
+        focus: "cli.py, pipeline.py — remove flags, wire subtitle step, add --whisper-model"
+        report: "03-exec-pipeline.md"
+
+    reviewers:
+      1:
+        name: "completeness"
+        focus: "Did every item from the preprocessing manifest get addressed? What was skipped?"
+      2:
+        name: "correctness"
+        focus: "Does the code actually work? Run it. Test it. Verify claims."
+      3:
+        name: "robustness"
+        focus: "Try to break the subtitle system — silent video, edge cases, resource cleanup."
+
+    remediators:
+      1:
+        name: "completeness-fixes"
+        focus: "Address all gaps identified by the completeness reviewer"
+      2:
+        name: "correctness-fixes"
+        focus: "Fix all broken code identified by the correctness reviewer"
+      3:
+        name: "robustness-fixes"
+        focus: "Fix all edge cases and failure modes identified by the robustness reviewer"
+
+    tdf_lenses:
+      1:
+        name: "youtube-creator"
+        voice: >-
+          You are a YouTube creator with 500K subscribers who can barely
+          use a command line. You know what makes good short-form content
+          but you're not technical. You care about: does this tool actually
+          produce clips I can post? Are the subtitles readable? Is the
+          error output gibberish or helpful? Would I use this over OpusClip?
+        focus: "Usability, output quality, subtitle readability, error clarity, competitive value"
+        question: "Would I actually use this tool, or would I give up and go back to OpusClip?"
+      2:
+        name: "ai-builder"
+        voice: >-
+          You are an AI engineer who builds cool shit and ships fast.
+          You care about clean APIs, extensibility, and whether the
+          architecture lets you hack on it. You want to fork this and
+          add features. You hate over-engineering but love good abstractions.
+        focus: "API design, extensibility, code quality, developer experience, hackability"
+        question: "Can I fork this and build on it, or is the architecture going to fight me?"
+      3:
+        name: "graduate-professor"
+        voice: >-
+          You are a graduate-level computer science professor evaluating
+          this as a student project submission. You grade on rigor,
+          methodology, correctness, and whether the approach is sound.
+          You're not impressed by volume — you want to see clear thinking.
+        focus: "Algorithmic correctness, methodology, code structure, documentation quality, rigor"
+        question: "Is this well-engineered, or is it duct tape that happens to run?"
+      4:
+        name: "systems-engineer"
+        voice: >-
+          You are a systems engineer who happened across this project.
+          You think about reliability, resource usage, failure modes,
+          deployment, and what happens at 3am when nobody is watching.
+          You've been burned by tools that work in demos but break in
+          production.
+        focus: "Reliability, resource management, failure handling, deployment, monitoring, scalability"
+        question: "Will this run reliably on someone else's machine, or only on the developer's?"
+      5:
+        name: "ml-expert"
+        voice: >-
+          You are an ML engineer who works with speech models, vision
+          models, and multimodal pipelines daily. You know faster-whisper
+          internals, Ollama quirks, and where ML pipelines silently
+          degrade. You care about model selection, inference quality,
+          and whether the ML components are used correctly.
+        focus: "Whisper usage, Ollama integration, model selection, inference quality, ML pipeline correctness"
+        question: "Are the ML components used correctly, or is this cargo-culting API calls?"
+
+  template: |
+    {# ── Reusable macros ────────────────────────────────────── #}
+    {% macro ctx() %}
+    Project directory: {{ project }} (source code lives here)
+    Workspace: {{ workspace }} (score artifacts/reports only)
+    Package: {{ project }}/viral_clip_extractor/ (Python package)
+    Tests: {{ project }}/tests/ (root level, NOT inside the package)
+    Reports: {{ workspace }}/score-artifacts/ (create if missing)
+    Design doc: {{ design_doc }}
+    Test fixtures: {{ test_video_dir }} (shared across stages)
+
+    IMPORTANT: Run all code commands from {{ project }}, NOT {{ workspace }}.
+    Write reports to {{ workspace }}/score-artifacts/.
+    {% endmacro %}
+
+    {% macro output_spec(filename) %}
+    ## Output
+    - **File**: {{ workspace }}/score-artifacts/{{ filename }}
+    - **Format**: Markdown with clear section headers
+    - Write a complete, well-structured document
+    {% endmacro %}
+
+    {% macro quality_bar(level) %}
+    {% if level == "high" %}
+    Quality: Be thorough. Cite specific file paths and line numbers.
+    No hedging. If uncertain, state what you'd need to verify.
+    {% elif level == "draft" %}
+    Quality: Prioritize coverage over polish. Mark uncertainties with [?].
+    {% endif %}
+    {% endmacro %}
+
+    {% macro failure_rule() %}
+    CRITICAL DESIGN PRINCIPLE: Every feature is mandatory. There are NO
+    optional features, NO --no-* flags, NO silent fallbacks. If semantic
+    analysis fails, the clip fails. If caption generation fails, the clip
+    fails. If subtitle generation fails, the clip fails. Failure = error,
+    not degraded output.
+    {% endmacro %}
+
+    {# ── Stage logic ────────────────────────────────────────── #}
+    {% if stage == 1 %}
+    # Stage 1: Frame
+
+    {{ ctx() }}
+
+    ## Context
+    Read the design doc at {{ design_doc }}.
+
+    This project (Viral Clip Extractor) takes long-form video and produces
+    short-form clips for TikTok/Instagram Reels/YouTube Shorts. It replaces
+    paid services like OpusClip.
+
+    The hardening score just completed: 224 tests pass, 80% coverage. But
+    the tool is missing a critical feature (burned-in subtitles) and has
+    optional feature flags that allow disabling core functionality, hiding
+    failures behind silent fallbacks.
+
+    ## Your Task
+    Frame the implementation precisely:
+
+    1. **Restate the changes** — what exactly are we building and removing?
+    2. **Map every file** that needs to change (read the design doc for the list)
+    3. **Define success criteria**:
+       - `subtitle_burner.py` exists and works: faster-whisper → ASS → FFmpeg burn-in
+       - TikTok word-pop style: 1-3 words, large bold text, platform-safe positioning
+       - `--no-semantic`, `--no-captions`, `--no-vertical` flags are GONE
+       - `enable_semantic`, `enable_captions`, `vertical_crop` removed from PipelineConfig
+       - Semantic analyzer RAISES on failure (no `_default_features()` fallback)
+       - Caption generator RAISES on failure (no `None` return)
+       - Subtitle burner RAISES on failure (no un-subtitled clips)
+       - All tests pass after changes
+       - Live extraction produces clips with burned-in subtitles
+    4. **Identify risks** — what could go wrong?
+
+    {{ output_spec("01-framing.md") }}
+    {{ quality_bar("draft") }}
+
+    {% elif stage == 2 %}
+    # Stage 2: Preprocessing
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+
+    Read the framing at {{ workspace }}/score-artifacts/01-framing.md.
+
+    ## Your Task
+    Gather ALL raw material so downstream workers can focus on implementation.
+
+    ### 1. Read every file that will be modified
+    Read and summarize the current state of:
+    ```bash
+    cd {{ project }}
+    cat viral_clip_extractor/models.py
+    cat viral_clip_extractor/pipeline.py
+    cat viral_clip_extractor/cli.py
+    cat viral_clip_extractor/core/semantic_analyzer.py
+    cat viral_clip_extractor/caption_generator.py
+    cat viral_clip_extractor/extractors/clip_extractor.py
+    cat viral_clip_extractor/utils/config.py
+    cat viral_clip_extractor/bootstrap.py
+    ```
+
+    ### 2. Find EVERY reference to removed flags
+    ```bash
+    cd {{ project }}
+    grep -rn "enable_semantic\|enable_captions\|vertical_crop" viral_clip_extractor/ tests/ --include="*.py"
+    grep -rn "no.semantic\|no.captions\|no.vertical\|no_semantic\|no_captions\|no_vertical" viral_clip_extractor/ tests/ --include="*.py"
+    ```
+    Record every hit with file:line. This is the surgical manifest.
+
+    ### 3. Verify faster-whisper word-level API
+    ```bash
+    cd {{ project }} && python -c "
+    from faster_whisper import WhisperModel
+    model = WhisperModel('tiny', device='cpu', compute_type='int8')
+    # Transcribe a test fixture with word timestamps
+    import os
+    fixture = '{{ test_video_dir }}/rickroll_30s.mp4'
+    if os.path.exists(fixture):
+        segments, info = model.transcribe(fixture, word_timestamps=True)
+        for seg in segments:
+            if seg.words:
+                for w in seg.words[:5]:
+                    print(f'  word=\"{w.word}\" start={w.start:.2f} end={w.end:.2f}')
+                break
+        print(f'Language: {info.language}, prob: {info.language_probability:.2f}')
+    else:
+        print(f'MISSING FIXTURE: {fixture}')
+    "
+    ```
+
+    ### 4. Verify FFmpeg libass/subtitles support
+    ```bash
+    ffmpeg -filters 2>/dev/null | grep -i "ass\|subtitles"
+    ```
+
+    ### 5. Verify test fixtures exist
+    ```bash
+    ls -la {{ test_video_dir }}/*.mp4 2>/dev/null
+    ```
+    If rickroll_30s.mp4 is missing, download and create it:
+    ```bash
+    mkdir -p {{ test_video_dir }}
+    cd {{ project }} && python -c "
+    from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+    dl = YouTubeDownloader(output_dir='{{ test_video_dir }}')
+    result = dl.download('{{ rickroll_url }}')
+    print(f'Downloaded: {result[\"video_path\"]}')
+    "
+    FULL=$(ls {{ test_video_dir }}/*.mp4 | grep -v synthetic | grep -v 30s | head -1)
+    ffmpeg -y -i "$FULL" -t 30 -c copy {{ test_video_dir }}/rickroll_30s.mp4
+    ```
+
+    ### 6. Run current test suite
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -q --tb=short 2>&1
+    ```
+
+    ### 7. Capture current CLI help
+    ```bash
+    cd {{ project }}
+    python -m viral_clip_extractor --help 2>&1
+    python -m viral_clip_extractor process --help 2>&1
+    ```
+
+    ## Write the preprocessing report
+
+    {{ output_spec("02-preprocessing.md") }}
+    {{ quality_bar("high") }}
+
+    The report MUST have these sections:
+    - **File Summaries** (current state of each file being modified)
+    - **Flag Reference Manifest** (every grep hit — file:line:content)
+    - **faster-whisper Verification** (word-level timestamps work? output?)
+    - **FFmpeg Subtitle Support** (ass/subtitles filters available?)
+    - **Test Fixtures** (paths to all available fixtures)
+    - **Current Test State** (pass/fail counts)
+    - **Current CLI** (help output showing flags to be removed)
+
+    {% elif stage == 3 %}
+    # Execute: {{ workers[instance].name }}
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+
+    Read the preprocessing report at {{ workspace }}/score-artifacts/02-preprocessing.md.
+    Use the flag reference manifest to find every line that needs to change.
+    Read the design doc at {{ design_doc }}.
+
+    {% if instance == 1 %}
+    ## Worker 1: Foundation + Subtitle Module
+
+    ### Part A: Update models.py
+    1. Remove from `PipelineConfig`: `enable_semantic`, `enable_captions`, `vertical_crop`
+    2. Add to `PipelineConfig`: `whisper_model: str = "base"`
+    3. Add to `ClipData`: `subtitle_path: Optional[str] = None`
+
+    ### Part B: Update utils/config.py
+    Remove INI reads for the three removed fields. Remove them from
+    `save_default_config` if present.
+
+    ### Part C: Update bootstrap.py
+    Move `faster_whisper` from `OPTIONAL_DEPS` to `PYTHON_DEPS` (required).
+
+    ### Part D: Create subtitle_burner.py
+    New file at `{{ project }}/viral_clip_extractor/subtitle_burner.py`.
+
+    Architecture:
+    - Class `SubtitleBurner` with lazy-loaded WhisperModel
+    - `transcribe(clip_path) → list[WordTimestamp]`: faster-whisper with
+      `word_timestamps=True`. Returns word-level timing data. RAISES on
+      failure or empty transcription (silent clip = error).
+    - `generate_ass(words, frame_width, frame_height) → str`: Generate ASS
+      subtitle file content with TikTok word-pop styling.
+    - `burn_subtitles(clip_path, ass_content) → str`: FFmpeg hardburn via
+      `ffmpeg -i clip.mp4 -vf "ass=temp.ass" -c:a copy out.mp4`. RAISES
+      on FFmpeg failure. Returns path to subtitled clip.
+    - `process_clip(clip_path, frame_width, frame_height) → str`: Full
+      pipeline: transcribe → generate ASS → burn. Single public entry point.
+
+    **TikTok Word-Pop ASS Styling:**
+    - Font: Arial or DejaVu Sans Bold (check availability)
+    - Font size: ~5.5% of frame height (e.g., 106px on 1920h)
+    - Position: centered horizontally, anchored at 62% from top
+    - Margins: 15% left and right (clears platform UI buttons)
+    - Style: white fill, black outline (3px), drop shadow
+    - Display: 1-3 words at a time, timed to speech
+
+    **ASS format reference:**
+    ```
+    [Script Info]
+    ScriptType: v4.00+
+    PlayResX: {width}
+    PlayResY: {height}
+
+    [V4+ Styles]
+    Format: Name, Fontname, Fontsize, PrimaryColour, ...
+    Style: WordPop,Arial,{fontsize},&H00FFFFFF,&H000000FF,...
+
+    [Events]
+    Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+    Dialogue: 0,{start},{end},WordPop,,{marginL},{marginR},{marginV},,{words}
+    ```
+
+    After creating, verify:
+    ```bash
+    cd {{ project }}
+    python -c "from viral_clip_extractor.subtitle_burner import SubtitleBurner; print('Import OK')"
+    python -c "
+    from viral_clip_extractor.models import PipelineConfig
+    assert not hasattr(PipelineConfig, 'enable_semantic'), 'enable_semantic still exists!'
+    assert not hasattr(PipelineConfig, 'enable_captions'), 'enable_captions still exists!'
+    assert not hasattr(PipelineConfig, 'vertical_crop'), 'vertical_crop still exists!'
+    assert hasattr(PipelineConfig, 'whisper_model'), 'whisper_model missing!'
+    print('PipelineConfig OK')
+    "
+    ```
+
+    {{ output_spec(workers[instance].report) }}
+
+    {% elif instance == 2 %}
+    ## Worker 2: Core Hardening
+
+    Use the preprocessing manifest to find every fallback path.
+
+    ### semantic_analyzer.py
+    1. Delete `_default_features()` method entirely
+    2. In `_query_with_retries()`: when all retries exhausted, RAISE
+       `RuntimeError("Semantic analysis failed after N retries")` instead
+       of returning `_default_features()`
+    3. Remove any other call to `_default_features()` — each must raise
+    4. Update docstrings to reflect that methods raise on failure
+
+    ### caption_generator.py
+    1. `analyze_video()` must RAISE on failure, not return `None`
+    2. Remove all `return None` failure paths — replace with raises
+    3. The return type changes from `Optional[CaptionData]` to `CaptionData`
+    4. Update docstrings
+
+    ### clip_extractor.py
+    1. Remove the `vertical` parameter from `__init__` — always vertical
+    2. `_get_vertical_filter()` must RAISE on failure, not return `None`
+    3. Remove any conditional that checks `self.vertical` — always crop
+    4. Remove the `if config is None else config.vertical_crop` logic
+    5. The SmartCropper import failure becomes a hard error
+
+    After all changes, verify:
+    ```bash
+    cd {{ project }}
+    python -c "
+    from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+    # Verify _default_features is gone
+    assert not hasattr(SemanticAnalyzer, '_default_features'), '_default_features still exists!'
+    print('SemanticAnalyzer hardened')
+    "
+    python -c "
+    from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+    import inspect
+    sig = inspect.signature(OllamaVideoAnalyzer.analyze_video)
+    ret = sig.return_annotation
+    print(f'analyze_video return type: {ret}')
+    "
+    python -c "
+    from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+    import inspect
+    sig = inspect.signature(ClipExtractor.__init__)
+    assert 'vertical' not in sig.parameters, 'vertical param still in ClipExtractor.__init__!'
+    print('ClipExtractor hardened')
+    "
+    ```
+
+    {{ output_spec(workers[instance].report) }}
+
+    {% elif instance == 3 %}
+    ## Worker 3: CLI + Pipeline Wiring
+
+    Use the preprocessing manifest to find every flag reference.
+
+    ### cli.py
+    1. Remove argparse arguments: `--no-semantic`, `--no-captions`, `--no-vertical`
+    2. Add argparse argument: `--whisper-model` (choices: tiny, base, small, medium, large-v3; default: base)
+    3. Update `_build_config()` to remove references to removed flags
+    4. Update `_build_config()` to pass `whisper_model` to PipelineConfig
+    5. Remove any warning about `--no-semantic` usage
+    6. Remove `no_semantic`, `no_captions`, `no_vertical` from namespace handling
+    7. Update the `check` subcommand: `faster_whisper` is now required, not optional
+
+    ### pipeline.py
+    1. Remove ALL conditional checks for `self.config.enable_semantic`,
+       `self.config.enable_captions`, `self.config.vertical_crop`
+    2. Semantic analysis, caption generation, and vertical crop are ALWAYS ON
+    3. Add subtitle burn step after clip extraction, before caption generation:
+       ```python
+       # After extracting clips, burn subtitles
+       subtitle_burner = self._get_subtitle_burner()
+       for clip in clips:
+           subtitled_path = subtitle_burner.process_clip(
+               clip.output_path,
+               frame_width=...,  # from clip metadata
+               frame_height=...
+           )
+           clip.output_path = subtitled_path  # Replace with subtitled version
+       ```
+    4. Add `_get_subtitle_burner()` lazy initializer following existing pattern
+    5. Update pipeline step numbering in log messages
+    6. When semantic analysis raises, catch at segment level, add to errors
+    7. When caption generation raises, catch at clip level, add to errors
+    8. When subtitle burn raises, catch at clip level, add to errors
+    9. A clip with any error is NOT included in the output
+
+    After all changes, verify:
+    ```bash
+    cd {{ project }}
+    python -m viral_clip_extractor --help 2>&1 | grep -c "no-semantic\|no-captions\|no-vertical"
+    # Should output 0
+
+    python -m viral_clip_extractor process --help 2>&1 | grep "whisper-model"
+    # Should show the new flag
+
+    python -m viral_clip_extractor check 2>&1
+    ```
+
+    {{ output_spec(workers[instance].report) }}
+    {% endif %}
+
+    {% elif stage == 4 %}
+    # Stage 4: Test Rewrite
+
+    {{ ctx() }}
+    {{ failure_rule() }}
+
+    Read all execution reports:
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/{{ workers[i].report }}
+    {% endfor %}
+
+    And the preprocessing manifest at {{ workspace }}/score-artifacts/02-preprocessing.md.
+
+    ## Your Task
+    The feature flags have been removed. The test suite will be broken because
+    tests still reference `enable_semantic`, `enable_captions`, `vertical_crop`,
+    `--no-semantic`, `--no-captions`, `--no-vertical`, and `vertical=False`.
+
+    ### 1. Fix every broken test file
+    Use the preprocessing manifest's grep results to find every reference.
+    Key files:
+    - `tests/test_integration.py` — DELETE the `TestOptionCombinations` class
+      and `TestFeatureToggleAllOff`. There is now ONE configuration.
+    - `tests/test_adversarial.py` — fix `_make_config()` helper
+    - `tests/test_pipeline.py` — fix `PipelineConfig(enable_semantic=False, ...)`
+    - `tests/test_cli_coverage.py` — fix all `--no-*` flag references, remove
+      `test_no_semantic_high_min_score_warning`, fix `test_build_config_with_ini_file`
+    - `tests/test_scorer_extractor.py` — fix `ClipExtractor(vertical=False, ...)`
+    - `tests/conftest.py` — update if needed
+
+    ### 2. Add subtitle tests
+    In `tests/test_integration.py`, add:
+    - `test_subtitle_burner_transcribes_speech` — verify word timestamps from real audio
+    - `test_subtitle_burner_generates_valid_ass` — verify ASS format and styling
+    - `test_subtitle_burner_burns_subtitles` — verify FFmpeg burn produces valid video
+    - `test_subtitle_burner_silent_clip_fails` — silent video raises error
+
+    In `tests/test_adversarial.py`, add:
+    - `test_subtitle_nonexistent_file` — raises on missing file
+    - `test_subtitle_corrupt_video` — raises on corrupt input
+    - `test_subtitle_empty_transcription` — raises when no speech detected
+
+    ### 3. Add failure-is-error tests
+    - `test_semantic_failure_is_error` — mock Ollama returning 500, verify raise
+    - `test_caption_failure_is_error` — mock Ollama failure, verify raise
+
+    ### 4. Run tests
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -v --tb=short 2>&1
+    ```
+    Fix any failures. Iterate until all pass.
+
+    {{ output_spec("04-test-rewrite.md") }}
+    {{ quality_bar("high") }}
+
+    {% elif stage == 5 %}
+    # Adversarial Review 1: {{ reviewers[instance].name | title }}
+
+    {{ ctx() }}
+
+    Read the preprocessing manifest at {{ workspace }}/score-artifacts/02-preprocessing.md
+    and all execution reports:
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/{{ workers[i].report }}
+    {% endfor %}
+    - {{ workspace }}/score-artifacts/04-test-rewrite.md
+
+    ## CRITICAL: Do Not Trust the Reports
+    Run code. Verify claims. The workers may claim success while leaving
+    real issues.
+
+    ## Your Review Focus
+    {{ reviewers[instance].focus }}
+
+    {% if instance == 1 %}
+    ## Completeness Review
+    Cross-reference the preprocessing manifest against actual changes:
+    - For EVERY line in the grep manifest, verify the flag reference is gone
+    - Verify `subtitle_burner.py` exists and has all required methods
+    - Verify PipelineConfig has no toggle fields
+    - Verify ClipExtractor has no `vertical` parameter
+    - Verify `_default_features()` is deleted from semantic_analyzer.py
+    - Verify `analyze_video` no longer returns None
+    - Verify `--whisper-model` flag exists in CLI
+
+    {% elif instance == 2 %}
+    ## Correctness Review
+    Run commands and verify things work:
+    ```bash
+    cd {{ project }}
+    python -m viral_clip_extractor check
+    python -m pytest tests/ -x -q --tb=short 2>&1
+    # Verify no removed flags in help
+    python -m viral_clip_extractor process --help 2>&1 | grep -c "no-semantic\|no-captions\|no-vertical"
+    # Verify subtitle module works
+    python -c "
+    from viral_clip_extractor.subtitle_burner import SubtitleBurner
+    sb = SubtitleBurner(whisper_model='tiny')
+    print('SubtitleBurner instantiated')
+    "
+    ```
+    Fix anything broken. Don't just report — repair.
+
+    {% elif instance == 3 %}
+    ## Robustness Review
+    Try to break the subtitle system:
+    ```bash
+    cd {{ project }}
+    # Silent video
+    python -c "
+    from viral_clip_extractor.subtitle_burner import SubtitleBurner
+    sb = SubtitleBurner(whisper_model='tiny')
+    try:
+        sb.process_clip('{{ test_video_dir }}/synthetic_noaudio.mp4', 608, 1080)
+        print('ERROR: Should have raised on silent video!')
+    except Exception as e:
+        print(f'Correctly raised: {e}')
+    "
+    # Nonexistent file
+    python -c "
+    from viral_clip_extractor.subtitle_burner import SubtitleBurner
+    sb = SubtitleBurner(whisper_model='tiny')
+    try:
+        sb.process_clip('/nonexistent.mp4', 608, 1080)
+        print('ERROR: Should have raised on missing file!')
+    except Exception as e:
+        print(f'Correctly raised: {e}')
+    "
+    ```
+    Fix anything broken.
+    {% endif %}
+
+    ## Output Format
+    Produce a **prioritized issue list** with explicit count:
+    - **P1 (Blockers)**: Must fix. Code is broken or wrong.
+    - **P2 (Important)**: Should fix. Correctness or quality risk.
+    - **P3 (Minor)**: Nice to fix. Polish items.
+
+    End with:
+    ```
+    Issue count: N (P1: X, P2: Y, P3: Z)
+    ```
+
+    {{ output_spec("05-review1-" ~ instance ~ ".md") }}
+
+    {% elif stage == 6 %}
+    # Remediation 1: {{ remediators[instance].name | title }}
+
+    {{ ctx() }}
+
+    Read the review that corresponds to your focus:
+    - {{ workspace }}/score-artifacts/05-review1-{{ instance }}.md
+
+    Also read the other two reviews for context:
+    {% for i in range(1, 4) %}
+    {% if i != instance %}
+    - {{ workspace }}/score-artifacts/05-review1-{{ i }}.md
+    {% endif %}
+    {% endfor %}
+
+    ## Your Task
+    Fix every issue listed in review {{ instance }} ({{ remediators[instance].name }}).
+    Work through the priority queue: all P1 items first, then P2, then P3.
+
+    For each fix:
+    1. Read the issue description
+    2. Make the code change
+    3. Verify the fix works
+    4. Record what you did
+
+    After all fixes, run:
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -x -q --tb=short 2>&1
+    ```
+
+    {{ output_spec("06-remediation1-" ~ instance ~ ".md") }}
+
+    Report format:
+    - **Issues Addressed**: For each issue from the review, what you did
+    - **Test Results**: Did tests pass after fixes?
+    - **Remaining Issues**: Anything you couldn't fix and why
+
+    {% elif stage == 7 %}
+    # TDF Review: {{ tdf_lenses[instance].name | replace("-", " ") | title }}
+
+    {{ ctx() }}
+
+    {{ tdf_lenses[instance].voice }}
+
+    Read ALL prior work:
+    - {{ workspace }}/score-artifacts/02-preprocessing.md (what existed before)
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/{{ workers[i].report }} (execution)
+    {% endfor %}
+    - {{ workspace }}/score-artifacts/04-test-rewrite.md (test changes)
+    {% for i in range(1, 4) %}
+    - {{ workspace }}/score-artifacts/06-remediation1-{{ i }}.md (first fixes)
+    {% endfor %}
+
+    Then READ THE ACTUAL CODE. Do not trust reports. Read:
+    ```bash
+    cd {{ project }}
+    cat viral_clip_extractor/subtitle_burner.py
+    cat viral_clip_extractor/pipeline.py
+    cat viral_clip_extractor/cli.py
+    cat viral_clip_extractor/models.py
+    cat viral_clip_extractor/core/semantic_analyzer.py
+    cat viral_clip_extractor/caption_generator.py
+    cat viral_clip_extractor/extractors/clip_extractor.py
+    ```
+
+    ## Your Question
+    {{ tdf_lenses[instance].question }}
+
+    ## Your Focus
+    {{ tdf_lenses[instance].focus }}
+
+    ## Your Task
+    Review ALL changes from your perspective. You are working independently —
+    four other reviewers are analyzing the same codebase from completely
+    different angles. You cannot see their work.
+
+    {% if instance == 1 %}
+    As a YouTube creator who can barely use a CLI:
+    - Run the tool yourself. Can you figure out the commands?
+    - What happens when something goes wrong? Is the error helpful?
+    - Look at the subtitle output — would you post this?
+    - Compare to what OpusClip gives you. Is this competitive?
+    - What would make you stop using this and go back to paid tools?
+
+    {% elif instance == 2 %}
+    As an AI builder who wants to hack on this:
+    - Is the SubtitleBurner API clean? Would you want to extend it?
+    - Is the pipeline architecture easy to understand and modify?
+    - Are the abstractions right? Too much? Too little?
+    - Could you swap faster-whisper for another STT model easily?
+    - What would you change to make this more hackable?
+
+    {% elif instance == 3 %}
+    As a professor grading this:
+    - Is the ASS subtitle generation algorithmically correct?
+    - Is the word-grouping logic sound? (1-3 words per display)
+    - Are the platform-safe positioning calculations correct?
+    - Is the error handling rigorous or sloppy?
+    - Would this pass a code review in your graduate seminar?
+
+    {% elif instance == 4 %}
+    As a systems engineer:
+    - What happens when Ollama is down? Does it fail fast or hang?
+    - What about disk space? Temp files? Cleanup?
+    - What happens with a 3-hour video? Memory usage?
+    - Is the FFmpeg subprocess management robust?
+    - Would you trust this to run unattended?
+
+    {% elif instance == 5 %}
+    As an ML expert:
+    - Is faster-whisper configured correctly? Model size tradeoffs?
+    - Is `word_timestamps=True` the right approach?
+    - Are the Ollama API calls correct for semantic analysis and captions?
+    - Is the Whisper output parsed correctly?
+    - Are there ML-specific failure modes being ignored?
+    {% endif %}
+
+    ## Output Format
+    Produce:
+    - **Assessment**: Your answer to your guiding question
+    - **Priority Queue**: Specific issues found, ordered by severity
+      - P1 (Blockers), P2 (Important), P3 (Minor)
+      - Each item: file path, line number, what's wrong, what to do
+    - **Issue count: N (P1: X, P2: Y, P3: Z)**
+
+    {{ output_spec("07-tdf-" ~ instance ~ ".md") }}
+    {{ quality_bar("high") }}
+
+    {% elif stage == 8 %}
+    # TDF Synthesis
+
+    {{ ctx() }}
+
+    Read all five TDF reviews:
+    {% for i in range(1, 6) %}
+    - {{ workspace }}/score-artifacts/07-tdf-{{ i }}.md ({{ tdf_lenses[i].name }})
+    {% endfor %}
+
+    ## Your Task
+    Five independent reviewers with radically different perspectives analyzed
+    the same codebase. Synthesize their findings.
+
+    ### Part 1: Collision Analysis
+    1. **Convergences** — Where did independent reviewers agree without
+       coordination? (A YouTube creator and an ML expert agreeing on something
+       is strong signal.)
+    2. **Tensions** — Where do they disagree? Don't average. Find the reading
+       that makes both true, or explain why the tension is irreducible.
+    3. **Blind spots** — What did ALL five miss?
+    4. **Emergence** — What insight exists in the collision that no single
+       reviewer stated?
+
+    ### Part 2: Unified Priority Queue
+    Merge all five priority queues into a single, deduplicated list.
+    For duplicates (same issue found by multiple reviewers), note who found it.
+
+    Order by: P1 first, then P2, then P3. Within each priority, order by
+    how many reviewers independently flagged it.
+
+    ### Part 3: Issue Count
+    State the total explicitly:
+    ```
+    Issue count: N (P1: X, P2: Y, P3: Z)
+    ```
+
+    If N is 0, state clearly:
+    ```
+    Issue count: 0
+    ```
+
+    This count determines whether Remediation 2 runs. Be honest.
+    Do NOT inflate or deflate. Count real issues only.
+
+    {{ output_spec("08-tdf-synthesis.md") }}
+    {{ quality_bar("high") }}
+
+    {% elif stage == 9 %}
+    # Remediation 2 (Conditional)
+
+    {{ ctx() }}
+
+    This stage only runs if the TDF synthesis found issues. If you're
+    reading this, there are issues to fix.
+
+    Read the synthesis at {{ workspace }}/score-artifacts/08-tdf-synthesis.md.
+
+    ## Your Task
+    Work through the unified priority queue. Fix every P1 and P2 item.
+    Fix P3 items if they're quick wins.
+
+    For each fix:
+    1. Read the issue
+    2. Make the code change
+    3. Verify the fix
+    4. Record what you did
+
+    After all fixes:
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -x -q --tb=short 2>&1
+    ```
+
+    {{ output_spec("09-remediation2.md") }}
+
+    {% elif stage == 10 %}
+    # Live E2E Test
+
+    {{ ctx() }}
+
+    This is NOT just running pytest. You must actually run the tool against
+    real video and verify the output.
+
+    ## Part 1: Ensure test fixtures exist
+    ```bash
+    ls {{ test_video_dir }}/rickroll_30s.mp4 2>/dev/null || echo "MISSING"
+    ```
+    If missing, download:
+    ```bash
+    mkdir -p {{ test_video_dir }}
+    cd {{ project }} && python -c "
+    from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+    dl = YouTubeDownloader(output_dir='{{ test_video_dir }}')
+    result = dl.download('{{ rickroll_url }}')
+    print(f'Downloaded: {result[\"video_path\"]}')
+    "
+    FULL=$(ls {{ test_video_dir }}/*.mp4 | grep -v synthetic | grep -v 30s | head -1)
+    ffmpeg -y -i "$FULL" -t 30 -c copy {{ test_video_dir }}/rickroll_30s.mp4
+    ```
+
+    ## Part 2: Live extraction with subtitles
+    ```bash
+    cd {{ project }}
+    rm -rf /tmp/vce_e2e_subtitles
+
+    # Extract multiple clips from the 30s fixture
+    python -m viral_clip_extractor process \
+      --video {{ test_video_dir }}/rickroll_30s.mp4 \
+      --title "E2E Subtitle Test" \
+      --output-dir /tmp/vce_e2e_subtitles \
+      --top-n 3 --min-score 0 \
+      --whisper-model tiny 2>&1
+    ```
+
+    ## Part 3: Verify subtitles are burned in
+    ```bash
+    # Check each clip has subtitle content
+    for clip in /tmp/vce_e2e_subtitles/clip_*.mp4; do
+      echo "=== Checking: $clip ==="
+      # Extract a frame and check for text overlay (file size difference)
+      DURATION=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$clip")
+      echo "  Duration: $DURATION"
+      SIZE=$(stat -f%z "$clip" 2>/dev/null || stat -c%s "$clip")
+      echo "  Size: $SIZE bytes"
+    done
+
+    # Check CSV report
+    cat /tmp/vce_e2e_subtitles/clips_report.csv
+    ```
+
+    ## Part 4: Verify no removed flags remain
+    ```bash
+    cd {{ project }}
+    STALE=$(grep -rn "enable_semantic\|enable_captions\|vertical_crop\|no.semantic\|no.captions\|no.vertical\|no_semantic\|no_captions\|no_vertical" viral_clip_extractor/ tests/ --include="*.py" | grep -v "\.pyc" | grep -v "__pycache__")
+    if [ -n "$STALE" ]; then
+      echo "STALE FLAGS FOUND:"
+      echo "$STALE"
+    else
+      echo "CLEAN: no stale flags"
+    fi
+    ```
+
+    ## Part 5: Full test suite with coverage
+    ```bash
+    cd {{ project }} && python -m pytest tests/ -v --tb=short \
+      --cov=viral_clip_extractor \
+      --cov-report=term-missing \
+      --cov-branch 2>&1
+    ```
+
+    ## Part 6: Cleanup
+    ```bash
+    rm -rf /tmp/vce_e2e_subtitles
+    ```
+
+    ## Write Report
+
+    {{ output_spec("10-live-e2e.md") }}
+    {{ quality_bar("high") }}
+
+    Include:
+    - **Live Extraction Results**: Did clips extract? How many? With subtitles?
+    - **Subtitle Verification**: Evidence that subtitles are burned in
+    - **Stale Flags Check**: Any remaining references?
+    - **Test Results**: Full pass/fail, coverage numbers
+    - **Verdict**: End with exactly one of:
+      - `LIVE E2E: ALL PASS` (everything worked)
+      - `LIVE E2E: FAILURES FOUND` (with details of what failed)
+
+    {% elif stage == 11 %}
+    # Final Remediation (Conditional)
+
+    {{ ctx() }}
+
+    This stage only runs if the live E2E found failures. If you're
+    reading this, something broke during the real test.
+
+    Read the E2E report at {{ workspace }}/score-artifacts/10-live-e2e.md.
+
+    ## Your Task
+    Fix every failure identified in the E2E report. Then re-run the
+    verification:
+
+    ```bash
+    cd {{ project }}
+
+    # Re-run live extraction
+    rm -rf /tmp/vce_final_fix
+    python -m viral_clip_extractor process \
+      --video {{ test_video_dir }}/rickroll_30s.mp4 \
+      --title "Final Fix Test" \
+      --output-dir /tmp/vce_final_fix \
+      --top-n 3 --min-score 0 \
+      --whisper-model tiny 2>&1
+
+    # Re-run tests
+    python -m pytest tests/ -x -q --tb=short 2>&1
+
+    # Cleanup
+    rm -rf /tmp/vce_final_fix
+    ```
+
+    {{ output_spec("11-final-remediation.md") }}
+    {% endif %}
+
+validations:
+  # === Stage 1: Framing ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/01-framing.md"
+    condition: "stage == 1"
+    stage: 1
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/01-framing.md") -ge 300'
+    condition: "stage == 1"
+    stage: 2
+    description: "Framing has substantive content"
+
+  # === Stage 2: Preprocessing ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/02-preprocessing.md"
+    condition: "stage == 2"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/02-preprocessing.md"
+    pattern: "(?si)(Flag Reference Manifest|File Summaries|faster-whisper Verification)"
+    condition: "stage == 2"
+    stage: 2
+    description: "Preprocessing has required sections"
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/02-preprocessing.md") -ge 500'
+    condition: "stage == 2"
+    stage: 2
+    description: "Preprocessing has substantive content"
+
+  # === Stage 3: Execution Workers ===
+  # Worker 1: Foundation + subtitles
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.subtitle_burner import SubtitleBurner; print(\"OK\")"'
+    condition: "stage == 3 and instance == 1"
+    stage: 1
+    description: "SubtitleBurner module imports"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.models import PipelineConfig; assert not hasattr(PipelineConfig, \"enable_semantic\"); assert not hasattr(PipelineConfig, \"enable_captions\"); assert not hasattr(PipelineConfig, \"vertical_crop\"); print(\"OK\")"'
+    condition: "stage == 3 and instance == 1"
+    stage: 2
+    description: "PipelineConfig toggle fields removed"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/03-exec-foundation.md"
+    condition: "stage == 3 and instance == 1"
+    stage: 2
+
+  # Worker 2: Core hardening
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer; assert not hasattr(SemanticAnalyzer, \"_default_features\"); print(\"OK\")"'
+    condition: "stage == 3 and instance == 2"
+    stage: 1
+    description: "_default_features fallback removed"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -c "import inspect; from viral_clip_extractor.extractors.clip_extractor import ClipExtractor; assert \"vertical\" not in inspect.signature(ClipExtractor.__init__).parameters; print(\"OK\")"'
+    condition: "stage == 3 and instance == 2"
+    stage: 2
+    description: "ClipExtractor vertical parameter removed"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/03-exec-hardening.md"
+    condition: "stage == 3 and instance == 2"
+    stage: 2
+
+  # Worker 3: CLI + pipeline
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && ! python -m viral_clip_extractor process --help 2>&1 | grep -qE "no-semantic|no-captions|no-vertical"'
+    condition: "stage == 3 and instance == 3"
+    stage: 1
+    description: "Removed flags are gone from CLI help"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m viral_clip_extractor process --help 2>&1 | grep -q "whisper-model"'
+    condition: "stage == 3 and instance == 3"
+    stage: 2
+    description: "--whisper-model flag exists"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/03-exec-pipeline.md"
+    condition: "stage == 3 and instance == 3"
+    stage: 2
+
+  # === Stage 4: Test Rewrite ===
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -q --tb=short 2>&1 | tail -1 | grep -qP "\\d{3,} passed"'
+    condition: "stage == 4"
+    stage: 1
+    timeout_seconds: 300
+    description: "Tests pass after rewrite"
+  - type: command_succeeds
+    command: '! grep -rn "enable_semantic\|enable_captions\|vertical_crop\|no_semantic\|no_captions\|no_vertical" /home/emzi/Projects/yacg/tests/ --include="*.py" | grep -v __pycache__ | grep -q .'
+    condition: "stage == 4"
+    stage: 2
+    description: "No stale flag references in test files"
+  - type: file_exists
+    path: "{workspace}/score-artifacts/04-test-rewrite.md"
+    condition: "stage == 4"
+    stage: 2
+
+  # === Stage 5: Adversarial Review 1 ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/05-review1-{instance}.md"
+    condition: "stage == 5"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/05-review1-{instance}.md"
+    pattern: "Issue count: \\d+"
+    condition: "stage == 5"
+    stage: 2
+    description: "Review includes explicit issue count"
+
+  # === Stage 6: Remediation 1 ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/06-remediation1-{instance}.md"
+    condition: "stage == 6"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/06-remediation1-{instance}.md"
+    pattern: "(?si)Issues Addressed"
+    condition: "stage == 6"
+    stage: 2
+    description: "Remediation documents what was fixed"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -q --tb=short 2>&1 | tail -1 | grep -qP "\\d{3,} passed"'
+    condition: "stage == 6"
+    stage: 2
+    timeout_seconds: 300
+    description: "Tests pass after remediation 1"
+
+  # === Stage 7: TDF Review ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/07-tdf-{instance}.md"
+    condition: "stage == 7"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/07-tdf-{instance}.md"
+    pattern: "Issue count: \\d+"
+    condition: "stage == 7"
+    stage: 2
+    description: "TDF review includes explicit issue count"
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/07-tdf-{instance}.md") -ge 500'
+    condition: "stage == 7"
+    stage: 2
+    description: "TDF review has substantive content"
+
+  # === Stage 8: TDF Synthesis ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/08-tdf-synthesis.md"
+    condition: "stage == 8"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/08-tdf-synthesis.md"
+    pattern: "(?si)convergence"
+    condition: "stage == 8"
+    stage: 2
+    description: "Synthesis identifies convergences"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/08-tdf-synthesis.md"
+    pattern: "Issue count: \\d+"
+    condition: "stage == 8"
+    stage: 2
+    description: "Synthesis has explicit issue count"
+  - type: command_succeeds
+    command: 'test $(wc -w < "{workspace}/score-artifacts/08-tdf-synthesis.md") -ge 800'
+    condition: "stage == 8"
+    stage: 2
+    description: "Synthesis has substantive content"
+
+  # === Stage 9: Remediation 2 (conditional) ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/09-remediation2.md"
+    condition: "stage == 9"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -q --tb=short 2>&1 | tail -1 | grep -qP "\\d{3,} passed"'
+    condition: "stage == 9"
+    stage: 2
+    timeout_seconds: 300
+    description: "Tests pass after remediation 2"
+
+  # === Stage 10: Live E2E ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/10-live-e2e.md"
+    condition: "stage == 10"
+    stage: 1
+  - type: content_regex
+    path: "{workspace}/score-artifacts/10-live-e2e.md"
+    pattern: "(?si)Live Extraction Results"
+    condition: "stage == 10"
+    stage: 2
+    description: "E2E report has extraction results"
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -q --tb=short 2>&1 | tail -1 | grep -qP "\\d{3,} passed"'
+    condition: "stage == 10"
+    stage: 2
+    timeout_seconds: 300
+    description: "Full test suite passes"
+  - type: command_succeeds
+    command: '! grep -rn "enable_semantic\|enable_captions\|vertical_crop\|no_semantic\|no_captions\|no_vertical" /home/emzi/Projects/yacg/viral_clip_extractor/ /home/emzi/Projects/yacg/tests/ --include="*.py" | grep -v __pycache__ | grep -q .'
+    condition: "stage == 10"
+    stage: 2
+    description: "No stale flag references anywhere"
+  - type: command_succeeds
+    command: 'test -n "$(ls /tmp/vce_e2e_subtitles/clip_*.mp4 2>/dev/null)"'
+    condition: "stage == 10"
+    stage: 2
+    description: "At least one clip was produced by live E2E"
+  - type: content_regex
+    path: "{workspace}/score-artifacts/10-live-e2e.md"
+    pattern: "LIVE E2E: ALL PASS"
+    condition: "stage == 10"
+    stage: 2
+    description: "E2E verdict is ALL PASS"
+
+  # === Stage 11: Final Remediation (conditional) ===
+  - type: file_exists
+    path: "{workspace}/score-artifacts/11-final-remediation.md"
+    condition: "stage == 11"
+    stage: 1
+  - type: command_succeeds
+    command: 'cd /home/emzi/Projects/yacg && python -m pytest tests/ -q --tb=short 2>&1 | tail -1 | grep -qP "\\d{3,} passed"'
+    condition: "stage == 11"
+    stage: 2
+    timeout_seconds: 300
+    description: "Tests pass after final remediation"
