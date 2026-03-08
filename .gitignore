@@ -1,11 +1,49 @@
+# Python
 __pycache__/
 *.pyc
-downloads/
-logs/
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Mozart scores & state
+vce-*.yaml
+viral-clip-extractor-score.yaml
+.mozart-observer.jsonl
+.mozart-outcomes.json
+.mozart-state.db
 score-artifacts/
 .mozart/
-/tmp/
-.coverage
-site/
 *-workspace/
 workspaces/
+docs/mozart-scores/
+
+# Runtime
+downloads/
+logs/
+clip_output/
+site/
+/tmp/

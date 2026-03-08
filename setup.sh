@@ -11,7 +11,7 @@
 #   1. Detects your OS and package manager
 #   2. Checks Python version (3.10+ required)
 #   3. Installs system dependencies (ffmpeg)
-#   4. Installs Python dependencies from requirements-clip-extractor.txt
+#   4. Installs Python package in editable mode with dev dependencies
 #   5. Optionally pulls Ollama model for semantic analysis / captions
 #   6. Verifies everything works
 #
@@ -198,14 +198,13 @@ else
     success "ffmpeg installed"
 fi
 
-# -- Install Python dependencies ----------------------------------------------
-header "Installing Python dependencies..."
+# -- Install Python package ----------------------------------------------------
+header "Installing Python package..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REQUIREMENTS="$SCRIPT_DIR/requirements-clip-extractor.txt"
 
-if [ ! -f "$REQUIREMENTS" ]; then
-    error "Cannot find $REQUIREMENTS"
+if [ ! -f "$SCRIPT_DIR/pyproject.toml" ]; then
+    error "Cannot find pyproject.toml"
     error "Make sure you're running setup.sh from the project root."
     exit 1
 fi
@@ -231,22 +230,22 @@ else
     fi
 fi
 
-info "Installing from $REQUIREMENTS..."
-if python3 -m pip install "${PIP_FLAGS[@]}" -r "$REQUIREMENTS" 2>&1; then
-    success "Python dependencies installed"
+info "Installing from pyproject.toml (editable + dev deps)..."
+if python3 -m pip install "${PIP_FLAGS[@]}" -e "$SCRIPT_DIR[dev]" 2>&1; then
+    success "Python package installed"
 else
     warn "Install with flags failed, retrying without --user..."
     PIP_FLAGS_RETRY=()
     if [[ " ${PIP_FLAGS[*]} " =~ " --break-system-packages " ]]; then
         PIP_FLAGS_RETRY=("--break-system-packages")
     fi
-    python3 -m pip install "${PIP_FLAGS_RETRY[@]}" -r "$REQUIREMENTS" || {
-        error "Failed to install Python dependencies."
+    python3 -m pip install "${PIP_FLAGS_RETRY[@]}" -e "$SCRIPT_DIR[dev]" || {
+        error "Failed to install Python package."
         error "Try creating a virtual environment first:"
         echo -e "    ${BOLD}python3 -m venv .venv && source .venv/bin/activate && ./setup.sh${NC}"
         exit 1
     }
-    success "Python dependencies installed (without --user)"
+    success "Python package installed (without --user)"
 fi
 
 # -- Check for dual opencv conflict -------------------------------------------
@@ -358,9 +357,6 @@ echo -e "    python -m viral_clip_extractor youtube --url ${CYAN}https://youtube
 echo -e "    python -m viral_clip_extractor batch --videos-dir ${CYAN}/path/to/videos/${NC}"
 echo ""
 echo -e "  ${BOLD}Useful flags:${NC}"
-echo -e "    --no-semantic     Skip LLM-based analysis (faster, no Ollama needed)"
-echo -e "    --no-captions     Skip caption generation"
-echo -e "    --no-vertical     Keep original aspect ratio (skip 9:16 crop)"
 echo -e "    --min-score 0     Accept all clips regardless of score"
 echo -e "    --top-n 5         Limit to top 5 clips"
 echo -e "    -v                Verbose/debug output"
@@ -370,6 +366,4 @@ echo -e "    1. Install Ollama: ${CYAN}https://ollama.com/download${NC}"
 echo -e "    2. Pull model:    ${BOLD}ollama pull qwen2.5vl:7b${NC}"
 echo -e "    3. Start Ollama:  ${BOLD}ollama serve${NC}"
 echo ""
-echo -e "  ${BOLD}Optional (for trigger word detection):${NC}"
-echo -e "    pip install faster-whisper"
 echo ""

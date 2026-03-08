@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "viral-clip-extractor"
+version = "0.1.0"
+description = "Extract viral-potential short-form clips from long-form video"
+requires-python = ">=3.10"
+dependencies = [
+    "scenedetect[opencv]>=0.6",
+    "librosa>=0.10",
+    "opencv-python-headless>=4.8",
+    "numpy>=1.24",
+    "requests>=2.28",
+    "yt-dlp>=2024.0",
+    "soundfile>=0.12",
+    "faster-whisper>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "pytest-timeout>=2.2",
+]
+docs = [
+    "mkdocs-material",
+]
+
+[project.scripts]
+vce = "viral_clip_extractor.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["viral_clip_extractor*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-p no:randomly --tb=short -q"
+markers = [
+    "integration: integration tests (may download from internet)",
+    "adversarial: adversarial edge-case tests",
+    "slow: slow tests (full video processing)",
+]
+filterwarnings = [
+    "ignore::FutureWarning:torch.*",
+    "ignore::FutureWarning:librosa.*",
+    "ignore::UserWarning:librosa.*",
+    "ignore:PySoundFile failed:UserWarning",
+    "ignore:'aifc' is deprecated:DeprecationWarning:audioread.*",
+    "ignore:'audioop' is deprecated:DeprecationWarning:audioread.*",
+    "ignore:'sunau' is deprecated:DeprecationWarning:audioread.*",
+]
