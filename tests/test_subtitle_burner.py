@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.models import WordTimestamp
-from viral_clip_extractor.subtitle_burner import SubtitleBurner, _format_ass_time
+from yacg.models import WordTimestamp
+from yacg.subtitle_burner import SubtitleBurner, _format_ass_time
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class TestGenerateAss:
         assert "PlayResY: 1920" in ass
         assert "WordPop" in ass
         # Font is dynamically detected — verify some sans-serif font is present
-        from viral_clip_extractor.subtitle_burner import _find_system_font
+        from yacg.subtitle_burner import _find_system_font
         assert _find_system_font() in ass
 
     def test_ass_styling_1080x1920(self, burner, sample_words):
@@ -125,7 +125,7 @@ class TestFormatAssTime:
 class TestBurnSubtitles:
     """Tests for SubtitleBurner.burn_subtitles (mock FFmpeg)."""
 
-    @patch("viral_clip_extractor.subtitle_burner.subprocess.run")
+    @patch("yacg.subtitle_burner.subprocess.run")
     def test_subtitle_burner_burns_subtitles(self, mock_run, burner, tmp_path):
         """burn_subtitles calls FFmpeg and replaces the clip in place."""
         clip_path = str(tmp_path / "clip.mp4")
@@ -151,7 +151,7 @@ class TestBurnSubtitles:
         # Temp file should be cleaned up
         assert not os.path.exists(temp_output)
 
-    @patch("viral_clip_extractor.subtitle_burner.subprocess.run")
+    @patch("yacg.subtitle_burner.subprocess.run")
     def test_burn_subtitles_raises_on_ffmpeg_failure(self, mock_run, burner, tmp_path):
         """burn_subtitles raises RuntimeError on FFmpeg failure."""
         clip_path = str(tmp_path / "clip.mp4")

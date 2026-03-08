@@ -2,7 +2,7 @@
 
 ## Overview
 
-VCE is a 10-step pipeline that takes a video file, segments it using LLM-driven transcript analysis, scores segments across audio/visual/semantic dimensions, extracts the top clips in parallel as vertical (9:16) videos with burned subtitles and thumbnails, and generates Instagram-optimized captions.
+YACG is a 10-step pipeline that takes a video file, segments it using LLM-driven transcript analysis, scores segments across audio/visual/semantic dimensions, extracts the top clips in parallel as vertical (9:16) videos with burned subtitles and thumbnails, and generates Instagram-optimized captions.
 
 The pipeline uses **protocol-based dependency injection** — all 8 core components are defined as `Protocol` interfaces and can be swapped via constructor injection. Components are lazily initialized to keep import time fast.
 
@@ -183,7 +183,7 @@ Layer 3: CLI argument overrides (cli.py)
 ## Package Structure
 
 ```
-viral_clip_extractor/
+yacg/
     __init__.py              # Exports: ClipData, PipelineConfig, ViralClipPipeline, __version__
     __main__.py              # python -m entry point
     models.py                # Dataclasses: SceneSegment, AudioFeatures, VisualFeatures,
@@ -224,7 +224,7 @@ viral_clip_extractor/
 
 ### Ollama
 
-VCE communicates with Ollama via HTTP (`POST /api/generate`). Three modules call Ollama, all using `requests.Session()` for HTTP connection reuse:
+YACG communicates with Ollama via HTTP (`POST /api/generate`). Three modules call Ollama, all using `requests.Session()` for HTTP connection reuse:
 
 | Module | Purpose | Input | Model |
 |--------|---------|-------|-------|
@@ -276,4 +276,4 @@ All non-fatal errors accumulate in `ProcessingResult.errors` for post-run inspec
 
 ## Bootstrap Caching
 
-The dependency check result (`bootstrap.ensure_ready()`) is cached via a `~/.vce_bootstrap_ok` marker file with a 24-hour TTL, avoiding the startup penalty on every invocation.
+The dependency check result (`bootstrap.ensure_ready()`) is cached via a `~/.yacg_bootstrap_ok` marker file with a 24-hour TTL, avoiding the startup penalty on every invocation.

@@ -1,5 +1,5 @@
 """
-Integration tests for the Viral Clip Extractor pipeline.
+Integration tests for the YACG pipeline.
 
 Tests pipeline initialization, config loading, CLI argument parsing,
 YouTubeDownloader URL parsing, CSV generation, and mock-based pipeline
@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     AudioFeatures,
     CaptionData,
     ClipData,
@@ -39,7 +39,7 @@ class TestConfigLoading:
 
     def test_load_default_config(self):
         """Loading with no path returns defaults."""
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         config = load_config(None)
         assert isinstance(config, PipelineConfig)
@@ -51,7 +51,7 @@ class TestConfigLoading:
 
     def test_load_missing_file_returns_defaults(self):
         """Loading a non-existent file returns defaults gracefully."""
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         config = load_config("/nonexistent/path.ini")
         assert isinstance(config, PipelineConfig)
@@ -59,7 +59,7 @@ class TestConfigLoading:
 
     def test_load_custom_config(self, tmp_path):
         """Loading a valid INI file overrides defaults."""
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         ini_content = """\
 [Model]
@@ -99,7 +99,7 @@ class TestCLIParsing:
 
     def test_process_subcommand(self):
         """Parse 'process' subcommand with required args."""
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -119,7 +119,7 @@ class TestCLIParsing:
 
     def test_youtube_subcommand(self):
         """Parse 'youtube' subcommand with URL."""
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -133,7 +133,7 @@ class TestCLIParsing:
 
     def test_batch_subcommand(self):
         """Parse 'batch' subcommand."""
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -145,7 +145,7 @@ class TestCLIParsing:
 
     def test_check_subcommand(self):
         """Parse 'check' subcommand."""
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args(["check"])
@@ -153,14 +153,14 @@ class TestCLIParsing:
 
     def test_no_command_returns_error(self):
         """main() with no args returns error exit code."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         exit_code = main([])
         assert exit_code == 1
 
     def test_whisper_model_flag(self):
         """Parse --whisper-model flag."""
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -180,37 +180,37 @@ class TestYouTubeURLParsing:
     """Test YouTubeDownloader.extract_video_id with various URL formats."""
 
     def test_standard_url(self):
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         dl = YouTubeDownloader.__new__(YouTubeDownloader)
         assert dl.extract_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ") == "dQw4w9WgXcQ"
 
     def test_short_url(self):
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         dl = YouTubeDownloader.__new__(YouTubeDownloader)
         assert dl.extract_video_id("https://youtu.be/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
 
     def test_shorts_url(self):
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         dl = YouTubeDownloader.__new__(YouTubeDownloader)
         assert dl.extract_video_id("https://youtube.com/shorts/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
 
     def test_embed_url(self):
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         dl = YouTubeDownloader.__new__(YouTubeDownloader)
         assert dl.extract_video_id("https://youtube.com/embed/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
 
     def test_bare_id(self):
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         dl = YouTubeDownloader.__new__(YouTubeDownloader)
         assert dl.extract_video_id("dQw4w9WgXcQ") == "dQw4w9WgXcQ"
 
     def test_invalid_url(self):
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         dl = YouTubeDownloader.__new__(YouTubeDownloader)
         assert dl.extract_video_id("not_a_valid_url") == ""
@@ -226,7 +226,7 @@ class TestPipelineInit:
 
     def test_default_init(self):
         """Pipeline initializes with default config."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         pipeline = ViralClipPipeline()
         assert pipeline.config is not None
@@ -235,7 +235,7 @@ class TestPipelineInit:
 
     def test_custom_config(self):
         """Pipeline respects custom config."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         config = PipelineConfig(
             model_name="custom:latest",
@@ -247,7 +247,7 @@ class TestPipelineInit:
 
     def test_process_video_missing_file(self):
         """Processing a non-existent file returns error result."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         pipeline = ViralClipPipeline()
         result = pipeline.process_video("/nonexistent/video.mp4")
@@ -266,7 +266,7 @@ class TestCSVGeneration:
 
     def test_csv_columns(self, tmp_path):
         """CSV has the expected column headers."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         pipeline = ViralClipPipeline()
 
@@ -335,7 +335,7 @@ class TestCSVGeneration:
 
     def test_csv_empty_clips(self, tmp_path):
         """CSV with no clips still has headers."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         pipeline = ViralClipPipeline()
         result = ProcessingResult(
@@ -364,14 +364,14 @@ class TestCSVGeneration:
 class TestPipelineOrchestration:
     """Mock all components and verify transcript-first pipeline flow."""
 
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_caption_analyzer")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_subtitle_burner")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_clip_extractor")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_virality_scorer")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_semantic_analyzer")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_visual_analyzer")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_audio_analyzer")
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline._get_transcript_segmenter")
+    @patch("yacg.pipeline.ViralClipPipeline._get_caption_analyzer")
+    @patch("yacg.pipeline.ViralClipPipeline._get_subtitle_burner")
+    @patch("yacg.pipeline.ViralClipPipeline._get_clip_extractor")
+    @patch("yacg.pipeline.ViralClipPipeline._get_virality_scorer")
+    @patch("yacg.pipeline.ViralClipPipeline._get_semantic_analyzer")
+    @patch("yacg.pipeline.ViralClipPipeline._get_visual_analyzer")
+    @patch("yacg.pipeline.ViralClipPipeline._get_audio_analyzer")
+    @patch("yacg.pipeline.ViralClipPipeline._get_transcript_segmenter")
     def test_transcript_first_pipeline(
         self,
         mock_segmenter,
@@ -385,7 +385,7 @@ class TestPipelineOrchestration:
         tmp_path,
     ):
         """Verify pipeline uses transcript-first flow with all mandatory steps."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         # Create a dummy video file
         video_file = tmp_path / "test.mp4"
@@ -497,7 +497,7 @@ class TestPipelineContentProfile:
 
     def test_pipeline_with_gaming_profile(self):
         """Pipeline accepts a PipelineConfig with a gaming ContentProfile."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         profile = ContentProfile(
             content_type="gaming",
@@ -511,14 +511,14 @@ class TestPipelineContentProfile:
 
     def test_pipeline_default_profile_is_general(self):
         """Default pipeline has general content profile."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         pipeline = ViralClipPipeline()
         assert pipeline.config.content_profile.content_type == "general"
 
     def test_semantic_analyzer_receives_profile_fields(self):
         """SemanticAnalyzer gets content_type, channel_description, etc. from pipeline."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         profile = ContentProfile(
             content_type="cooking",
@@ -538,7 +538,7 @@ class TestPipelineContentProfile:
 
     def test_caption_analyzer_receives_profile_fields(self):
         """OllamaVideoAnalyzer gets all ContentProfile fields from pipeline."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         profile = ContentProfile(
             content_type="educational",
@@ -564,7 +564,7 @@ class TestPipelineContentProfile:
 
     def test_transcript_segmenter_receives_profile_fields(self):
         """TranscriptSegmenter gets content_type, channel_description, etc. from pipeline."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         profile = ContentProfile(
             content_type="gaming",
@@ -582,7 +582,7 @@ class TestPipelineContentProfile:
 
     def test_audio_analyzer_asmr_uses_default_keywords(self):
         """ASMR content type creates AudioAnalyzer with default ASMR keywords."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         profile = ContentProfile(content_type="asmr")
         config = PipelineConfig(content_profile=profile)
@@ -593,7 +593,7 @@ class TestPipelineContentProfile:
 
     def test_audio_analyzer_general_uses_engagement_keywords(self):
         """Non-ASMR content type creates AudioAnalyzer with general engagement keywords."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         profile = ContentProfile(content_type="gaming")
         config = PipelineConfig(content_profile=profile)

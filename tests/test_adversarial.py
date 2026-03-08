@@ -1,5 +1,5 @@
 """
-Adversarial tests for the Viral Clip Extractor.
+Adversarial tests for the YACG.
 
 Edge-case inputs, malformed data, and resource cleanup verification.
 These tests verify graceful degradation rather than correct output.
@@ -11,7 +11,7 @@ import tempfile
 
 import pytest
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     AudioFeatures,
     PipelineConfig,
     ProcessingResult,
@@ -39,7 +39,7 @@ def _make_config(**overrides) -> PipelineConfig:
 class TestInvalidInputs:
     def test_zero_byte_file(self):
         """Pipeline handles a zero-byte file gracefully."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             empty_file = os.path.join(tmpdir, "empty.mp4")
@@ -62,7 +62,7 @@ class TestInvalidInputs:
 
     def test_corrupt_file(self):
         """Pipeline handles random bytes as .mp4 gracefully."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             corrupt_file = os.path.join(tmpdir, "corrupt.mp4")
@@ -85,7 +85,7 @@ class TestInvalidInputs:
 
     def test_nonexistent_file(self):
         """Pipeline returns an error for nonexistent paths."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -104,7 +104,7 @@ class TestInvalidInputs:
 
     def test_directory_as_video_path(self):
         """Pipeline doesn't crash when given a directory instead of a file."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -129,7 +129,7 @@ class TestInvalidInputs:
 class TestAudioEdgeCases:
     def test_no_audio_track_full_pipeline(self, synthetic_noaudio):
         """Pipeline completes with video that has no audio track."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -151,7 +151,7 @@ class TestAudioEdgeCases:
 
     def test_audio_analyzer_negative_times(self):
         """AudioAnalyzer raises RuntimeError for unloadable audio."""
-        from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
+        from yacg.core.audio_analyzer import AudioAnalyzer
 
         analyzer = AudioAnalyzer()
         with pytest.raises(RuntimeError, match="Failed to load audio"):
@@ -166,7 +166,7 @@ class TestAudioEdgeCases:
 class TestSingleFrameEdgeCases:
     def test_single_frame_video_pipeline(self, synthetic_singleframe):
         """Pipeline handles a single-frame video without crash."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -191,7 +191,7 @@ class TestSingleFrameEdgeCases:
 class TestTitleEdgeCases:
     def test_unicode_in_title(self, synthetic_1s):
         """Unicode characters in title don't crash the pipeline."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -209,7 +209,7 @@ class TestTitleEdgeCases:
 
     def test_empty_title(self, synthetic_1s):
         """Empty title is handled by falling back to filename."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -228,7 +228,7 @@ class TestTitleEdgeCases:
 
     def test_very_long_title(self, synthetic_1s):
         """Very long title doesn't crash the pipeline."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -253,7 +253,7 @@ class TestTitleEdgeCases:
 class TestOutputDirEdgeCases:
     def test_output_dir_does_not_exist(self, synthetic_1s):
         """Pipeline with no-speech video returns error (transcript-first)."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             new_dir = os.path.join(tmpdir, "nested", "deep", "output")
@@ -280,7 +280,7 @@ class TestOutputDirEdgeCases:
 class TestConfigEdgeCases:
     def test_min_score_100(self, synthetic_1s):
         """min_score=100 yields zero clips (nothing scores 100)."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -298,7 +298,7 @@ class TestConfigEdgeCases:
 
     def test_top_n_zero(self, synthetic_1s):
         """top_n=0 yields zero clips."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -316,7 +316,7 @@ class TestConfigEdgeCases:
 
     def test_negative_min_score(self, synthetic_1s):
         """Negative min_score doesn't crash — all clips pass."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -340,7 +340,7 @@ class TestConfigEdgeCases:
 class TestScorerEdgeCases:
     def test_scorer_all_zero_inputs(self):
         """Scorer handles all-zero features without crashing."""
-        from viral_clip_extractor.core.virality_scorer import ViralityScorer
+        from yacg.core.virality_scorer import ViralityScorer
 
         scorer = ViralityScorer()
         audio = AudioFeatures(
@@ -358,7 +358,7 @@ class TestScorerEdgeCases:
 
     def test_scorer_extreme_values(self):
         """Scorer clamps extreme input values properly."""
-        from viral_clip_extractor.core.virality_scorer import ViralityScorer
+        from yacg.core.virality_scorer import ViralityScorer
 
         scorer = ViralityScorer()
         audio = AudioFeatures(
@@ -375,7 +375,7 @@ class TestScorerEdgeCases:
 
     def test_scorer_zero_duration(self):
         """Scorer handles zero duration gracefully."""
-        from viral_clip_extractor.core.virality_scorer import ViralityScorer
+        from yacg.core.virality_scorer import ViralityScorer
 
         scorer = ViralityScorer()
         audio = AudioFeatures(
@@ -400,26 +400,26 @@ class TestScorerEdgeCases:
 class TestCLIEdgeCases:
     def test_cli_no_args(self):
         """CLI with no arguments returns non-zero exit code."""
-        from viral_clip_extractor.cli import main as cli_main
+        from yacg.cli import main as cli_main
         exit_code = cli_main([])
         assert exit_code == 1
 
     def test_cli_invalid_command(self):
         """CLI with invalid subcommand exits non-zero."""
-        from viral_clip_extractor.cli import main as cli_main
+        from yacg.cli import main as cli_main
         # argparse will exit with SystemExit for unrecognized commands
         with pytest.raises(SystemExit):
             cli_main(["nonexistent_command"])
 
     def test_cli_process_missing_required_args(self):
         """process subcommand without --video fails."""
-        from viral_clip_extractor.cli import main as cli_main
+        from yacg.cli import main as cli_main
         with pytest.raises(SystemExit):
             cli_main(["process"])
 
     def test_cli_help_exits_zero(self):
         """--help exits with code 0."""
-        from viral_clip_extractor.cli import main as cli_main
+        from yacg.cli import main as cli_main
         with pytest.raises(SystemExit) as exc_info:
             cli_main(["--help"])
         assert exc_info.value.code == 0
@@ -433,7 +433,7 @@ class TestCLIEdgeCases:
 class TestSceneDetectorEdgeCases:
     def test_scene_detector_nonexistent_file(self):
         """SceneDetector raises for nonexistent file."""
-        from viral_clip_extractor.core.scene_detector import SceneDetector
+        from yacg.core.scene_detector import SceneDetector
 
         detector = SceneDetector()
         with pytest.raises(FileNotFoundError):
@@ -441,7 +441,7 @@ class TestSceneDetectorEdgeCases:
 
     def test_scene_detector_zero_byte_file(self):
         """SceneDetector raises for zero-byte file."""
-        from viral_clip_extractor.core.scene_detector import SceneDetector
+        from yacg.core.scene_detector import SceneDetector
 
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
             path = f.name

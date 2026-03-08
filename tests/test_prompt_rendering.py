@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
-from viral_clip_extractor.transcript_segmenter import TranscriptSegmenter
+from yacg.core.semantic_analyzer import SemanticAnalyzer
+from yacg.transcript_segmenter import TranscriptSegmenter
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +257,7 @@ class TestCaptionPrompt:
     """OllamaVideoAnalyzer._create_caption_prompt content awareness."""
 
     def test_asmr_vs_general_different(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         asmr = OllamaVideoAnalyzer(content_type="asmr")
         general = OllamaVideoAnalyzer(content_type="general")
@@ -266,42 +266,42 @@ class TestCaptionPrompt:
         assert asmr_prompt != general_prompt
 
     def test_asmr_prompt_mentions_asmr(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="asmr")
         prompt = analyzer._create_caption_prompt("Test")
         assert "ASMR" in prompt or "asmr" in prompt.lower()
 
     def test_general_prompt_mentions_strategist(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("Test")
         assert "strategist" in prompt.lower() or "content" in prompt.lower()
 
     def test_prompt_requests_json_output(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("Test")
         assert "JSON" in prompt
 
     def test_prompt_includes_title(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("My Amazing Video")
         assert "My Amazing Video" in prompt
 
     def test_prompt_requests_hook(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("Test")
         assert "HOOK" in prompt or "hook" in prompt
 
     def test_transcript_text_injected(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("Test", transcript_text="Hello world this is a test")
@@ -309,42 +309,42 @@ class TestCaptionPrompt:
         assert "TRANSCRIPT" in prompt
 
     def test_transcript_text_absent_when_empty(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("Test", transcript_text="")
         assert "TRANSCRIPT" not in prompt
 
     def test_tone_injected_in_caption(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general", tone="energetic")
         prompt = analyzer._create_caption_prompt("Test")
         assert "energetic" in prompt
 
     def test_platform_tiktok_injected(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general", platform="tiktok")
         prompt = analyzer._create_caption_prompt("Test")
         assert "TikTok" in prompt
 
     def test_platform_reels_injected(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="cooking", platform="reels")
         prompt = analyzer._create_caption_prompt("Test")
         assert "Reels" in prompt
 
     def test_platform_shorts_injected(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="educational", platform="shorts")
         prompt = analyzer._create_caption_prompt("Test")
         assert "Shorts" in prompt
 
     def test_caption_length_affects_prompt(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         short_analyzer = OllamaVideoAnalyzer(content_type="general", caption_length="short")
         long_analyzer = OllamaVideoAnalyzer(content_type="general", caption_length="long")
@@ -354,7 +354,7 @@ class TestCaptionPrompt:
         assert "(long)" in long_prompt
 
     def test_channel_description_injected_in_caption(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(
             content_type="general",
@@ -364,7 +364,7 @@ class TestCaptionPrompt:
         assert "urban gardening" in prompt
 
     def test_empty_channel_not_injected_in_caption(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(content_type="general", channel_description="")
         prompt = analyzer._create_caption_prompt("Test")
@@ -390,7 +390,7 @@ class TestAllPromptsRequestJSON:
         assert "JSON" in prompt
 
     def test_caption_json(self):
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
         analyzer = OllamaVideoAnalyzer(content_type="general")
         prompt = analyzer._create_caption_prompt("Title")
         assert "JSON" in prompt

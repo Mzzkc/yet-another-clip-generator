@@ -1,5 +1,5 @@
 """
-Shared test fixtures for the Viral Clip Extractor test suite.
+Shared test fixtures for the YACG test suite.
 
 Provides session-scoped fixtures for synthetic and real video test files.
 Synthetic fixtures are auto-created via FFmpeg; the rickroll fixture
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-FIXTURE_DIR = Path("/tmp/vce_test_fixtures")
+FIXTURE_DIR = Path("/tmp/yacg_test_fixtures")
 
 
 @pytest.fixture(scope="session")

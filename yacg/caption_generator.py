@@ -14,7 +14,7 @@ from typing import Optional
 
 import requests
 
-from viral_clip_extractor.models import CaptionData
+from yacg.models import CaptionData
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ class OllamaVideoAnalyzer:
         Returns an empty list if all extractions fail.
         """
         try:
-            from viral_clip_extractor.utils.video_utils import (
+            from yacg.utils.video_utils import (
                 extract_metadata,
                 get_frame_at_time,
             )

@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     CONTENT_PRESETS,
     VALID_CAPTION_LENGTHS,
     VALID_CONTENT_TYPES,

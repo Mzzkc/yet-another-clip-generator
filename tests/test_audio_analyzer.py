@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer, _DEFAULT_ASMR_KEYWORDS
-from viral_clip_extractor.models import AudioFeatures
+from yacg.core.audio_analyzer import AudioAnalyzer, _DEFAULT_ASMR_KEYWORDS
+from yacg.models import AudioFeatures
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ class TestInit:
 # ---------------------------------------------------------------------------
 
 class TestAnalyzeSegment:
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_returns_audio_features(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """analyze_segment returns an AudioFeatures dataclass."""
         mock_trigger.return_value = []
@@ -80,7 +80,7 @@ class TestAnalyzeSegment:
         assert result.audio_peak_score > 0
         assert result.overall_energy > 0
 
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_high_freq_score_computation(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """High-freq score reflects fraction of spectral centroid > 4 kHz."""
         mock_trigger.return_value = []
@@ -100,7 +100,7 @@ class TestAnalyzeSegment:
         # All centroid frames > 4000, so base score = 1.0 (may get crinkle boost capped at 1.0)
         assert result.high_freq_score >= 0.9
 
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_dynamic_range_and_zcr(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """Dynamic range is std of RMS, zcr_score is mean of zero-crossing rate."""
         mock_trigger.return_value = []
@@ -141,7 +141,7 @@ class TestEdgeCases:
         assert isinstance(result, AudioFeatures)
         assert result.audio_peak_score == 0.0
 
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_empty_audio_returns_zeros(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """Empty audio array from librosa.load yields zeros."""
         mock_trigger.return_value = []
@@ -152,7 +152,7 @@ class TestEdgeCases:
         assert result.audio_peak_score == 0.0
         assert result.high_freq_score == 0.0
 
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_librosa_load_exception(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """If librosa.load raises, raise RuntimeError (failure = error)."""
         mock_trigger.return_value = []
@@ -193,7 +193,7 @@ class TestTriggerWords:
 
         with patch.dict("sys.modules", {"faster_whisper": mock_whisper_module}):
             with patch(
-                "viral_clip_extractor.utils.video_utils.extract_audio"
+                "yacg.utils.video_utils.extract_audio"
             ):
                 result = analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
 
@@ -215,7 +215,7 @@ class TestTriggerWords:
 
         with patch.dict("sys.modules", {"faster_whisper": mock_whisper_module}):
             with patch(
-                "viral_clip_extractor.utils.video_utils.extract_audio"
+                "yacg.utils.video_utils.extract_audio"
             ):
                 result = analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
 
@@ -249,7 +249,7 @@ class TestTriggerWords:
 
         with patch.dict("sys.modules", {"faster_whisper": mock_whisper_module}):
             with patch(
-                "viral_clip_extractor.utils.video_utils.extract_audio"
+                "yacg.utils.video_utils.extract_audio"
             ):
                 result = custom_analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
 
@@ -262,7 +262,7 @@ class TestTriggerWords:
 # ---------------------------------------------------------------------------
 
 class TestASMRDetections:
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_tapping_detection_boosts_peak(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """Dense onsets (tapping) boost the audio_peak_score."""
         mock_trigger.return_value = []
@@ -285,7 +285,7 @@ class TestASMRDetections:
         # Base peak = percentile(90) of [0.1] = 0.1, tapping should add a boost
         assert result.audio_peak_score > float(np.percentile(base_rms, 90))
 
-    @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
+    @patch("yacg.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_onset_detect_failure_does_not_crash(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
         """If onset detection raises, analysis still completes."""
         mock_trigger.return_value = []

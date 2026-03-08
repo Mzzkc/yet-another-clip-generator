@@ -1,5 +1,5 @@
 """
-Command-line interface for the Viral Clip Extractor.
+Command-line interface for Yet Another Clip Generator (YACG).
 
 Provides ``process``, ``youtube``, ``batch``, and ``check`` subcommands
 for running the pipeline on local files, YouTube URLs, or entire directories.
@@ -228,7 +228,7 @@ def _build_config(args: argparse.Namespace):
     """Build PipelineConfig from parsed CLI arguments."""
     import json as _json
 
-    from viral_clip_extractor.utils.config import load_config
+    from yacg.utils.config import load_config
 
     config = load_config(getattr(args, "config", None))
 
@@ -250,7 +250,7 @@ def _build_config(args: argparse.Namespace):
             overrides = _json.loads(raw_weights)
             config.scoring_weights.update(overrides)
             # Re-validate after mutation — catches typo'd keys like "hooks"
-            from viral_clip_extractor.models import VALID_SCORING_KEYS
+            from yacg.models import VALID_SCORING_KEYS
             invalid_keys = set(config.scoring_weights.keys()) - VALID_SCORING_KEYS
             if invalid_keys:
                 raise ValueError(
@@ -283,7 +283,7 @@ def _build_config(args: argparse.Namespace):
     content_type_arg = getattr(args, "content_type", None)
     if content_type_arg:
         from copy import deepcopy
-        from viral_clip_extractor.models import CONTENT_PRESETS
+        from yacg.models import CONTENT_PRESETS
         preset = CONTENT_PRESETS.get(content_type_arg)
         if preset:
             config.content_profile = deepcopy(preset)
@@ -352,15 +352,15 @@ def build_parser() -> argparse.ArgumentParser:
         A configured ArgumentParser.
     """
     parser = argparse.ArgumentParser(
-        prog="viral-clip-extractor",
+        prog="yacg",
         description="Extract viral-potential clips from long-form videos",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:
-  python -m viral_clip_extractor process --video video.mp4 --title "My Video"
-  python -m viral_clip_extractor youtube --url https://youtube.com/watch?v=XXXXX
-  python -m viral_clip_extractor batch --videos-dir /path/to/videos/
-  python -m viral_clip_extractor check
+  python -m yacg process --video video.mp4 --title "My Video"
+  python -m yacg youtube --url https://youtube.com/watch?v=XXXXX
+  python -m yacg batch --videos-dir /path/to/videos/
+  python -m yacg check
 """,
     )
 
@@ -453,7 +453,7 @@ def _print_error_summary(errors: list[str]) -> None:
 
 def _cmd_process(args: argparse.Namespace) -> int:
     """Handle the 'process' subcommand."""
-    from viral_clip_extractor.pipeline import ViralClipPipeline
+    from yacg.pipeline import ViralClipPipeline
 
     config = _build_config(args)
     logger = logging.getLogger(__name__)
@@ -473,7 +473,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
 
 def _cmd_youtube(args: argparse.Namespace) -> int:
     """Handle the 'youtube' subcommand."""
-    from viral_clip_extractor.pipeline import ViralClipPipeline
+    from yacg.pipeline import ViralClipPipeline
 
     config = _build_config(args)
     yt_logger = logging.getLogger(__name__)
@@ -499,7 +499,7 @@ def _cmd_youtube(args: argparse.Namespace) -> int:
 
 def _cmd_batch(args: argparse.Namespace) -> int:
     """Handle the 'batch' subcommand."""
-    from viral_clip_extractor.pipeline import ViralClipPipeline
+    from yacg.pipeline import ViralClipPipeline
 
     batch_logger = logging.getLogger(__name__)
     videos_dir = Path(args.videos_dir)
@@ -674,7 +674,7 @@ def _cmd_check(_args: argparse.Namespace) -> int:
     # DNN face detection model check
     dnn_model_dirs = [
         str(Path(__file__).resolve().parent / "models"),
-        str(Path.home() / ".vce" / "models"),
+        str(Path.home() / ".yacg" / "models"),
     ]
     dnn_found = False
     for d in dnn_model_dirs:
@@ -702,7 +702,7 @@ def _cmd_check(_args: argparse.Namespace) -> int:
 
 def _cmd_show_config(args: argparse.Namespace) -> int:
     """Handle the 'show-config' subcommand — display current config."""
-    from viral_clip_extractor.utils.config import load_config
+    from yacg.utils.config import load_config
 
     config = load_config(getattr(args, "config", None))
     descriptions = {
@@ -779,7 +779,7 @@ def _cmd_show_config(args: argparse.Namespace) -> int:
 
 def _cmd_generate_config(args: argparse.Namespace) -> int:
     """Handle the 'generate-config' subcommand — write a default INI config."""
-    from viral_clip_extractor.utils.config import save_default_config
+    from yacg.utils.config import save_default_config
 
     output_path = args.output
     if os.path.exists(output_path):
@@ -840,7 +840,7 @@ def main(argv: list[str] | None = None) -> int:
     # Cache result via marker file to avoid ~100ms startup penalty on
     # every invocation. Marker is valid for 24 hours.
     if args.command not in ("check", "show-config", "generate-config"):
-        marker = Path.home() / ".vce_bootstrap_ok"
+        marker = Path.home() / ".yacg_bootstrap_ok"
         skip_bootstrap = False
         if marker.exists():
             import time as _time
@@ -849,7 +849,7 @@ def main(argv: list[str] | None = None) -> int:
                 skip_bootstrap = True
 
         if not skip_bootstrap:
-            from viral_clip_extractor.bootstrap import ensure_ready
+            from yacg.bootstrap import ensure_ready
 
             if not ensure_ready(verbose=verbose):
                 print("Some required dependencies are missing. Run 'check' for details.")

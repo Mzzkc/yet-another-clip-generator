@@ -15,8 +15,8 @@ from typing import Optional
 
 import requests
 
-from viral_clip_extractor.models import SemanticFeatures
-from viral_clip_extractor.utils.video_utils import get_frame_at_time
+from yacg.models import SemanticFeatures
+from yacg.utils.video_utils import get_frame_at_time
 
 logger = logging.getLogger(__name__)
 

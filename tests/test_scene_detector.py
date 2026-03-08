@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.models import SceneSegment
+from yacg.models import SceneSegment
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ def _scene_pair(start: float, end: float) -> tuple:
 @pytest.fixture()
 def detector():
     """Return a SceneDetector with default settings."""
-    from viral_clip_extractor.core.scene_detector import SceneDetector
+    from yacg.core.scene_detector import SceneDetector
 
     return SceneDetector(threshold=3.0, min_scene_len=7.0, max_scene_len=60.0)
 
@@ -44,7 +44,7 @@ def detector():
 @pytest.fixture()
 def detector_tight():
     """Return a SceneDetector with tight min/max for easier split/merge testing."""
-    from viral_clip_extractor.core.scene_detector import SceneDetector
+    from yacg.core.scene_detector import SceneDetector
 
     return SceneDetector(threshold=3.0, min_scene_len=5.0, max_scene_len=20.0)
 
@@ -54,9 +54,9 @@ def detector_tight():
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
-@patch("viral_clip_extractor.core.scene_detector.detect")
-@patch("viral_clip_extractor.core.scene_detector.AdaptiveDetector")
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector.detect")
+@patch("yacg.core.scene_detector.AdaptiveDetector")
 def test_detect_scenes_basic(mock_adaptive, mock_detect, detector, tmp_path):
     """Basic scene detection returns correctly typed SceneSegment objects."""
     # Create a dummy video file so the path check passes
@@ -87,10 +87,10 @@ def test_detect_scenes_basic(mock_adaptive, mock_detect, detector, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
-@patch("viral_clip_extractor.core.scene_detector.open_video")
-@patch("viral_clip_extractor.core.scene_detector.detect")
-@patch("viral_clip_extractor.core.scene_detector.AdaptiveDetector")
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector.open_video")
+@patch("yacg.core.scene_detector.detect")
+@patch("yacg.core.scene_detector.AdaptiveDetector")
 def test_detect_scenes_no_boundaries(
     mock_adaptive, mock_detect, mock_open_video, detector, tmp_path
 ):
@@ -118,10 +118,10 @@ def test_detect_scenes_no_boundaries(
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
-@patch("viral_clip_extractor.core.scene_detector.open_video")
-@patch("viral_clip_extractor.core.scene_detector.detect")
-@patch("viral_clip_extractor.core.scene_detector.AdaptiveDetector")
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector.open_video")
+@patch("yacg.core.scene_detector.detect")
+@patch("yacg.core.scene_detector.AdaptiveDetector")
 def test_detect_scenes_very_short_video(
     mock_adaptive, mock_detect, mock_open_video, detector, tmp_path
 ):
@@ -145,7 +145,7 @@ def test_detect_scenes_very_short_video(
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
 def test_detect_scenes_file_not_found(detector):
     """Raises FileNotFoundError for a non-existent path."""
     with pytest.raises(FileNotFoundError, match="Video not found"):
@@ -157,9 +157,9 @@ def test_detect_scenes_file_not_found(detector):
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
-@patch("viral_clip_extractor.core.scene_detector.detect")
-@patch("viral_clip_extractor.core.scene_detector.AdaptiveDetector")
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector.detect")
+@patch("yacg.core.scene_detector.AdaptiveDetector")
 def test_detect_scenes_corrupt_file(mock_adaptive, mock_detect, detector, tmp_path):
     """Raises RuntimeError when scenedetect fails on a corrupt file."""
     video_file = tmp_path / "corrupt.mp4"
@@ -176,7 +176,7 @@ def test_detect_scenes_corrupt_file(mock_adaptive, mock_detect, detector, tmp_pa
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", False)
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", False)
 def test_detect_scenes_missing_dependency(detector):
     """Raises ImportError with install instructions when scenedetect is absent."""
     with pytest.raises(ImportError, match="pip install scenedetect"):
@@ -284,12 +284,12 @@ def test_split_short_scene_unchanged(detector):
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
-@patch("viral_clip_extractor.core.scene_detector.detect")
-@patch("viral_clip_extractor.core.scene_detector.AdaptiveDetector")
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector.detect")
+@patch("yacg.core.scene_detector.AdaptiveDetector")
 def test_detect_scenes_merge_and_split(mock_adaptive, mock_detect, tmp_path):
     """End-to-end: short scenes merge, long scenes split, indices are sequential."""
-    from viral_clip_extractor.core.scene_detector import SceneDetector
+    from yacg.core.scene_detector import SceneDetector
 
     video_file = tmp_path / "full.mp4"
     video_file.write_bytes(b"\x00" * 100)
@@ -324,8 +324,8 @@ def test_detect_scenes_merge_and_split(mock_adaptive, mock_detect, tmp_path):
 
 def test_init_with_pipeline_config():
     """SceneDetector reads parameters from PipelineConfig."""
-    from viral_clip_extractor.core.scene_detector import SceneDetector
-    from viral_clip_extractor.models import PipelineConfig
+    from yacg.core.scene_detector import SceneDetector
+    from yacg.models import PipelineConfig
 
     config = PipelineConfig(
         scene_threshold=2.5,
@@ -341,7 +341,7 @@ def test_init_with_pipeline_config():
 
 def test_init_with_direct_params():
     """SceneDetector uses direct parameters when no config is given."""
-    from viral_clip_extractor.core.scene_detector import SceneDetector
+    from yacg.core.scene_detector import SceneDetector
 
     det = SceneDetector(threshold=4.0, min_scene_len=8.0, max_scene_len=50.0)
 
@@ -355,10 +355,10 @@ def test_init_with_direct_params():
 # ---------------------------------------------------------------------------
 
 
-@patch("viral_clip_extractor.core.scene_detector._HAS_SCENEDETECT", True)
-@patch("viral_clip_extractor.core.scene_detector.open_video")
-@patch("viral_clip_extractor.core.scene_detector.detect")
-@patch("viral_clip_extractor.core.scene_detector.AdaptiveDetector")
+@patch("yacg.core.scene_detector._HAS_SCENEDETECT", True)
+@patch("yacg.core.scene_detector.open_video")
+@patch("yacg.core.scene_detector.detect")
+@patch("yacg.core.scene_detector.AdaptiveDetector")
 def test_duration_fallback_failure(
     mock_adaptive, mock_detect, mock_open_video, detector, tmp_path
 ):

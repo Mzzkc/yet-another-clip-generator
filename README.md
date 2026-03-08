@@ -1,4 +1,4 @@
-# Viral Clip Extractor
+# YACG — Yet Another Clip Generator
 
 Automatically extract viral-potential short-form clips from long-form video.
 Takes a video (local file or YouTube URL), detects scenes, scores viral
@@ -29,22 +29,22 @@ pip install -e ".[dev]"
 
 ```bash
 # Check environment
-vce check
+yacg check
 
 # Process a local video
-vce process --video video.mp4 --title "My Video"
+yacg process --video video.mp4 --title "My Video"
 
 # Process a YouTube video
-vce youtube --url https://youtube.com/watch?v=XXXXX
+yacg youtube --url https://youtube.com/watch?v=XXXXX
 
 # Batch process a directory
-vce batch --videos-dir /path/to/videos/
+yacg batch --videos-dir /path/to/videos/
 ```
 
 ## Project Structure
 
 ```
-viral_clip_extractor/       # Main package
+yacg/                       # Main package
     core/                   # Analysis engines (audio, scene, semantic, visual, virality)
     extractors/             # Clip extraction and smart cropping
     utils/                  # Config and video utilities

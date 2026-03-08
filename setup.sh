@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Viral Clip Extractor — Setup Script
+# YACG — Yet Another Clip Generator — Setup Script
 # =============================================================================
-# Installs dependencies and verifies the environment for viral_clip_extractor.
+# Installs dependencies and verifies the environment for yacg.
 #
 # Usage:
 #   git clone <repo> && cd yacg && ./setup.sh
@@ -37,7 +37,7 @@ header()  { echo -e "\n${BOLD}${CYAN}$*${NC}"; }
 
 # -- Header -------------------------------------------------------------------
 header "==========================================="
-header "  Viral Clip Extractor — Setup"
+header "  Yet Another Clip Generator — Setup"
 header "==========================================="
 echo ""
 
@@ -262,10 +262,10 @@ header "Verifying installation..."
 VERIFY_OK=true
 
 # Suppress known third-party warnings during verification
-if python3 -W ignore::FutureWarning -W ignore::UserWarning -m viral_clip_extractor check 2>/dev/null; then
-    success "viral_clip_extractor check passed"
+if python3 -W ignore::FutureWarning -W ignore::UserWarning -m yacg check 2>/dev/null; then
+    success "yacg check passed"
 else
-    warn "viral_clip_extractor check reported issues (may be OK for optional deps)"
+    warn "yacg check reported issues (may be OK for optional deps)"
     VERIFY_OK=false
 fi
 
@@ -351,10 +351,10 @@ fi
 
 echo ""
 echo -e "  ${BOLD}Quick start:${NC}"
-echo -e "    python -m viral_clip_extractor check"
-echo -e "    python -m viral_clip_extractor process --video ${CYAN}video.mp4${NC} --title ${CYAN}\"My Video\"${NC}"
-echo -e "    python -m viral_clip_extractor youtube --url ${CYAN}https://youtube.com/watch?v=XXXXX${NC}"
-echo -e "    python -m viral_clip_extractor batch --videos-dir ${CYAN}/path/to/videos/${NC}"
+echo -e "    python -m yacg check"
+echo -e "    python -m yacg process --video ${CYAN}video.mp4${NC} --title ${CYAN}\"My Video\"${NC}"
+echo -e "    python -m yacg youtube --url ${CYAN}https://youtube.com/watch?v=XXXXX${NC}"
+echo -e "    python -m yacg batch --videos-dir ${CYAN}/path/to/videos/${NC}"
 echo ""
 echo -e "  ${BOLD}Useful flags:${NC}"
 echo -e "    --min-score 0     Accept all clips regardless of score"

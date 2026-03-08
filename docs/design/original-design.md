@@ -1,4 +1,4 @@
-# Viral Clip Extractor - System Design Document
+# YACG - System Design Document
 
 ## 🎯 Executive Summary
 

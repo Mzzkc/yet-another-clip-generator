@@ -1,5 +1,5 @@
 """
-Video utility functions for the Viral Clip Extractor.
+Video utility functions for the YACG.
 
 Wraps FFmpeg/FFprobe operations for metadata extraction, audio extraction,
 segment cutting, and frame capture. Follows patterns from the existing

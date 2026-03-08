@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from viral_clip_extractor.models import PipelineConfig, SceneSegment
+from yacg.models import PipelineConfig, SceneSegment
 
 logger = logging.getLogger(__name__)
 

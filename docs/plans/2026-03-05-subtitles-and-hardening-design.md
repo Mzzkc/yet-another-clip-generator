@@ -5,7 +5,7 @@
 
 ## Problem
 
-VCE produces clips without burned-in subtitles, making them unusable for TikTok/Reels/Shorts without manual post-processing. The tool also has `--no-semantic`, `--no-captions`, and `--no-vertical` flags that allow disabling core features, creating a false sense of reliability by silently degrading output quality instead of surfacing failures.
+YACG produces clips without burned-in subtitles, making them unusable for TikTok/Reels/Shorts without manual post-processing. The tool also has `--no-semantic`, `--no-captions`, and `--no-vertical` flags that allow disabling core features, creating a false sense of reliability by silently degrading output quality instead of surfacing failures.
 
 Additionally, the current pipeline uses PySceneDetect (visual transitions) as the primary segmentation signal, which produces arbitrary clip boundaries that don't align with speech content. Viral clips are defined by what's being *said* — complete thoughts, hooks, narrative arcs — not by visual cuts. The pipeline needs to be inverted: transcript-first segmentation using LLM analysis of the full Whisper transcription.
 
@@ -13,7 +13,7 @@ Finally, the project lacks documentation. It needs a GitHub Pages documentation 
 
 ## Product Context
 
-VCE replaces paid services like OpusClip. It takes long-form video and produces ready-to-post short-form clips with:
+YACG replaces paid services like OpusClip. It takes long-form video and produces ready-to-post short-form clips with:
 - Semantic analysis for intelligent clip selection
 - Vertical 9:16 crop with face-aware framing
 - Speech-to-text subtitles (TikTok word-pop style)
@@ -128,19 +128,19 @@ Vertical 9:16 crop is mandatory. Remove:
 
 | File | Change |
 |------|--------|
-| `viral_clip_extractor/transcript_segmenter.py` | **New** — LLM-driven transcript segmentation |
-| `viral_clip_extractor/subtitle_burner.py` | **New** — ASS generation + FFmpeg burn-in (receives pre-computed words) |
-| `viral_clip_extractor/pipeline.py` | **Major rewrite** — transcript-first flow, subtitle step, no conditionals |
-| `viral_clip_extractor/models.py` | Remove toggle fields, add `whisper_model`, transcript/subtitle fields |
-| `viral_clip_extractor/cli.py` | Remove 3 flags, add `--whisper-model` |
-| `viral_clip_extractor/core/semantic_analyzer.py` | Delete `_default_features()`, raise on failure |
-| `viral_clip_extractor/caption_generator.py` | Raise on failure, no `None` returns |
-| `viral_clip_extractor/extractors/clip_extractor.py` | Remove `vertical` param (always crop) |
-| `viral_clip_extractor/extractors/smart_cropper.py` | Fix fallback crop logic (visual-focus center) |
-| `viral_clip_extractor/core/scene_detector.py` | Demoted to optional boundary refinement |
-| `viral_clip_extractor/transcript_bridge.py` | **Removed/deprecated** — replaced by direct faster-whisper |
-| `viral_clip_extractor/bootstrap.py` | `faster_whisper` → required dep |
-| `viral_clip_extractor/utils/config.py` | Remove INI reads for removed fields |
+| `yacg/transcript_segmenter.py` | **New** — LLM-driven transcript segmentation |
+| `yacg/subtitle_burner.py` | **New** — ASS generation + FFmpeg burn-in (receives pre-computed words) |
+| `yacg/pipeline.py` | **Major rewrite** — transcript-first flow, subtitle step, no conditionals |
+| `yacg/models.py` | Remove toggle fields, add `whisper_model`, transcript/subtitle fields |
+| `yacg/cli.py` | Remove 3 flags, add `--whisper-model` |
+| `yacg/core/semantic_analyzer.py` | Delete `_default_features()`, raise on failure |
+| `yacg/caption_generator.py` | Raise on failure, no `None` returns |
+| `yacg/extractors/clip_extractor.py` | Remove `vertical` param (always crop) |
+| `yacg/extractors/smart_cropper.py` | Fix fallback crop logic (visual-focus center) |
+| `yacg/core/scene_detector.py` | Demoted to optional boundary refinement |
+| `yacg/transcript_bridge.py` | **Removed/deprecated** — replaced by direct faster-whisper |
+| `yacg/bootstrap.py` | `faster_whisper` → required dep |
+| `yacg/utils/config.py` | Remove INI reads for removed fields |
 | `tests/*.py` | Rewrite flag-combo tests, add segmentation/subtitle/failure tests |
 | `docs/` | **New** — GitHub Pages documentation site |
 

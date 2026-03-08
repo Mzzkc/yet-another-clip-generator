@@ -1,25 +1,25 @@
 # API Reference
 
-This page documents the key public classes and functions in the `viral_clip_extractor` package.
+This page documents the key public classes and functions in the `yacg` package.
 
 ## Public Exports
 
-The package exports these symbols from `viral_clip_extractor/__init__.py`:
+The package exports these symbols from `yacg/__init__.py`:
 
 ```python
-from viral_clip_extractor import ClipData, PipelineConfig, ViralClipPipeline, __version__
+from yacg import ClipData, PipelineConfig, ViralClipPipeline, __version__
 ```
 
 ## Data Models
 
-All data models are defined in `viral_clip_extractor/models.py`.
+All data models are defined in `yacg/models.py`.
 
 ### PipelineConfig
 
 Configuration for the viral clip extraction pipeline.
 
 ```python
-from viral_clip_extractor.models import PipelineConfig
+from yacg.models import PipelineConfig
 
 config = PipelineConfig(
     model_name="qwen2.5-vl:7b",
@@ -246,10 +246,10 @@ class ProcessingResult:
 
 ### ViralClipPipeline
 
-The main orchestrator class. Defined in `viral_clip_extractor/pipeline.py`.
+The main orchestrator class. Defined in `yacg/pipeline.py`.
 
 ```python
-from viral_clip_extractor import PipelineConfig, ViralClipPipeline
+from yacg import PipelineConfig, ViralClipPipeline
 
 config = PipelineConfig(output_dir="./my_clips")
 pipeline = ViralClipPipeline(config=config)
@@ -402,10 +402,10 @@ class ClipExtractorProtocol(Protocol):
 
 ### AudioAnalyzer
 
-Computes audio features using librosa. Defined in `viral_clip_extractor/core/audio_analyzer.py`.
+Computes audio features using librosa. Defined in `yacg/core/audio_analyzer.py`.
 
 ```python
-from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
+from yacg.core.audio_analyzer import AudioAnalyzer
 
 analyzer = AudioAnalyzer(asmr_keywords=["tapping", "scratching", "whispering"])
 features = analyzer.analyze_segment(
@@ -421,10 +421,10 @@ Detects: audio peaks, high-frequency content, tapping (onset transients), crinkl
 
 ### VisualAnalyzer
 
-Computes visual features using OpenCV. Defined in `viral_clip_extractor/core/visual_analyzer.py`.
+Computes visual features using OpenCV. Defined in `yacg/core/visual_analyzer.py`.
 
 ```python
-from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+from yacg.core.visual_analyzer import VisualAnalyzer
 
 analyzer = VisualAnalyzer(config=config)  # optional PipelineConfig
 features = analyzer.analyze_segment(
@@ -439,10 +439,10 @@ Computes: motion (optical flow), face presence (DNN SSD detector with Haar casca
 
 ### SemanticAnalyzer
 
-Semantic analysis via Ollama VLM. Defined in `viral_clip_extractor/core/semantic_analyzer.py`.
+Semantic analysis via Ollama VLM. Defined in `yacg/core/semantic_analyzer.py`.
 
 ```python
-from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+from yacg.core.semantic_analyzer import SemanticAnalyzer
 
 analyzer = SemanticAnalyzer(
     model="qwen2.5-vl:7b",
@@ -463,10 +463,10 @@ Extracts `num_frames` JPEG frames at evenly-spaced positions and sends them to t
 
 ### ViralityScorer
 
-Weighted multi-signal scoring engine. Defined in `viral_clip_extractor/core/virality_scorer.py`.
+Weighted multi-signal scoring engine. Defined in `yacg/core/virality_scorer.py`.
 
 ```python
-from viral_clip_extractor.core.virality_scorer import ViralityScorer
+from yacg.core.virality_scorer import ViralityScorer
 
 scorer = ViralityScorer(weights={...}, config=config)
 score = scorer.calculate_score(
@@ -486,10 +486,10 @@ When `semantic` is `None`, semantic weights are redistributed proportionally to 
 
 ### ClipExtractor
 
-Extracts and formats video clips. Defined in `viral_clip_extractor/extractors/clip_extractor.py`.
+Extracts and formats video clips. Defined in `yacg/extractors/clip_extractor.py`.
 
 ```python
-from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+from yacg.extractors.clip_extractor import ClipExtractor
 
 extractor = ClipExtractor(context_padding=2.0, config=config)
 success = extractor.extract_clip(
@@ -504,10 +504,10 @@ Adds context padding, applies SmartCropper for 9:16 vertical format, re-encodes 
 
 ### SmartCropper
 
-Face-aware vertical cropping. Defined in `viral_clip_extractor/extractors/smart_cropper.py`.
+Face-aware vertical cropping. Defined in `yacg/extractors/smart_cropper.py`.
 
 ```python
-from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+from yacg.extractors.smart_cropper import SmartCropper
 
 cropper = SmartCropper(config=config)
 crop_params = cropper.get_crop_params(
@@ -528,11 +528,11 @@ Uses DNN SSD face detection (ResNet-10 Caffe model) with Haar cascade fallback, 
 
 ### SubtitleBurner
 
-TikTok word-pop subtitle generation and burning. Defined in `viral_clip_extractor/subtitle_burner.py`.
+TikTok word-pop subtitle generation and burning. Defined in `yacg/subtitle_burner.py`.
 
 ```python
-from viral_clip_extractor.subtitle_burner import SubtitleBurner
-from viral_clip_extractor.models import SubtitleStyle
+from yacg.subtitle_burner import SubtitleBurner
+from yacg.models import SubtitleStyle
 
 burner = SubtitleBurner()
 output_path = burner.process_clip(
@@ -553,7 +553,7 @@ Generates ASS v4+ subtitles with configurable styling and burns them via FFmpeg 
 ### Configuration
 
 ```python
-from viral_clip_extractor.utils.config import load_config, save_default_config
+from yacg.utils.config import load_config, save_default_config
 
 # Load from file (or get defaults)
 config = load_config("config.ini")
@@ -564,7 +564,7 @@ save_default_config("config.ini")
 
 ### Video Utilities
 
-Defined in `viral_clip_extractor/utils/video_utils.py`:
+Defined in `yacg/utils/video_utils.py`:
 
 | Function | Description |
 |----------|-------------|
@@ -580,10 +580,10 @@ Defined in `viral_clip_extractor/utils/video_utils.py`:
 ### Bootstrap
 
 ```python
-from viral_clip_extractor.bootstrap import ensure_ready
+from yacg.bootstrap import ensure_ready
 
 # Returns True if all dependencies are satisfied
 ready = ensure_ready(verbose=True)
 ```
 
-Checks FFmpeg/FFprobe availability and auto-installs missing Python packages via pip. Result is cached for 24 hours via `~/.vce_bootstrap_ok` marker file.
+Checks FFmpeg/FFprobe availability and auto-installs missing Python packages via pip. Result is cached for 24 hours via `~/.yacg_bootstrap_ok` marker file.

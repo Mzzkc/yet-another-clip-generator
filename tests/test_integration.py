@@ -1,9 +1,9 @@
 """
-Integration tests for the Viral Clip Extractor pipeline.
+Integration tests for the YACG pipeline.
 
 These tests exercise real code paths with real video fixtures — no mocking
 of core libraries (OpenCV, librosa, scenedetect, FFmpeg). Fixtures live at
-/tmp/vce_test_fixtures/ and are created by conftest.py or the preprocessing stage.
+/tmp/yacg_test_fixtures/ and are created by conftest.py or the preprocessing stage.
 
 Note: The pipeline is now transcript-first (Whisper + Ollama segmentation).
 Tests that use synthetic videos (no speech) will fail at transcription.
@@ -17,8 +17,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from viral_clip_extractor.cli import main as cli_main
-from viral_clip_extractor.models import (
+from yacg.cli import main as cli_main
+from yacg.models import (
     AudioFeatures,
     PipelineConfig,
     ProcessingResult,
@@ -55,7 +55,7 @@ def _make_config(**overrides) -> PipelineConfig:
 class TestSceneDetectionReal:
     def test_scene_detection_real_video(self, synthetic_1s):
         """SceneDetector.detect_scenes() with no mocks on a real video."""
-        from viral_clip_extractor.core.scene_detector import SceneDetector
+        from yacg.core.scene_detector import SceneDetector
 
         detector = SceneDetector(threshold=3.0, min_scene_len=0.5, max_scene_len=60.0)
         scenes = detector.detect_scenes(str(synthetic_1s))
@@ -68,7 +68,7 @@ class TestSceneDetectionReal:
 
     def test_scene_detection_rickroll(self, rickroll_30s):
         """SceneDetector handles a real 30s video clip."""
-        from viral_clip_extractor.core.scene_detector import SceneDetector
+        from yacg.core.scene_detector import SceneDetector
 
         detector = SceneDetector(threshold=3.0, min_scene_len=3.0, max_scene_len=60.0)
         scenes = detector.detect_scenes(str(rickroll_30s))
@@ -86,7 +86,7 @@ class TestSceneDetectionReal:
 class TestAudioAnalysisReal:
     def test_audio_analysis_real_video(self, synthetic_1s):
         """AudioAnalyzer.analyze_segment() with no mocks on real video."""
-        from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
+        from yacg.core.audio_analyzer import AudioAnalyzer
 
         analyzer = AudioAnalyzer()
         result = analyzer.analyze_segment(str(synthetic_1s), 0.0, 1.0)
@@ -98,7 +98,7 @@ class TestAudioAnalysisReal:
 
     def test_audio_analysis_no_audio_track(self, synthetic_noaudio):
         """AudioAnalyzer raises RuntimeError for video with no audio track."""
-        from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
+        from yacg.core.audio_analyzer import AudioAnalyzer
 
         analyzer = AudioAnalyzer()
         with pytest.raises(RuntimeError, match="Failed to load audio"):
@@ -113,7 +113,7 @@ class TestAudioAnalysisReal:
 class TestVisualAnalysisReal:
     def test_visual_analysis_real_video(self, synthetic_1s):
         """VisualAnalyzer.analyze_segment() with no mocks."""
-        from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+        from yacg.core.visual_analyzer import VisualAnalyzer
 
         analyzer = VisualAnalyzer(PipelineConfig())
         result = analyzer.analyze_segment(str(synthetic_1s), 0.0, 1.0)
@@ -126,7 +126,7 @@ class TestVisualAnalysisReal:
 
     def test_visual_analysis_singleframe(self, synthetic_singleframe):
         """VisualAnalyzer handles near-zero duration without crash."""
-        from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+        from yacg.core.visual_analyzer import VisualAnalyzer
 
         analyzer = VisualAnalyzer(PipelineConfig())
         result = analyzer.analyze_segment(str(synthetic_singleframe), 0.0, 0.04)
@@ -144,10 +144,10 @@ class TestVisualAnalysisReal:
 class TestScoringWithRealFeatures:
     def test_scoring_with_real_features(self, synthetic_1s):
         """Full chain: scene detect -> audio -> visual -> scorer."""
-        from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
-        from viral_clip_extractor.core.scene_detector import SceneDetector
-        from viral_clip_extractor.core.virality_scorer import ViralityScorer
-        from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+        from yacg.core.audio_analyzer import AudioAnalyzer
+        from yacg.core.scene_detector import SceneDetector
+        from yacg.core.virality_scorer import ViralityScorer
+        from yacg.core.visual_analyzer import VisualAnalyzer
 
         detector = SceneDetector(threshold=3.0, min_scene_len=0.5, max_scene_len=60.0)
         scenes = detector.detect_scenes(str(synthetic_1s))
@@ -184,7 +184,7 @@ class TestScoringWithRealFeatures:
 class TestClipExtractionReal:
     def test_clip_extraction_real_video(self, rickroll_30s):
         """ClipExtractor.extract_clip() with real FFmpeg."""
-        from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+        from yacg.extractors.clip_extractor import ClipExtractor
 
         config = _make_config()
         extractor = ClipExtractor(config=config)
@@ -208,7 +208,7 @@ class TestClipExtractionReal:
 class TestPipelineE2E:
     def test_pipeline_process_minimal(self, synthetic_1s):
         """Pipeline returns error for synthetic video with no speech (transcript-first)."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -230,7 +230,7 @@ class TestPipelineE2E:
     @pytest.mark.slow
     def test_pipeline_rickroll_basic(self, rickroll_30s):
         """Full pipeline on 30s rickroll with mocked transcript segmenter."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -272,7 +272,7 @@ class TestPipelineE2E:
 
     def test_process_nonexistent_file(self):
         """Processing a nonexistent file returns error result."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)
@@ -298,7 +298,7 @@ class TestPipelineE2E:
 class TestCSVOutput:
     def test_csv_has_expected_columns(self, synthetic_1s):
         """CSV report contains all expected column headers (with mocked segmenter)."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = _make_config(output_dir=tmpdir)

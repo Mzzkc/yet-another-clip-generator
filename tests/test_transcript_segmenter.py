@@ -10,12 +10,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     SceneSegment,
     SegmentBoundary,
     WordTimestamp,
 )
-from viral_clip_extractor.transcript_segmenter import TranscriptSegmenter
+from yacg.transcript_segmenter import TranscriptSegmenter
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ class TestFullTranscribe:
         mock_model.transcribe.return_value = (iter([mock_segment]), mock_info)
 
         with patch(
-            "viral_clip_extractor.transcript_segmenter.WhisperModel",
+            "yacg.transcript_segmenter.WhisperModel",
             return_value=mock_model,
             create=True,
         ):

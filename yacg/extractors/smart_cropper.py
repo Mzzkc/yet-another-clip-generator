@@ -9,13 +9,13 @@ Handles already-vertical and square videos gracefully.
 import logging
 from typing import Optional
 
-from viral_clip_extractor.core.visual_analyzer import (
+from yacg.core.visual_analyzer import (
     _detect_faces_in_gray,
     _validate_face_detection,
     validate_spatial_consistency,
 )
-from viral_clip_extractor.models import PipelineConfig
-from viral_clip_extractor.utils.video_utils import get_cv2 as _shared_get_cv2
+from yacg.models import PipelineConfig
+from yacg.utils.video_utils import get_cv2 as _shared_get_cv2
 
 logger = logging.getLogger(__name__)
 

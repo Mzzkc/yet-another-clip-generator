@@ -30,8 +30,7 @@ htmlcov/
 Thumbs.db
 
 # Mozart scores & state
-vce-*.yaml
-viral-clip-extractor-score.yaml
+yacg-*.yaml
 .mozart-observer.jsonl
 .mozart-outcomes.json
 .mozart-state.db

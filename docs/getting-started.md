@@ -74,7 +74,7 @@ ollama pull qwen2.5:7b      # ~4.7GB — text model for transcript segmentation
 | `qwen2.5:7b` | ~4.7GB | Fast | Default — text-only, efficient for JSON output |
 | `qwen2.5-vl:7b` | ~4.7GB | Slower | Works but wastes VRAM on unused vision encoder |
 
-### 3. Install Viral Clip Extractor
+### 3. Install YACG
 
 ```bash
 git clone https://github.com/Mzzkc/yacg.git
@@ -85,7 +85,7 @@ pip install -r requirements-clip-extractor.txt
 ### 4. Verify Setup
 
 ```bash
-python -m viral_clip_extractor check
+python -m yacg check
 ```
 
 This checks for FFmpeg, FFprobe, all Python packages, Ollama connectivity, model availability (including `qwen2.5:7b` segmentation model), Whisper model cache status, and DNN face detection model availability.
@@ -95,7 +95,7 @@ This checks for FFmpeg, FFprobe, all Python packages, Ollama connectivity, model
 ### Process a Local Video
 
 ```bash
-python -m viral_clip_extractor process \
+python -m yacg process \
   --video /path/to/video.mp4 \
   --title "My Video" \
   --output-dir ./my_clips
@@ -110,7 +110,7 @@ Output appears in `./my_clips/`:
 ### Process a YouTube Video
 
 ```bash
-python -m viral_clip_extractor youtube \
+python -m yacg youtube \
   --url "https://youtube.com/watch?v=XXXXX" \
   --top-n 5
 ```
@@ -118,7 +118,7 @@ python -m viral_clip_extractor youtube \
 ### Process a Directory of Videos
 
 ```bash
-python -m viral_clip_extractor batch \
+python -m yacg batch \
   --videos-dir /path/to/videos/ \
   --min-score 60
 ```
@@ -127,12 +127,12 @@ Each video gets its own subdirectory under `--output-dir`.
 
 ## Configuration
 
-VCE uses sensible defaults but supports INI-style configuration files for customization.
+YACG uses sensible defaults but supports INI-style configuration files for customization.
 
 ### Generate a Default Config
 
 ```bash
-python -m viral_clip_extractor generate-config --output config.ini
+python -m yacg generate-config --output config.ini
 ```
 
 This generates a fully-commented INI file with all available configuration keys and their defaults.
@@ -140,7 +140,7 @@ This generates a fully-commented INI file with all available configuration keys 
 ### Use a Config File
 
 ```bash
-python -m viral_clip_extractor process \
+python -m yacg process \
   --video video.mp4 \
   --config config.ini
 ```
@@ -274,7 +274,7 @@ Error: ffprobe: command not found
 
 ### No Clips Extracted
 
-If VCE finds segments but extracts zero clips:
+If YACG finds segments but extracts zero clips:
 
 - Lower `--min-score` (e.g., `--min-score 40`)
 - Increase `--top-n` (e.g., `--top-n 20`)

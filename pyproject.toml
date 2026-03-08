@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "viral-clip-extractor"
+name = "yacg"
 version = "0.1.0"
-description = "Extract viral-potential short-form clips from long-form video"
+description = "Yet Another Clip Generator — extract viral-potential short-form clips from long-form video"
 requires-python = ">=3.10"
 dependencies = [
     "scenedetect[opencv]>=0.6",
@@ -29,10 +29,10 @@ docs = [
 ]
 
 [project.scripts]
-vce = "viral_clip_extractor.cli:main"
+yacg = "yacg.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["viral_clip_extractor*"]
+include = ["yacg*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

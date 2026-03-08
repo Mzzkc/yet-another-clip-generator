@@ -12,7 +12,7 @@ from typing import Optional
 
 import numpy as np
 
-from viral_clip_extractor.models import AudioFeatures, WordTimestamp
+from yacg.models import AudioFeatures, WordTimestamp
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class AudioAnalyzer:
         # Extract audio to WAV first so librosa uses PySoundFile directly,
         # avoiding the deprecated audioread fallback and its warnings.
         try:
-            from viral_clip_extractor.utils.video_utils import extract_audio, temp_audio_file
+            from yacg.utils.video_utils import extract_audio, temp_audio_file
 
             with temp_audio_file(suffix=".wav") as tmp_wav:
                 extract_audio(video_path, tmp_wav, start=start_time, end=end_time)
@@ -243,7 +243,7 @@ class AudioAnalyzer:
             logger.debug("faster-whisper not installed — skipping trigger word detection")
             return []
 
-        from viral_clip_extractor.utils.video_utils import (
+        from yacg.utils.video_utils import (
             extract_audio as _extract_audio,
             temp_audio_file,
         )

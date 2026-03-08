@@ -9,7 +9,7 @@ class TestGetOsInfo:
     """Cover get_os_info() OS detection branches."""
 
     def test_get_os_info_returns_dict(self):
-        from viral_clip_extractor.bootstrap import get_os_info
+        from yacg.bootstrap import get_os_info
 
         info = get_os_info()
         assert isinstance(info, dict)
@@ -29,7 +29,7 @@ class TestGetOsInfo:
         ],
     )
     def test_get_os_info_debian_wsl(self, mock_open, mock_system):
-        from viral_clip_extractor.bootstrap import get_os_info
+        from yacg.bootstrap import get_os_info
 
         info = get_os_info()
         assert info["distro"] == "debian"
@@ -38,7 +38,7 @@ class TestGetOsInfo:
 
     @patch("platform.system", return_value="Darwin")
     def test_get_os_info_macos(self, mock_system):
-        from viral_clip_extractor.bootstrap import get_os_info
+        from yacg.bootstrap import get_os_info
 
         info = get_os_info()
         assert info["distro"] == "macos"
@@ -49,14 +49,14 @@ class TestCheckFfmpeg:
     """Cover check_ffmpeg()."""
 
     def test_check_ffmpeg_present(self):
-        from viral_clip_extractor.bootstrap import check_ffmpeg
+        from yacg.bootstrap import check_ffmpeg
 
         # We know ffmpeg is installed in this environment
         assert check_ffmpeg() is True
 
     @patch("shutil.which", return_value=None)
     def test_check_ffmpeg_missing(self, mock_which):
-        from viral_clip_extractor.bootstrap import check_ffmpeg
+        from yacg.bootstrap import check_ffmpeg
 
         assert check_ffmpeg() is False
 
@@ -65,21 +65,21 @@ class TestPrintFfmpegInstructions:
     """Cover print_ffmpeg_instructions() branches."""
 
     def test_print_for_debian(self, capsys):
-        from viral_clip_extractor.bootstrap import print_ffmpeg_instructions
+        from yacg.bootstrap import print_ffmpeg_instructions
 
         print_ffmpeg_instructions({"system": "linux", "distro": "debian"})
         captured = capsys.readouterr()
         assert "apt" in captured.out
 
     def test_print_for_unknown(self, capsys):
-        from viral_clip_extractor.bootstrap import print_ffmpeg_instructions
+        from yacg.bootstrap import print_ffmpeg_instructions
 
         print_ffmpeg_instructions({"system": "linux", "distro": None})
         captured = capsys.readouterr()
         assert "Install ffmpeg" in captured.out
 
     def test_print_for_windows(self, capsys):
-        from viral_clip_extractor.bootstrap import print_ffmpeg_instructions
+        from yacg.bootstrap import print_ffmpeg_instructions
 
         print_ffmpeg_instructions({"system": "windows", "distro": None})
         captured = capsys.readouterr()
@@ -92,13 +92,13 @@ class TestPipInstall:
     @patch("subprocess.run")
     def test_pip_install_success(self, mock_run):
         mock_run.return_value = MagicMock(returncode=0)
-        from viral_clip_extractor.bootstrap import _pip_install
+        from yacg.bootstrap import _pip_install
 
         assert _pip_install(["fake-package"]) is True
 
     @patch("subprocess.run", side_effect=Exception("fail"))
     def test_pip_install_all_fail(self, mock_run):
-        from viral_clip_extractor.bootstrap import _pip_install
+        from yacg.bootstrap import _pip_install
 
         assert _pip_install(["fake-package"]) is False
 
@@ -107,7 +107,7 @@ class TestEnsurePythonDeps:
     """Cover ensure_python_deps()."""
 
     def test_all_deps_present(self):
-        from viral_clip_extractor.bootstrap import ensure_python_deps
+        from yacg.bootstrap import ensure_python_deps
 
         # All required deps should be present in this environment
         assert ensure_python_deps() is True
@@ -117,7 +117,7 @@ class TestCheckOllama:
     """Cover check_ollama()."""
 
     def test_check_ollama_returns_dict(self):
-        from viral_clip_extractor.bootstrap import check_ollama
+        from yacg.bootstrap import check_ollama
 
         result = check_ollama()
         assert isinstance(result, dict)
@@ -129,7 +129,7 @@ class TestEnsureReady:
     """Cover ensure_ready() flow."""
 
     def test_ensure_ready_succeeds(self):
-        import viral_clip_extractor.bootstrap as bs
+        import yacg.bootstrap as bs
 
         # Reset the cached flag to exercise the full path
         original = bs._bootstrapped
@@ -141,7 +141,7 @@ class TestEnsureReady:
             bs._bootstrapped = original
 
     def test_ensure_ready_cached(self):
-        import viral_clip_extractor.bootstrap as bs
+        import yacg.bootstrap as bs
 
         bs._bootstrapped = True
         try:
@@ -149,9 +149,9 @@ class TestEnsureReady:
         finally:
             bs._bootstrapped = False
 
-    @patch("viral_clip_extractor.bootstrap.check_ffmpeg", return_value=False)
+    @patch("yacg.bootstrap.check_ffmpeg", return_value=False)
     def test_ensure_ready_missing_ffmpeg(self, mock_ffmpeg):
-        import viral_clip_extractor.bootstrap as bs
+        import yacg.bootstrap as bs
 
         bs._bootstrapped = False
         try:
@@ -160,9 +160,9 @@ class TestEnsureReady:
         finally:
             bs._bootstrapped = False
 
-    @patch("viral_clip_extractor.bootstrap.ensure_python_deps", return_value=False)
+    @patch("yacg.bootstrap.ensure_python_deps", return_value=False)
     def test_ensure_ready_missing_python_deps(self, mock_deps):
-        import viral_clip_extractor.bootstrap as bs
+        import yacg.bootstrap as bs
 
         bs._bootstrapped = False
         try:

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.models import PipelineConfig
+from yacg.models import PipelineConfig
 
 
 # ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ class TestSemanticFailureRaises:
 
     def test_semantic_failure_raises(self):
         """SemanticAnalyzer.analyze_segment raises RuntimeError on Ollama 500."""
-        from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+        from yacg.core.semantic_analyzer import SemanticAnalyzer
 
         analyzer = SemanticAnalyzer(
             model="test-model", ollama_host="http://localhost:11434"
@@ -51,7 +51,7 @@ class TestCaptionFailureRaises:
 
     def test_caption_failure_raises(self):
         """OllamaVideoAnalyzer.analyze_video raises RuntimeError on failure."""
-        from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+        from yacg.caption_generator import OllamaVideoAnalyzer
 
         analyzer = OllamaVideoAnalyzer(
             model="test-model", ollama_host="http://localhost:11434"
@@ -72,11 +72,11 @@ class TestCaptionFailureDeletesClip:
 
     def test_caption_failure_deletes_clip_and_thumbnail(self, tmp_path):
         """Pipeline._generate_captions deletes clip + thumbnail on failure."""
-        from viral_clip_extractor.models import (
+        from yacg.models import (
             AudioFeatures, ClipData, SceneSegment, SemanticFeatures,
             VisualFeatures, ViralityScore,
         )
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         # Create fake clip and thumbnail files
         clip_file = tmp_path / "clip_01.mp4"
@@ -122,7 +122,7 @@ class TestPipelineIsTranscriptFirst:
 
     def test_pipeline_is_transcript_first(self):
         """Pipeline._get_transcript_segmenter exists and is used."""
-        from viral_clip_extractor.pipeline import ViralClipPipeline
+        from yacg.pipeline import ViralClipPipeline
 
         pipeline = ViralClipPipeline()
 
@@ -132,7 +132,7 @@ class TestPipelineIsTranscriptFirst:
 
         # Verify pipeline creates TranscriptSegmenter
         segmenter = pipeline._get_transcript_segmenter()
-        from viral_clip_extractor.transcript_segmenter import TranscriptSegmenter
+        from yacg.transcript_segmenter import TranscriptSegmenter
         assert isinstance(segmenter, TranscriptSegmenter)
 
     def test_pipeline_has_no_feature_toggles(self):
@@ -150,7 +150,7 @@ class TestPipelineIsTranscriptFirst:
 
     def test_clip_extractor_no_vertical_toggle(self):
         """ClipExtractor has no vertical parameter."""
-        from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+        from yacg.extractors.clip_extractor import ClipExtractor
         import inspect
 
         sig = inspect.signature(ClipExtractor.__init__)

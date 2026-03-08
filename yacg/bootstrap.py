@@ -1,5 +1,5 @@
 """
-Self-bootstrapping dependency management for the Viral Clip Extractor.
+Self-bootstrapping dependency management for the YACG.
 
 Checks for all required dependencies at startup and installs anything
 missing, following the pattern from yt-transcriber. Call ensure_ready()

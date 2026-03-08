@@ -1,5 +1,5 @@
 """
-YouTube video downloader for the Viral Clip Extractor.
+YouTube video downloader for the YACG.
 
 Downloads videos via yt-dlp for local processing, handling various YouTube
 URL formats and providing structured metadata about the downloaded file.

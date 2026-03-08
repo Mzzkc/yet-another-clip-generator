@@ -1,4 +1,4 @@
-# Viral Clip Extractor - Implementation Roadmap
+# YACG - Implementation Roadmap
 
 ## 🚦 Quick Decision Framework
 
@@ -189,7 +189,7 @@ Make it production-grade
 **Recommended: Modular Pipeline**
 
 ```
-viral_clip_extractor/
+yacg/
 ├── core/
 │   ├── scene_detector.py      # PySceneDetect wrapper
 │   ├── audio_analyzer.py      # librosa analysis

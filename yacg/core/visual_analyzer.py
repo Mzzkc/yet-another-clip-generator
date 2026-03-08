@@ -12,8 +12,8 @@ from typing import Optional
 
 import numpy as np
 
-from viral_clip_extractor.models import PipelineConfig, VisualFeatures
-from viral_clip_extractor.utils.video_utils import get_cv2 as _shared_get_cv2
+from yacg.models import PipelineConfig, VisualFeatures
+from yacg.utils.video_utils import get_cv2 as _shared_get_cv2
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def _get_dnn_net(cv2):
     try:
         model_dirs = [
             str(Path(__file__).resolve().parent.parent / "models"),
-            str(Path.home() / ".vce" / "models"),
+            str(Path.home() / ".yacg" / "models"),
         ]
         for d in model_dirs:
             p = Path(d) / "deploy.prototxt"

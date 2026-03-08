@@ -1,5 +1,5 @@
 """
-Shared data models for the Viral Clip Extractor pipeline.
+Shared data models for the YACG pipeline.
 
 Every module in the system depends on these dataclasses. They define the
 contract between pipeline stages: scene detection, audio/visual/semantic

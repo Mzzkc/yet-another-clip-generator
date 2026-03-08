@@ -1,5 +1,5 @@
 """
-Viral Clip Extractor — automatically extract viral-potential clips from long-form videos.
+YACG — Yet Another Clip Generator. Extract viral-potential clips from long-form videos.
 
 Detects scene boundaries, analyzes audio/visual/semantic signals, scores viral potential,
 and extracts formatted clips with auto-generated Instagram captions.
@@ -7,8 +7,8 @@ and extracts formatted clips with auto-generated Instagram captions.
 
 __version__ = "0.1.0"
 
-from viral_clip_extractor.models import ClipData, PipelineConfig
-from viral_clip_extractor.pipeline import ViralClipPipeline
+from yacg.models import ClipData, PipelineConfig
+from yacg.pipeline import ViralClipPipeline
 
 __all__ = [
     "ClipData",

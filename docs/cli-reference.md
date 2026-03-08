@@ -1,9 +1,9 @@
 # CLI Reference
 
-VCE is invoked as a Python module:
+YACG is invoked as a Python module:
 
 ```bash
-python -m viral_clip_extractor <command> [options]
+python -m yacg <command> [options]
 ```
 
 ## Commands
@@ -13,7 +13,7 @@ python -m viral_clip_extractor <command> [options]
 Extract clips from a local video file.
 
 ```bash
-python -m viral_clip_extractor process --video <path> [options]
+python -m yacg process --video <path> [options]
 ```
 
 | Flag | Default | Description |
@@ -26,7 +26,7 @@ All [common options](#common-options) are also accepted.
 **Example:**
 
 ```bash
-python -m viral_clip_extractor process \
+python -m yacg process \
   --video ~/Videos/stream_2026-03-01.mp4 \
   --title "March Stream Highlights" \
   --top-n 5 \
@@ -41,7 +41,7 @@ python -m viral_clip_extractor process \
 Download a YouTube video and extract clips.
 
 ```bash
-python -m viral_clip_extractor youtube --url <url> [options]
+python -m yacg youtube --url <url> [options]
 ```
 
 | Flag | Default | Description |
@@ -59,7 +59,7 @@ Supported URL formats include:
 **Example:**
 
 ```bash
-python -m viral_clip_extractor youtube \
+python -m yacg youtube \
   --url "https://youtube.com/watch?v=dQw4w9WgXcQ" \
   --top-n 3
 ```
@@ -71,7 +71,7 @@ python -m viral_clip_extractor youtube \
 Process all video files in a directory. The Whisper model is loaded once and shared across all videos.
 
 ```bash
-python -m viral_clip_extractor batch --videos-dir <path> [options]
+python -m yacg batch --videos-dir <path> [options]
 ```
 
 | Flag | Default | Description |
@@ -85,7 +85,7 @@ Recognized video extensions: `.mp4`, `.mov`, `.avi`, `.mkv`, `.webm`.
 **Example:**
 
 ```bash
-python -m viral_clip_extractor batch \
+python -m yacg batch \
   --videos-dir ~/Videos/ASMR/ \
   --output-dir ~/Clips/ \
   --min-score 50
@@ -98,7 +98,7 @@ python -m viral_clip_extractor batch \
 Check that all required system dependencies are installed.
 
 ```bash
-python -m viral_clip_extractor check
+python -m yacg check
 ```
 
 No additional flags. Checks:
@@ -139,7 +139,7 @@ All required dependencies satisfied.
 Display the current configuration with all field descriptions and defaults.
 
 ```bash
-python -m viral_clip_extractor show-config [--config <path>]
+python -m yacg show-config [--config <path>]
 ```
 
 | Flag | Default | Description |
@@ -149,8 +149,8 @@ python -m viral_clip_extractor show-config [--config <path>]
 **Example:**
 
 ```bash
-python -m viral_clip_extractor show-config
-python -m viral_clip_extractor show-config --config my_config.ini
+python -m yacg show-config
+python -m yacg show-config --config my_config.ini
 ```
 
 ---
@@ -160,7 +160,7 @@ python -m viral_clip_extractor show-config --config my_config.ini
 Write a fully-commented default INI config file with all available keys.
 
 ```bash
-python -m viral_clip_extractor generate-config [--output <path>]
+python -m yacg generate-config [--output <path>]
 ```
 
 | Flag | Default | Description |
@@ -170,8 +170,8 @@ python -m viral_clip_extractor generate-config [--output <path>]
 **Example:**
 
 ```bash
-python -m viral_clip_extractor generate-config
-python -m viral_clip_extractor generate-config --output my_config.ini
+python -m yacg generate-config
+python -m yacg generate-config --output my_config.ini
 ```
 
 ---

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 import numpy as np
 import pytest
 
-from viral_clip_extractor.models import PipelineConfig, VisualFeatures
+from yacg.models import PipelineConfig, VisualFeatures
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,7 @@ def _reset_face_detection_caches():
     Tests using mock cv2 need fresh caches so each test gets its own mock
     cascade rather than a stale one from a previous test.
     """
-    import viral_clip_extractor.core.visual_analyzer as va_mod
+    import yacg.core.visual_analyzer as va_mod
     va_mod._cached_dnn_checked = False
     va_mod._cached_dnn_net = None
     va_mod._cached_haar_cascade = None
@@ -69,7 +69,7 @@ class TestVisualAnalyzer:
 
     def _get_analyzer(self) -> "VisualAnalyzer":
         """Import and instantiate with mocked cv2."""
-        from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+        from yacg.core.visual_analyzer import VisualAnalyzer
         return VisualAnalyzer(PipelineConfig())
 
     def test_analyze_segment_returns_visual_features(self):
@@ -111,7 +111,7 @@ class TestVisualAnalyzer:
         mock_cv2.GaussianBlur.return_value = _make_gray()
         mock_cv2.minMaxLoc.return_value = (0, 255, (0, 0), (320, 240))
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -135,7 +135,7 @@ class TestVisualAnalyzer:
         cap.read.return_value = (False, None)
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -157,7 +157,7 @@ class TestVisualAnalyzer:
         cap.isOpened.return_value = False
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -214,7 +214,7 @@ class TestVisualAnalyzer:
         mock_cv2.GaussianBlur.return_value = _make_gray()
         mock_cv2.minMaxLoc.return_value = (0, 255, (0, 0), (320, 240))
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -237,7 +237,7 @@ class TestVisualAnalyzer:
         cap.isOpened.return_value = True
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -266,7 +266,7 @@ class TestVisualAnalyzer:
         ])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
 
         with patch.object(va_mod, "_get_cv2", return_value=mock_cv2):
             analyzer = self._get_analyzer()
@@ -281,7 +281,7 @@ class TestVisualAnalyzer:
         cap.isOpened.return_value = False
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
 
         with patch.object(va_mod, "_get_cv2", return_value=mock_cv2):
             analyzer = self._get_analyzer()
@@ -313,7 +313,7 @@ class TestVisualAnalyzer:
         mock_cv2.GaussianBlur.return_value = _make_gray()
         mock_cv2.minMaxLoc.return_value = (0, 255, (0, 0), (320, 240))
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -342,7 +342,7 @@ class TestSmartCropper:
         ``_detect_faces_in_gray`` — causing mock bypass and spurious
         failures.
         """
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
         va_mod._cached_haar_cascade = None
@@ -352,7 +352,7 @@ class TestSmartCropper:
         va_mod._cached_haar_cascade = None
 
     def _get_cropper(self) -> "SmartCropper":
-        from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+        from yacg.extractors.smart_cropper import SmartCropper
         return SmartCropper(PipelineConfig())
 
     def test_crop_params_horizontal_video_no_face(self):
@@ -375,7 +375,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.return_value = []
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -404,7 +404,7 @@ class TestSmartCropper:
         cap.read.return_value = (True, _make_frame(1080, 1920))
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -440,7 +440,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.return_value = np.array([[1400, 300, 200, 250]])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -478,7 +478,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.return_value = []
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -502,7 +502,7 @@ class TestSmartCropper:
         cap.isOpened.return_value = False
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -535,7 +535,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.return_value = np.array([[400, 200, 200, 250]])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -570,7 +570,7 @@ class TestSmartCropper:
         mock_cv2.GaussianBlur.return_value = _make_gray()
         mock_cv2.minMaxLoc.return_value = (0, 255, (0, 0), (500, 300))
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -636,7 +636,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.side_effect = fake_detect
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -676,7 +676,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.return_value = []  # no faces ever
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -726,7 +726,7 @@ class TestSmartCropper:
         cascade.detectMultiScale.side_effect = fake_detect
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
@@ -758,49 +758,49 @@ class TestFaceValidation:
 
     def test_reject_face_too_small(self):
         """A face bbox covering < 3% of frame area must be rejected."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 30x30 bbox on 1920x1080 frame = 900 / 2_073_600 = 0.043% area
         assert _validate_face_detection((100, 100, 30, 30), 1920, 1080) is False
 
     def test_reject_face_too_small_boundary(self):
         """A face bbox at exactly 3% of frame area boundary — reject at < 3%."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 3% of 1920x1080 = 62208 px². A 249x249 = 62001 < 62208 → reject
         assert _validate_face_detection((100, 100, 249, 249), 1920, 1080) is False
 
     def test_reject_face_too_large(self):
         """A face bbox covering > 70% of frame area must be rejected."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 1500x1000 on 1920x1080 = 1_500_000 / 2_073_600 = 72.3% area
         assert _validate_face_detection((100, 40, 1500, 1000), 1920, 1080) is False
 
     def test_reject_face_too_large_boundary(self):
         """A face bbox just over 70% of frame area — must be rejected."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 70% of 2073600 = 1451520. A 1206x1206 = 1454436 > 1451520 → reject
         assert _validate_face_detection((100, 0, 1206, 1206), 1920, 1080) is False
 
     def test_reject_face_bad_aspect_ratio(self):
         """A bbox with width/height > 2:1 must be rejected (not a face)."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 300x100 = 3:1 ratio → reject
         assert _validate_face_detection((100, 100, 300, 100), 1920, 1080) is False
 
     def test_reject_face_bad_aspect_ratio_tall(self):
         """A bbox with height/width > 2:1 must be rejected (not a face)."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 80x250 = height/width = 3.1:1 → reject
         assert _validate_face_detection((100, 100, 80, 250), 1920, 1080) is False
 
     def test_accept_face_plausible(self):
         """A reasonable face (200x250, ~2.4% of 1920x1080) must be accepted."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 200x250 = 50000 / 2073600 = 2.41% — but shape is plausible
         # Wait: 2.41% < 3%, this would fail the min_area check.
@@ -822,14 +822,14 @@ class TestFaceValidation:
 
     def test_accept_face_medium_size(self):
         """A medium face (150x180) on 1920x1080 should be accepted."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 150x180 — reasonable face, aspect ratio 0.83, dimensions plausible
         assert _validate_face_detection((500, 300, 150, 180), 1920, 1080) is True
 
     def test_reject_inconsistent_face_positions(self):
         """Face centers spread > 30% of frame width must be rejected."""
-        from viral_clip_extractor.core.visual_analyzer import validate_spatial_consistency
+        from yacg.core.visual_analyzer import validate_spatial_consistency
 
         # Centers at [100, 960, 1800] on 1920-wide frame
         # Spread = 1800 - 100 = 1700, which is 1700/1920 = 88.5% → reject
@@ -838,7 +838,7 @@ class TestFaceValidation:
 
     def test_accept_consistent_face_positions(self):
         """Face centers within 30% of frame width should be accepted."""
-        from viral_clip_extractor.core.visual_analyzer import validate_spatial_consistency
+        from yacg.core.visual_analyzer import validate_spatial_consistency
 
         # Centers at [900, 950, 920] on 1920-wide frame
         # Spread = 950 - 900 = 50, which is 50/1920 = 2.6% → accept
@@ -847,14 +847,14 @@ class TestFaceValidation:
 
     def test_spatial_consistency_single_center(self):
         """A single face center should always be accepted."""
-        from viral_clip_extractor.core.visual_analyzer import validate_spatial_consistency
+        from yacg.core.visual_analyzer import validate_spatial_consistency
 
         result = validate_spatial_consistency([500], 1920)
         assert result == [500]
 
     def test_spatial_consistency_empty_input(self):
         """Empty input returns empty output."""
-        from viral_clip_extractor.core.visual_analyzer import validate_spatial_consistency
+        from yacg.core.visual_analyzer import validate_spatial_consistency
 
         result = validate_spatial_consistency([], 1920)
         assert result == []
@@ -871,7 +871,7 @@ class TestExceptionHandling:
         """When DNN detection throws, it must log a warning (not silently pass)."""
         mock_cv2 = _mock_cv2_module()
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
         va_mod._cached_haar_cascade = None
@@ -909,12 +909,12 @@ class TestExceptionHandling:
         """When DNN model loading throws, it must log a warning."""
         mock_cv2 = _mock_cv2_module()
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
 
         # Make model files appear to exist but loading fails
-        with patch("viral_clip_extractor.core.visual_analyzer.Path") as MockPath:
+        with patch("yacg.core.visual_analyzer.Path") as MockPath:
             mock_path = MagicMock()
             mock_path.exists.return_value = True
             mock_path.__truediv__ = MagicMock(return_value=mock_path)
@@ -933,7 +933,7 @@ class TestExceptionHandling:
         """When a face is detected, the log must indicate which detector was used."""
         mock_cv2 = _mock_cv2_module()
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
         va_mod._cached_haar_cascade = None
@@ -969,7 +969,7 @@ class TestValidationIntegration:
     @pytest.fixture(autouse=True)
     def _reset_caches(self):
         """Reset visual_analyzer caches."""
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
         va_mod._cached_haar_cascade = None
@@ -998,11 +998,11 @@ class TestValidationIntegration:
         cascade.detectMultiScale.return_value = np.array([[1400, 500, 30, 30]])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             params = cropper.get_crop_params("/fake/video.mp4")
 
@@ -1062,11 +1062,11 @@ class TestValidationIntegration:
         cascade.detectMultiScale.side_effect = fake_detect
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             params = cropper.get_crop_params(
                 "/fake/video.mp4", start_time=0.0, end_time=30.0,
@@ -1102,11 +1102,11 @@ class TestValidationIntegration:
         cascade.detectMultiScale.return_value = np.array([[1300, 300, 200, 250]])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             params = cropper.get_crop_params("/fake/video.mp4")
 
@@ -1134,7 +1134,7 @@ class TestEdgeCases:
 
     @pytest.fixture(autouse=True)
     def _reset_caches(self):
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
         va_mod._cached_haar_cascade = None
@@ -1152,7 +1152,7 @@ class TestEdgeCases:
         cascade.detectMultiScale.return_value = []
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -1170,11 +1170,11 @@ class TestEdgeCases:
         cap.isOpened.return_value = False
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             params = cropper.get_crop_params("/corrupt/video.mp4")
             assert params == {"crop_x": 0, "crop_y": 0, "crop_w": 0, "crop_h": 0}
@@ -1189,11 +1189,11 @@ class TestEdgeCases:
         cap.isOpened.return_value = False
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             filt = cropper.get_ffmpeg_filter("/corrupt/video.mp4")
             assert filt == ""
@@ -1210,11 +1210,11 @@ class TestEdgeCases:
         cap.read.return_value = (True, _make_frame(1, 1))
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             params = cropper.get_crop_params("/fake/zero-dim.mp4")
             assert params["crop_w"] == 0
@@ -1231,7 +1231,7 @@ class TestEdgeCases:
         mock_net.setInput = MagicMock()
         mock_net.forward.side_effect = RuntimeError("CUDA OOM")
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
 
         # Haar cascade returns a face
         cascade = MagicMock()
@@ -1271,11 +1271,11 @@ class TestEdgeCases:
         cascade.detectMultiScale.return_value = []
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             cropper.get_crop_params("/fake/video.mp4")
             cap.release.assert_called_once()
@@ -1295,11 +1295,11 @@ class TestEdgeCases:
         cap.read.return_value = (False, None)
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             cropper.get_crop_params("/fake/broken.mp4")
             cap.release.assert_called_once()
@@ -1330,11 +1330,11 @@ class TestEdgeCases:
         mock_cv2.GaussianBlur.return_value = _make_gray(1920, 1080)
         mock_cv2.minMaxLoc.return_value = (0, 255, (0, 0), (960, 540))
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             cx, cy = cropper.detect_subject_center("/fake/video.mp4", 5.0)
 
@@ -1367,11 +1367,11 @@ class TestEdgeCases:
         cascade.detectMultiScale.return_value = np.array([[400, 200, 200, 250]])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             cx, cy = cropper.detect_subject_center("/fake/video.mp4", 0.0)
 
@@ -1389,7 +1389,7 @@ class TestEdgeCases:
         cascade.empty.return_value = True  # Failed to load
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
@@ -1431,11 +1431,11 @@ class TestEdgeCases:
         mock_cv2.GaussianBlur.return_value = _make_gray()
         mock_cv2.minMaxLoc.return_value = (0, 255, (0, 0), (320, 240))
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+            from yacg.core.visual_analyzer import VisualAnalyzer
             analyzer = VisualAnalyzer(PipelineConfig())
 
             with patch.object(va_mod.logger, "debug") as mock_debug:
@@ -1463,11 +1463,11 @@ class TestEdgeCases:
         cap.read.side_effect = RuntimeError("GPU memory error")
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             # Should NOT raise — should fall back to center crop
             params = cropper.get_crop_params("/fake/video.mp4")
@@ -1491,11 +1491,11 @@ class TestEdgeCases:
         cap.read.side_effect = RuntimeError("GPU memory error")
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             # Should NOT raise — should return center fallback
             cx, cy = cropper.detect_subject_center("/fake/video.mp4", 1.0)
@@ -1520,11 +1520,11 @@ class TestEdgeCases:
         ]
         mock_cv2.VideoCapture.return_value = cap
 
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+            from yacg.core.visual_analyzer import VisualAnalyzer
             analyzer = VisualAnalyzer(PipelineConfig())
             frames = analyzer._sample_frames("/fake/video.mp4", 0.0, 3.0, fps=1)
             # Should get 2 frames (skipping the one that raised)
@@ -1535,18 +1535,18 @@ class TestEdgeCases:
 
     def test_validate_face_zero_dimensions(self):
         """_validate_face_detection rejects zero-size bboxes without crashing."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
         assert _validate_face_detection((100, 100, 0, 0), 1920, 1080) is False
 
     def test_validate_face_negative_dimensions(self):
         """_validate_face_detection rejects negative dimension bboxes."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
         assert _validate_face_detection((100, 100, -50, 100), 1920, 1080) is False
         assert _validate_face_detection((100, 100, 100, -50), 1920, 1080) is False
 
     def test_validate_face_zero_frame_dimensions(self):
         """_validate_face_detection returns False (no crash) when frame dims are 0."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
         # Previously caused ZeroDivisionError
         assert _validate_face_detection((10, 10, 50, 50), 0, 0) is False
         assert _validate_face_detection((10, 10, 50, 50), 0, 1080) is False
@@ -1554,13 +1554,13 @@ class TestEdgeCases:
 
     def test_dnn_skip_logs_when_models_missing(self):
         """_get_dnn_net logs at debug level when model files are absent."""
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
         va_mod._cached_dnn_checked = False
         va_mod._cached_dnn_net = None
 
         mock_cv2 = _mock_cv2_module()
 
-        with patch("viral_clip_extractor.core.visual_analyzer.Path") as mock_path:
+        with patch("yacg.core.visual_analyzer.Path") as mock_path:
             # Make all path.exists() return False (no model files)
             mock_path.return_value.__truediv__ = MagicMock(
                 return_value=MagicMock(exists=MagicMock(return_value=False))
@@ -1583,8 +1583,8 @@ class TestEdgeCases:
 
     def test_crop_params_videocapture_released_on_frame_read_exception(self):
         """VideoCapture is released even when frame reading raises."""
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.extractors.smart_cropper as sc_mod
+        import yacg.core.visual_analyzer as va_mod
 
         mock_cv2 = _mock_cv2_module()
         cap = MagicMock()
@@ -1600,7 +1600,7 @@ class TestEdgeCases:
         va_mod._cached_dnn_net = None
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             sc = SmartCropper(PipelineConfig())
             params = sc.get_crop_params("/fake/video.mp4", start_time=0, end_time=10)
             # Should get center crop (no faces due to exception)
@@ -1614,7 +1614,7 @@ class TestEdgeCases:
 
     def test_crop_params_zero_dimensions_video(self):
         """get_crop_params handles video reporting 0x0 dimensions."""
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
 
         mock_cv2 = _mock_cv2_module()
         cap = MagicMock()
@@ -1626,7 +1626,7 @@ class TestEdgeCases:
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             sc = SmartCropper(PipelineConfig())
             params = sc.get_crop_params("/fake/zero-dim-video.mp4")
             assert params == {"crop_x": 0, "crop_y": 0, "crop_w": 0, "crop_h": 0}
@@ -1674,11 +1674,11 @@ class TestEdgeCases:
         cascade.detectMultiScale.return_value = np.array([[1091, 300, 200, 250]])
         mock_cv2.CascadeClassifier.return_value = cascade
 
-        import viral_clip_extractor.extractors.smart_cropper as sc_mod
+        import yacg.extractors.smart_cropper as sc_mod
         sc_mod._cv2 = mock_cv2
 
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+            from yacg.extractors.smart_cropper import SmartCropper
             cropper = SmartCropper(PipelineConfig())
             params = cropper.get_crop_params(
                 "/fake/video.mp4", start_time=0.0, end_time=30.0,
@@ -1702,7 +1702,7 @@ class TestEdgeCases:
         are accepted — this matches Haar cascade's behaviour of returning
         square bounding boxes for legitimate faces.
         """
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 316x316 on 1920x1080 = 4.82% area, perfectly square (ratio = 1.0)
         result = _validate_face_detection((800, 400, 316, 316), 1920, 1080)
@@ -1719,7 +1719,7 @@ class TestEdgeCases:
 
     def test_aspect_ratio_exactly_2_rejected(self):
         """Detection with exactly 2:1 aspect ratio is rejected."""
-        from viral_clip_extractor.core.visual_analyzer import _validate_face_detection
+        from yacg.core.visual_analyzer import _validate_face_detection
 
         # 400x200 = 2:1 ratio, area = 3.86% of 1920x1080
         result = _validate_face_detection((500, 300, 400, 200), 1920, 1080)
@@ -1735,7 +1735,7 @@ class TestEdgeCases:
 
     def test_all_black_frame_no_false_positives(self):
         """All-black frame produces no face detections."""
-        import viral_clip_extractor.core.visual_analyzer as va_mod
+        import yacg.core.visual_analyzer as va_mod
 
         mock_cv2 = _mock_cv2_module()
         va_mod._cached_dnn_checked = True
@@ -1749,7 +1749,7 @@ class TestEdgeCases:
         va_mod._cv2 = mock_cv2
         try:
             black_gray = np.zeros((1080, 1920), dtype=np.uint8)
-            from viral_clip_extractor.core.visual_analyzer import _detect_faces_in_gray
+            from yacg.core.visual_analyzer import _detect_faces_in_gray
             result = _detect_faces_in_gray(mock_cv2, black_gray)
             assert len(result) == 0
         finally:

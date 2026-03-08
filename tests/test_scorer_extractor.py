@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     AudioFeatures,
     ClipData,
     PipelineConfig,
@@ -20,8 +20,8 @@ from viral_clip_extractor.models import (
     ViralityScore,
     VisualFeatures,
 )
-from viral_clip_extractor.core.virality_scorer import ViralityScorer
-from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+from yacg.core.virality_scorer import ViralityScorer
+from yacg.extractors.clip_extractor import ClipExtractor
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +311,7 @@ class TestViralityScorerEdgeCases:
 # ---------------------------------------------------------------------------
 
 @patch(
-    "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_vertical_filter",
+    "yacg.extractors.clip_extractor.ClipExtractor._get_vertical_filter",
     return_value="crop=608:1080:236:0",
 )
 class TestClipExtractorExtractClip:
@@ -320,9 +320,9 @@ class TestClipExtractorExtractClip:
     def _make_extractor(self) -> ClipExtractor:
         return ClipExtractor(context_padding=2.0)
 
-    @patch("viral_clip_extractor.extractors.clip_extractor.subprocess.run")
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
         return_value=120.0,
     )
     def test_successful_extraction(
@@ -344,9 +344,9 @@ class TestClipExtractorExtractClip:
         assert result is True
         assert mock_run.called
 
-    @patch("viral_clip_extractor.extractors.clip_extractor.subprocess.run")
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
         return_value=120.0,
     )
     def test_ffmpeg_failure_returns_false(
@@ -360,11 +360,11 @@ class TestClipExtractorExtractClip:
         assert result is False
 
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.subprocess.run",
+        "yacg.extractors.clip_extractor.subprocess.run",
         side_effect=FileNotFoundError("ffmpeg not found"),
     )
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
         return_value=120.0,
     )
     def test_ffmpeg_not_found(
@@ -376,9 +376,9 @@ class TestClipExtractorExtractClip:
         result = ext.extract_clip("/fake/video.mp4", 10.0, 25.0, str(output))
         assert result is False
 
-    @patch("viral_clip_extractor.extractors.clip_extractor.subprocess.run")
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
         return_value=120.0,
     )
     def test_output_too_small_returns_false(
@@ -396,9 +396,9 @@ class TestClipExtractorExtractClip:
         result = ext.extract_clip("/fake/video.mp4", 10.0, 25.0, str(output))
         assert result is False
 
-    @patch("viral_clip_extractor.extractors.clip_extractor.subprocess.run")
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
         return_value=120.0,
     )
     def test_context_padding_applied(
@@ -423,9 +423,9 @@ class TestClipExtractorExtractClip:
         assert float(call_args[ss_idx + 1]) == pytest.approx(7.0)
         assert float(call_args[t_idx + 1]) == pytest.approx(16.0)
 
-    @patch("viral_clip_extractor.extractors.clip_extractor.subprocess.run")
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
     @patch(
-        "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
         return_value=12.0,
     )
     def test_padding_clamped_to_video_bounds(

@@ -19,7 +19,7 @@ class TestMainModule:
 
     def test_main_module_check_command(self):
         """Importing __main__ behavior through main() with check."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         # 'check' skips bootstrap, returns 0 when deps are present
         result = main(["check"])
@@ -27,7 +27,7 @@ class TestMainModule:
 
     def test_main_module_no_command(self):
         """main() with no args prints help and returns 1."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main([])
         assert result == 1
@@ -43,7 +43,7 @@ class TestCLIMainFlow:
 
     def test_verbose_skips_warning_filters(self):
         """Verbose mode does not install warning filters."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         # process with -v on nonexistent file exercises the verbose code path
         result = main(["process", "--video", "/nonexistent.mp4",
@@ -52,7 +52,7 @@ class TestCLIMainFlow:
 
     def test_min_score_below_zero(self):
         """--min-score < 0 is rejected."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["process", "--video", "/nonexistent.mp4",
                         "--title", "t", "--min-score", "-10"])
@@ -60,7 +60,7 @@ class TestCLIMainFlow:
 
     def test_min_score_above_100(self):
         """--min-score > 100 is rejected."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["process", "--video", "/nonexistent.mp4",
                         "--title", "t", "--min-score", "150"])
@@ -68,7 +68,7 @@ class TestCLIMainFlow:
 
     def test_process_nonexistent_file_returns_1(self):
         """process with nonexistent file returns 1."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["process", "--video", "/nonexistent.mp4",
                         "--title", "t", "--min-score", "0"])
@@ -76,7 +76,7 @@ class TestCLIMainFlow:
 
     def test_process_directory_as_video_returns_1(self):
         """process with a directory instead of file returns 1."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["process", "--video", "/tmp",
                         "--title", "t", "--min-score", "0"])
@@ -93,7 +93,7 @@ class TestBuildConfig:
 
     def test_build_config_with_ini_file(self):
         """_build_config loads a config INI when provided."""
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         with tempfile.NamedTemporaryFile(suffix=".ini", mode="w", delete=False) as f:
             f.write("[DEFAULT]\nmin_scene_length = 5.0\n")
@@ -114,7 +114,7 @@ class TestBuildConfig:
 
     def test_build_config_defaults(self):
         """_build_config with no overrides uses defaults."""
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None,
@@ -127,7 +127,7 @@ class TestBuildConfig:
 
     def test_build_config_content_type_gaming(self):
         """--content-type gaming loads gaming preset."""
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None,
@@ -149,7 +149,7 @@ class TestBuildConfig:
 
     def test_build_config_gaming_with_tone_override(self):
         """--content-type gaming --tone calm overrides preset tone."""
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None,
@@ -179,7 +179,7 @@ class TestCLIContentProfileArgs:
     """Test new --content-type and related CLI argument parsing."""
 
     def test_content_type_gaming_parsed(self):
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -189,7 +189,7 @@ class TestCLIContentProfileArgs:
         assert args.content_type == "gaming"
 
     def test_content_type_asmr_parsed(self):
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -199,7 +199,7 @@ class TestCLIContentProfileArgs:
         assert args.content_type == "asmr"
 
     def test_tone_parsed(self):
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -209,7 +209,7 @@ class TestCLIContentProfileArgs:
         assert args.tone == "calm"
 
     def test_platform_parsed(self):
-        from viral_clip_extractor.cli import build_parser
+        from yacg.cli import build_parser
 
         parser = build_parser()
         args = parser.parse_args([
@@ -228,7 +228,7 @@ class TestBuildConfigAllOverrides:
     """Test _build_config processes all 8 ContentProfile field overrides."""
 
     def test_build_config_channel_description_override(self):
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -241,7 +241,7 @@ class TestBuildConfigAllOverrides:
         assert config.content_profile.channel_description == "My awesome channel"
 
     def test_build_config_target_audience_override(self):
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -254,7 +254,7 @@ class TestBuildConfigAllOverrides:
         assert config.content_profile.target_audience == "teens"
 
     def test_build_config_platform_override(self):
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -267,7 +267,7 @@ class TestBuildConfigAllOverrides:
         assert config.content_profile.platform == "tiktok"
 
     def test_build_config_caption_length_override(self):
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -280,7 +280,7 @@ class TestBuildConfigAllOverrides:
         assert config.content_profile.caption_length == "long"
 
     def test_build_config_hashtag_count_override(self):
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -293,7 +293,7 @@ class TestBuildConfigAllOverrides:
         assert config.content_profile.hashtag_count == 3
 
     def test_build_config_custom_instructions_override(self):
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -307,7 +307,7 @@ class TestBuildConfigAllOverrides:
 
     def test_build_config_asmr_content_type_syncs_asmr_mode(self):
         """--content-type asmr without --asmr-mode should auto-sync asmr_mode=True."""
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -323,7 +323,7 @@ class TestBuildConfigAllOverrides:
 
     def test_build_config_asmr_content_type_with_no_asmr_mode(self):
         """--content-type asmr --no-asmr-mode should NOT auto-sync."""
-        from viral_clip_extractor.cli import _build_config
+        from yacg.cli import _build_config
 
         args = argparse.Namespace(
             config=None, output_dir="./out", model="qwen2.5-vl:7b",
@@ -347,7 +347,7 @@ class TestINIContentProfileLoading:
     """Test load_config parses [ContentProfile] section from INI files."""
 
     def test_load_ini_with_content_profile_section(self, tmp_path):
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         ini = tmp_path / "test.ini"
         ini.write_text(
@@ -366,7 +366,7 @@ class TestINIContentProfileLoading:
         assert config.content_profile.hashtag_count == 4
 
     def test_load_ini_invalid_content_type_raises(self, tmp_path):
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         ini = tmp_path / "bad.ini"
         ini.write_text(
@@ -377,7 +377,7 @@ class TestINIContentProfileLoading:
             load_config(str(ini))
 
     def test_load_ini_invalid_tone_raises(self, tmp_path):
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         ini = tmp_path / "bad_tone.ini"
         ini.write_text(
@@ -389,7 +389,7 @@ class TestINIContentProfileLoading:
             load_config(str(ini))
 
     def test_load_ini_legacy_asmr_section(self, tmp_path):
-        from viral_clip_extractor.utils.config import load_config
+        from yacg.utils.config import load_config
 
         ini = tmp_path / "legacy.ini"
         ini.write_text(
@@ -411,7 +411,7 @@ class TestShowConfigGenerateConfig:
     """Test show-config displays ContentProfile fields."""
 
     def test_show_config_displays_content_profile(self, capsys):
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["show-config"])
         assert result == 0
@@ -420,7 +420,7 @@ class TestShowConfigGenerateConfig:
         assert "Content Profile" in captured.out
 
     def test_generate_config_creates_file(self, tmp_path):
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         config_path = str(tmp_path / "generated.ini")
         result = main(["generate-config", "--output", config_path])
@@ -440,14 +440,14 @@ class TestCmdCheck:
 
     def test_check_passes_on_this_system(self):
         """check command returns 0 when deps are installed."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["check"])
         assert result == 0
 
     def test_check_output_contains_ok(self, capsys):
         """check command prints OK for available deps."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         main(["check"])
         captured = capsys.readouterr()
@@ -456,7 +456,7 @@ class TestCmdCheck:
     @patch("shutil.which", return_value=None)
     def test_check_missing_ffmpeg(self, mock_which, capsys):
         """check command reports missing ffmpeg."""
-        from viral_clip_extractor.cli import _cmd_check
+        from yacg.cli import _cmd_check
 
         args = argparse.Namespace()
         result = _cmd_check(args)
@@ -475,7 +475,7 @@ class TestCmdBatch:
 
     def test_batch_nonexistent_dir(self):
         """batch with nonexistent directory returns 1."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         result = main(["batch", "--videos-dir", "/nonexistent_dir",
                         "--min-score", "0"])
@@ -483,7 +483,7 @@ class TestCmdBatch:
 
     def test_batch_empty_dir(self):
         """batch with empty directory returns 1."""
-        from viral_clip_extractor.cli import main
+        from yacg.cli import main
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = main(["batch", "--videos-dir", tmpdir,
@@ -499,11 +499,11 @@ class TestCmdBatch:
 class TestCmdYoutube:
     """Cover _cmd_youtube without actually downloading."""
 
-    @patch("viral_clip_extractor.pipeline.ViralClipPipeline")
+    @patch("yacg.pipeline.ViralClipPipeline")
     def test_youtube_error_returns_1(self, mock_pipeline_cls):
         """youtube command returns 1 when pipeline has errors."""
-        from viral_clip_extractor.cli import main
-        from viral_clip_extractor.models import ProcessingResult
+        from yacg.cli import main
+        from yacg.models import ProcessingResult
 
         mock_result = ProcessingResult(
             video_path="/tmp/fake.mp4",

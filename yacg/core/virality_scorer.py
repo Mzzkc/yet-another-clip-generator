@@ -9,7 +9,7 @@ ASMR content on Instagram Reels.
 import logging
 from typing import Optional
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     AudioFeatures,
     PipelineConfig,
     SemanticFeatures,

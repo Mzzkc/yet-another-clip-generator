@@ -12,8 +12,8 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-from viral_clip_extractor.models import ClipData, PipelineConfig, SceneSegment
-from viral_clip_extractor.utils.video_utils import translate_ffmpeg_error
+from yacg.models import ClipData, PipelineConfig, SceneSegment
+from yacg.utils.video_utils import translate_ffmpeg_error
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +234,7 @@ class ClipExtractor:
         """
         _FALLBACK_DURATION = 86400.0  # 24 hours
         try:
-            from viral_clip_extractor.utils.video_utils import extract_metadata
+            from yacg.utils.video_utils import extract_metadata
             meta = extract_metadata(video_path)
             duration = float(meta.get("duration", 0))
             if duration > 0:
@@ -257,7 +257,7 @@ class ClipExtractor:
         """Build a SmartCropper filter. Raises on failure."""
         try:
             if self._cropper is None:
-                from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+                from yacg.extractors.smart_cropper import SmartCropper
                 self._cropper = SmartCropper(config=self.config)
             vf = self._cropper.get_ffmpeg_filter(
                 video_path, start_time=start_time, end_time=end_time,

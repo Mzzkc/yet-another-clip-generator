@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
-from viral_clip_extractor.models import SemanticFeatures
+from yacg.core.semantic_analyzer import SemanticAnalyzer
+from yacg.models import SemanticFeatures
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +190,7 @@ class TestAnalyzeSegment:
         with pytest.raises(RuntimeError, match="duration must be positive"):
             analyzer.analyze_segment("/fake/video.mp4", 10.0, 5.0)
 
-    @patch("viral_clip_extractor.core.semantic_analyzer.time.sleep")
+    @patch("yacg.core.semantic_analyzer.time.sleep")
     def test_retries_on_failure_then_raises(
         self,
         mock_sleep: MagicMock,
@@ -207,7 +207,7 @@ class TestAnalyzeSegment:
                     analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
         assert mock_post.call_count == 3  # _MAX_RETRIES
 
-    @patch("viral_clip_extractor.core.semantic_analyzer.time.sleep")
+    @patch("yacg.core.semantic_analyzer.time.sleep")
     def test_connection_error_retries_then_raises(
         self,
         mock_sleep: MagicMock,

@@ -1,8 +1,8 @@
-# Viral Clip Extractor
+# YACG
 
 **Automatically extract viral-potential clips from long-form videos using multi-modal AI analysis.**
 
-Viral Clip Extractor (VCE) takes a long-form video — local file or YouTube URL — and produces short, vertical (9:16) clips optimized for TikTok, Instagram Reels, and YouTube Shorts. It uses LLM-driven transcript segmentation, multi-signal virality scoring, face-aware smart cropping, word-pop subtitle burning, and AI-generated Instagram captions.
+YACG (YACG) takes a long-form video — local file or YouTube URL — and produces short, vertical (9:16) clips optimized for TikTok, Instagram Reels, and YouTube Shorts. It uses LLM-driven transcript segmentation, multi-signal virality scoring, face-aware smart cropping, word-pop subtitle burning, and AI-generated Instagram captions.
 
 ---
 
@@ -29,7 +29,7 @@ Viral Clip Extractor (VCE) takes a long-form video — local file or YouTube URL
 Process a local video and extract the top 5 clips:
 
 ```bash
-python -m viral_clip_extractor process \
+python -m yacg process \
   --video my_video.mp4 \
   --title "My Video Title" \
   --top-n 5 \
@@ -39,7 +39,7 @@ python -m viral_clip_extractor process \
 Process a YouTube video:
 
 ```bash
-python -m viral_clip_extractor youtube \
+python -m yacg youtube \
   --url "https://youtube.com/watch?v=XXXXX" \
   --top-n 3
 ```
@@ -47,7 +47,7 @@ python -m viral_clip_extractor youtube \
 Dry run — analyze without extracting:
 
 ```bash
-python -m viral_clip_extractor process \
+python -m yacg process \
   --video my_video.mp4 \
   --dry-run
 ```
@@ -55,14 +55,14 @@ python -m viral_clip_extractor process \
 Check that all dependencies are installed:
 
 ```bash
-python -m viral_clip_extractor check
+python -m yacg check
 ```
 
 ---
 
 ## How It Works
 
-VCE runs a 10-step pipeline on each video:
+YACG runs a 10-step pipeline on each video:
 
 1. **Transcribe** — full-video transcription with word-level timestamps (faster-whisper, auto device/precision)
 2. **Segment** — LLM identifies viral-worthy segments from the transcript (text-only model, default `qwen2.5:7b`)
@@ -79,7 +79,7 @@ VCE runs a 10-step pipeline on each video:
 
 ## Output
 
-For each processed video, VCE produces:
+For each processed video, YACG produces:
 
 - Vertical MP4 clips with burned-in subtitles in `clip_output/` (named `{title}_clip_01_score85.mp4`)
 - JPEG thumbnails for each clip (`{title}_clip_01_score85_thumb.jpg`)

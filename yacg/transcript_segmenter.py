@@ -14,7 +14,7 @@ import time
 
 import requests
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     SceneSegment,
     SegmentBoundary,
     WordTimestamp,

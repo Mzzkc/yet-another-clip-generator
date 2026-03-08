@@ -1,5 +1,5 @@
 """
-Main pipeline orchestrator for the Viral Clip Extractor.
+Main pipeline orchestrator for Yet Another Clip Generator (YACG).
 
 Coordinates transcript-first segmentation, multi-modal analysis, virality
 scoring, clip extraction, subtitle burning, and caption generation into an
@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, runtime_checkable
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     AudioFeatures,
     CaptionData,
     ClipData,
@@ -175,7 +175,7 @@ class ViralClipPipeline:
 
     def _get_audio_analyzer(self):
         if self._audio_analyzer is None:
-            from viral_clip_extractor.core.audio_analyzer import AudioAnalyzer
+            from yacg.core.audio_analyzer import AudioAnalyzer
             # Pass content-type-aware keywords: ASMR keywords for ASMR
             # content, general engagement keywords for other content types.
             if self.config.content_profile.content_type == "asmr":
@@ -190,13 +190,13 @@ class ViralClipPipeline:
 
     def _get_visual_analyzer(self):
         if self._visual_analyzer is None:
-            from viral_clip_extractor.core.visual_analyzer import VisualAnalyzer
+            from yacg.core.visual_analyzer import VisualAnalyzer
             self._visual_analyzer = VisualAnalyzer(config=self.config)
         return self._visual_analyzer
 
     def _get_semantic_analyzer(self):
         if self._semantic_analyzer is None:
-            from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
+            from yacg.core.semantic_analyzer import SemanticAnalyzer
             cp = self.config.content_profile
             self._semantic_analyzer = SemanticAnalyzer(
                 model=self.config.model_name,
@@ -212,20 +212,20 @@ class ViralClipPipeline:
 
     def _get_virality_scorer(self):
         if self._virality_scorer is None:
-            from viral_clip_extractor.core.virality_scorer import ViralityScorer
+            from yacg.core.virality_scorer import ViralityScorer
             self._virality_scorer = ViralityScorer(config=self.config)
         return self._virality_scorer
 
     def _get_clip_extractor(self):
         if self._clip_extractor is None:
-            from viral_clip_extractor.extractors.clip_extractor import ClipExtractor
+            from yacg.extractors.clip_extractor import ClipExtractor
             self._clip_extractor = ClipExtractor(config=self.config)
         return self._clip_extractor
 
     def _get_caption_analyzer(self):
         """Get caption analyzer (OllamaVideoAnalyzer)."""
         if self._caption_analyzer is None:
-            from viral_clip_extractor.caption_generator import OllamaVideoAnalyzer
+            from yacg.caption_generator import OllamaVideoAnalyzer
             cp = self.config.content_profile
             self._caption_analyzer = OllamaVideoAnalyzer(
                 model=self.config.model_name,
@@ -244,7 +244,7 @@ class ViralClipPipeline:
     def _get_transcript_segmenter(self):
         """Get transcript segmenter (TranscriptSegmenter)."""
         if self._transcript_segmenter is None:
-            from viral_clip_extractor.transcript_segmenter import TranscriptSegmenter
+            from yacg.transcript_segmenter import TranscriptSegmenter
             seg_model = self.config.segmentation_model or self.config.model_name
             cp = self.config.content_profile
             self._transcript_segmenter = TranscriptSegmenter(
@@ -267,7 +267,7 @@ class ViralClipPipeline:
     def _get_subtitle_burner(self):
         """Get subtitle burner (SubtitleBurner)."""
         if self._subtitle_burner is None:
-            from viral_clip_extractor.subtitle_burner import SubtitleBurner
+            from yacg.subtitle_burner import SubtitleBurner
             self._subtitle_burner = SubtitleBurner()
         return self._subtitle_burner
 
@@ -332,7 +332,7 @@ class ViralClipPipeline:
         # Ensure codec compatibility — track original path for cleanup
         original_video_path = video_path
         try:
-            from viral_clip_extractor.utils.video_utils import ensure_compatible_video
+            from yacg.utils.video_utils import ensure_compatible_video
             video_path = ensure_compatible_video(video_path)
         except Exception as exc:
             error_msg = f"Codec compatibility check failed: {exc}"
@@ -343,7 +343,7 @@ class ViralClipPipeline:
         # Extract title from metadata if not provided
         if not title:
             try:
-                from viral_clip_extractor.utils.video_utils import extract_metadata
+                from yacg.utils.video_utils import extract_metadata
                 meta = extract_metadata(video_path)
                 title = meta.get("filename", Path(video_path).stem)
             except Exception as exc:
@@ -402,7 +402,7 @@ class ViralClipPipeline:
                 errors + [error_msg], total_segments,
             )
 
-        staging_dir = os.path.join(output_dir, ".vce_tmp")
+        staging_dir = os.path.join(output_dir, ".yacg_tmp")
         try:
             Path(staging_dir).mkdir(parents=True, exist_ok=True)
             step_start = time.time()
@@ -800,7 +800,7 @@ class ViralClipPipeline:
         Returns:
             A ProcessingResult with extracted clips and metadata.
         """
-        from viral_clip_extractor.youtube_downloader import YouTubeDownloader
+        from yacg.youtube_downloader import YouTubeDownloader
 
         download_dir = os.path.join(self.config.output_dir, "downloads")
         downloader = YouTubeDownloader(output_dir=download_dir)

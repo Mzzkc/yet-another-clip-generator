@@ -1,4 +1,4 @@
-# Viral Clip Extractor
+# YACG — Yet Another Clip Generator
 
 Extracts viral-potential short-form clips from long-form video. Replaces paid
 services like OpusClip. Outputs ready-to-post clips for TikTok, Reels, and
@@ -8,15 +8,15 @@ Shorts with burned-in subtitles and auto-generated captions.
 
 | Path | Purpose |
 |------|---------|
-| `viral_clip_extractor/` | Main Python package |
-| `viral_clip_extractor/cli.py` | CLI entry point (`vce` command) |
-| `viral_clip_extractor/pipeline.py` | Orchestrates the full processing pipeline |
-| `viral_clip_extractor/core/` | Analysis engines: audio, scene, semantic, visual, virality |
-| `viral_clip_extractor/extractors/` | Clip extraction and smart 9:16 cropping |
-| `viral_clip_extractor/utils/` | Config loading, video utilities |
-| `viral_clip_extractor/subtitle_burner.py` | ASS subtitle burn-in via FFmpeg libass |
-| `viral_clip_extractor/transcript_segmenter.py` | Word-level transcript segmentation |
-| `viral_clip_extractor/caption_generator.py` | LLM-powered caption generation |
+| `yacg/` | Main Python package |
+| `yacg/cli.py` | CLI entry point (`yacg` command) |
+| `yacg/pipeline.py` | Orchestrates the full processing pipeline |
+| `yacg/core/` | Analysis engines: audio, scene, semantic, visual, virality |
+| `yacg/extractors/` | Clip extraction and smart 9:16 cropping |
+| `yacg/utils/` | Config loading, video utilities |
+| `yacg/subtitle_burner.py` | ASS subtitle burn-in via FFmpeg libass |
+| `yacg/transcript_segmenter.py` | Word-level transcript segmentation |
+| `yacg/caption_generator.py` | LLM-powered caption generation |
 | `tests/` | Test suite (pytest) |
 | `docs/` | MkDocs documentation |
 | `docs/design/` | Archived original design and roadmap docs |
@@ -41,15 +41,15 @@ Shorts with burned-in subtitles and auto-generated captions.
 
 ## What Goes Where
 
-- **New analysis engines** → `viral_clip_extractor/core/`
-- **New extraction/post-processing** → `viral_clip_extractor/extractors/`
-- **Shared helpers** → `viral_clip_extractor/utils/`
+- **New analysis engines** → `yacg/core/`
+- **New extraction/post-processing** → `yacg/extractors/`
+- **Shared helpers** → `yacg/utils/`
 - **Tests** → `tests/` (top-level, not inside the package)
 - **Documentation** → `docs/`
 
 ## What Does NOT Belong in This Repo
 
-- Mozart score files (`vce-*.yaml`, `viral-clip-extractor-score.yaml`)
+- Mozart score files (`yacg-*.yaml`)
 - Mozart state files (`.mozart-*.jsonl`, `.mozart-*.json`, `.mozart-*.db`)
 - IDE configuration (`.vscode/`, `.idea/`)
 - Virtual environments (`.venv/`, `venv/`)

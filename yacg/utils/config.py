@@ -1,5 +1,5 @@
 """
-Configuration loader for the Viral Clip Extractor.
+Configuration loader for Yet Another Clip Generator (YACG).
 
 Reads pipeline settings from an INI file (compatible with the existing
 config.ini format) and falls back to PipelineConfig defaults for any
@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from viral_clip_extractor.models import (
+from yacg.models import (
     CONTENT_PRESETS,
     ContentProfile,
     PipelineConfig,
@@ -247,7 +247,7 @@ def save_default_config(path: str) -> None:
     }
 
     with open(config_path, "w", encoding="utf-8") as f:
-        f.write("# Viral Clip Extractor Configuration\n")
+        f.write("# YACG Configuration\n")
         f.write("# Edit these settings to customize pipeline behavior\n\n")
         parser.write(f)
 
