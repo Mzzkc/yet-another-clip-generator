@@ -8,13 +8,11 @@ faster-whisper when available.
 """
 
 import logging
-import tempfile
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
 
-from viral_clip_extractor.models import AudioFeatures
+from viral_clip_extractor.models import AudioFeatures, WordTimestamp
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +44,21 @@ class AudioAnalyzer:
     # ------------------------------------------------------------------
 
     def analyze_segment(
-        self, video_path: str, start_time: float, end_time: float
+        self,
+        video_path: str,
+        start_time: float,
+        end_time: float,
+        words: Optional[list[WordTimestamp]] = None,
     ) -> AudioFeatures:
         """Analyze audio features for a time range within a video file.
 
         Extracts the audio track from *video_path* (or loads it directly
         if it is already a WAV/audio file), then computes spectral and
         energy features over the ``[start_time, end_time)`` window.
+
+        If *words* is provided (a list of WordTimestamp objects from the
+        full-video Whisper transcription), trigger word detection reuses
+        those words instead of running a redundant Whisper transcription.
 
         Args:
             video_path: Path to a video or audio file.
@@ -65,14 +71,9 @@ class AudioAnalyzer:
         try:
             import librosa
         except ImportError:
-            logger.error("librosa is not installed — returning zero-valued AudioFeatures")
-            return AudioFeatures(
-                audio_peak_score=0.0,
-                high_freq_score=0.0,
-                dynamic_range=0.0,
-                zcr_score=0.0,
-                trigger_words=[],
-                overall_energy=0.0,
+            raise RuntimeError(
+                "librosa is required for audio analysis. "
+                "Install it with: pip install librosa"
             )
 
         duration = end_time - start_time
@@ -87,23 +88,27 @@ class AudioAnalyzer:
                 overall_energy=0.0,
             )
 
-        # Load the audio segment via librosa (handles video files too via
-        # ffmpeg backend).
+        # Extract audio to WAV first so librosa uses PySoundFile directly,
+        # avoiding the deprecated audioread fallback and its warnings.
         try:
-            y, sr = librosa.load(
-                video_path, sr=22050, mono=True,
-                offset=start_time, duration=duration,
-            )
+            from viral_clip_extractor.utils.video_utils import extract_audio, temp_audio_file
+
+            with temp_audio_file(suffix=".wav") as tmp_wav:
+                extract_audio(video_path, tmp_wav, start=start_time, end=end_time)
+                y, sr = librosa.load(tmp_wav, sr=22050, mono=True)
         except Exception as exc:
-            logger.error("Failed to load audio from %s: %s", video_path, exc)
-            return AudioFeatures(
-                audio_peak_score=0.0,
-                high_freq_score=0.0,
-                dynamic_range=0.0,
-                zcr_score=0.0,
-                trigger_words=[],
-                overall_energy=0.0,
-            )
+            logger.debug("WAV extraction failed (%s), falling back to direct load", exc)
+            # Fallback: let librosa handle it (may emit warnings)
+            try:
+                y, sr = librosa.load(
+                    video_path, sr=22050, mono=True,
+                    offset=start_time, duration=duration,
+                )
+            except Exception as exc2:
+                raise RuntimeError(
+                    f"Failed to load audio from {video_path} "
+                    f"(segment {start_time:.1f}–{end_time:.1f}s): {exc2}"
+                ) from exc2
 
         # Guard against silent / empty audio
         if y is None or len(y) == 0:
@@ -147,7 +152,7 @@ class AudioAnalyzer:
                 tapping_boost = min(onset_density * 0.02, 0.1)
                 audio_peak_score += tapping_boost
         except Exception as exc:
-            logger.debug("Onset detection failed: %s", exc)
+            logger.warning("Onset detection failed: %s", exc)
 
         # Crinkle detection: high-frequency spectral flux
         try:
@@ -156,7 +161,7 @@ class AudioAnalyzer:
             if hf_flux > 500:
                 high_freq_score = min(high_freq_score + 0.05, 1.0)
         except Exception as exc:
-            logger.debug("Spectral flux computation failed: %s", exc)
+            logger.warning("Spectral flux computation failed: %s", exc)
 
         # Mouth-sound detection: mid-frequency energy (1–4 kHz band)
         try:
@@ -171,10 +176,12 @@ class AudioAnalyzer:
                     if mid_ratio > 0.5:
                         zcr_score = min(zcr_score + 0.02, 1.0)
         except Exception as exc:
-            logger.debug("Mid-frequency analysis failed: %s", exc)
+            logger.warning("Mid-frequency analysis failed: %s", exc)
 
         # --- Trigger word detection -------------------------------------------
-        trigger_words = self._detect_trigger_words(video_path, start_time, end_time)
+        trigger_words = self._detect_trigger_words(
+            video_path, start_time, end_time, existing_words=words,
+        )
 
         return AudioFeatures(
             audio_peak_score=float(audio_peak_score),
@@ -190,67 +197,75 @@ class AudioAnalyzer:
     # ------------------------------------------------------------------
 
     def _detect_trigger_words(
-        self, audio_path: str, start: float, end: float
+        self,
+        audio_path: str,
+        start: float,
+        end: float,
+        existing_words: Optional[list[WordTimestamp]] = None,
     ) -> list[str]:
-        """Detect ASMR trigger words in the audio segment using speech-to-text.
+        """Detect ASMR trigger words in the audio segment.
 
-        Tries faster-whisper for transcription and matches against the
-        configured keyword list.  Returns an empty list gracefully if
-        faster-whisper is unavailable or transcription fails.
+        If *existing_words* is provided (WordTimestamp objects from the
+        full-video Whisper run), filters them to the segment range and
+        matches against the keyword list — avoiding a redundant Whisper
+        transcription.  Falls back to a local ``tiny`` Whisper run when
+        no pre-existing words are available.
 
         Args:
             audio_path: Path to the audio/video file.
             start: Segment start in seconds.
             end: Segment end in seconds.
+            existing_words: Pre-computed WordTimestamp objects (optional).
 
         Returns:
             A (possibly empty) list of detected trigger words.
         """
+        # Fast path: reuse existing transcription from the pipeline
+        if existing_words:
+            _BOUNDARY_TOLERANCE = 0.05
+            segment_text = " ".join(
+                w.word for w in existing_words
+                if w.start >= start - _BOUNDARY_TOLERANCE
+                and w.end <= end + _BOUNDARY_TOLERANCE
+            ).lower()
+            found: list[str] = []
+            for keyword in self.asmr_keywords:
+                if keyword.lower() in segment_text:
+                    found.append(keyword)
+            if found:
+                logger.info("Detected trigger words in %.1f–%.1fs: %s", start, end, found)
+            return found
+
+        # Fallback: run Whisper tiny on this segment
         try:
             from faster_whisper import WhisperModel
         except ImportError:
             logger.debug("faster-whisper not installed — skipping trigger word detection")
             return []
 
-        # Extract the audio segment to a temp WAV for Whisper
-        try:
-            import librosa
-            import soundfile as sf
-
-            duration = end - start
-            y, sr = librosa.load(audio_path, sr=16000, mono=True, offset=start, duration=duration)
-            if y is None or len(y) == 0:
-                return []
-
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                tmp_path = tmp.name
-                sf.write(tmp_path, y, sr)
-
-        except Exception as exc:
-            logger.debug("Failed to extract audio for transcription: %s", exc)
-            return []
+        from viral_clip_extractor.utils.video_utils import (
+            extract_audio as _extract_audio,
+            temp_audio_file,
+        )
 
         try:
-            model = WhisperModel("tiny", device="cpu", compute_type="int8")
-            segments_gen, _info = model.transcribe(tmp_path, beam_size=1, vad_filter=True)
+            with temp_audio_file(suffix=".wav") as tmp_path:
+                _extract_audio(audio_path, tmp_path, start=start, end=end)
 
-            transcript_text = " ".join(seg.text for seg in segments_gen).lower()
+                model = WhisperModel("tiny", device="cpu", compute_type="int8")
+                segments_gen, _info = model.transcribe(tmp_path, beam_size=1, vad_filter=True)
 
-            found: list[str] = []
-            for keyword in self.asmr_keywords:
-                if keyword.lower() in transcript_text:
-                    found.append(keyword)
+                transcript_text = " ".join(seg.text for seg in segments_gen).lower()
 
-            if found:
-                logger.info("Detected trigger words in %.1f–%.1fs: %s", start, end, found)
-            return found
+                found = []
+                for keyword in self.asmr_keywords:
+                    if keyword.lower() in transcript_text:
+                        found.append(keyword)
+
+                if found:
+                    logger.info("Detected trigger words in %.1f–%.1fs: %s", start, end, found)
+                return found
 
         except Exception as exc:
-            logger.debug("Whisper transcription failed: %s", exc)
+            logger.debug("Failed to extract/transcribe audio for trigger words: %s", exc)
             return []
-        finally:
-            # Clean up temp file
-            try:
-                Path(tmp_path).unlink(missing_ok=True)
-            except Exception:
-                pass

@@ -154,16 +154,14 @@ class TestEdgeCases:
 
     @patch("viral_clip_extractor.core.audio_analyzer.AudioAnalyzer._detect_trigger_words")
     def test_librosa_load_exception(self, mock_trigger: MagicMock, analyzer: AudioAnalyzer) -> None:
-        """If librosa.load raises, return zero-valued features without crashing."""
+        """If librosa.load raises, raise RuntimeError (failure = error)."""
         mock_trigger.return_value = []
         with patch("librosa.load", side_effect=RuntimeError("corrupt file")):
-            result = analyzer.analyze_segment("/fake/corrupt.mp4", 0.0, 5.0)
-
-        assert isinstance(result, AudioFeatures)
-        assert result.audio_peak_score == 0.0
+            with pytest.raises(RuntimeError, match="Failed to load audio"):
+                analyzer.analyze_segment("/fake/corrupt.mp4", 0.0, 5.0)
 
     def test_librosa_import_failure(self, analyzer: AudioAnalyzer) -> None:
-        """If librosa is completely missing, return zero features gracefully."""
+        """If librosa is completely missing, raise RuntimeError (failure = error)."""
         import builtins
         original_import = builtins.__import__
 
@@ -173,11 +171,8 @@ class TestEdgeCases:
             return original_import(name, *args, **kwargs)
 
         with patch("builtins.__import__", side_effect=mock_import):
-            result = analyzer.analyze_segment("/fake/video.mp4", 0.0, 5.0)
-
-        assert isinstance(result, AudioFeatures)
-        assert result.audio_peak_score == 0.0
-        assert result.trigger_words == []
+            with pytest.raises(RuntimeError, match="librosa is required"):
+                analyzer.analyze_segment("/fake/video.mp4", 0.0, 5.0)
 
 
 # ---------------------------------------------------------------------------
@@ -196,12 +191,11 @@ class TestTriggerWords:
         mock_whisper_module = MagicMock()
         mock_whisper_module.WhisperModel.return_value = mock_model
 
-        fake_y = _fake_audio(sr=16000, duration=2.0)
-
         with patch.dict("sys.modules", {"faster_whisper": mock_whisper_module}):
-            with patch("librosa.load", return_value=(fake_y, 16000)):
-                with patch("soundfile.write"):
-                    result = analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
+            with patch(
+                "viral_clip_extractor.utils.video_utils.extract_audio"
+            ):
+                result = analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
 
         assert "relax" in result
         assert "gentle" in result
@@ -219,12 +213,11 @@ class TestTriggerWords:
         mock_whisper_module = MagicMock()
         mock_whisper_module.WhisperModel.return_value = mock_model
 
-        fake_y = _fake_audio(sr=16000, duration=2.0)
-
         with patch.dict("sys.modules", {"faster_whisper": mock_whisper_module}):
-            with patch("librosa.load", return_value=(fake_y, 16000)):
-                with patch("soundfile.write"):
-                    result = analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
+            with patch(
+                "viral_clip_extractor.utils.video_utils.extract_audio"
+            ):
+                result = analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
 
         assert result == []
 
@@ -254,12 +247,11 @@ class TestTriggerWords:
         mock_whisper_module = MagicMock()
         mock_whisper_module.WhisperModel.return_value = mock_model
 
-        fake_y = _fake_audio(sr=16000, duration=2.0)
-
         with patch.dict("sys.modules", {"faster_whisper": mock_whisper_module}):
-            with patch("librosa.load", return_value=(fake_y, 16000)):
-                with patch("soundfile.write"):
-                    result = custom_analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
+            with patch(
+                "viral_clip_extractor.utils.video_utils.extract_audio"
+            ):
+                result = custom_analyzer._detect_trigger_words("/fake/audio.wav", 0.0, 2.0)
 
         assert "custom" in result
         assert "words" in result

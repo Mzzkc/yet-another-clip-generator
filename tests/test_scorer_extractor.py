@@ -104,7 +104,7 @@ class TestViralityScorerCalculateScore:
     ) -> None:
         result = scorer.calculate_score(audio, visual, semantic, duration=15.0)
         expected_keys = {
-            "audio_peaks", "high_freq", "motion", "visual",
+            "audio_peaks", "high_freq", "motion", "visual", "composition",
             "hook", "emotional", "asmr", "narrative", "uniqueness", "duration",
         }
         assert set(result.component_scores.keys()) == expected_keys
@@ -263,7 +263,7 @@ class TestViralityScorerEdgeCases:
 
     def test_max_features(self, scorer: ViralityScorer) -> None:
         audio = AudioFeatures(
-            audio_peak_score=1.0, high_freq_score=1.0,
+            audio_peak_score=2.0, high_freq_score=1.0,
             dynamic_range=0.5, zcr_score=0.5,
         )
         visual = VisualFeatures(
@@ -310,11 +310,15 @@ class TestViralityScorerEdgeCases:
 # ClipExtractor — extract_clip
 # ---------------------------------------------------------------------------
 
+@patch(
+    "viral_clip_extractor.extractors.clip_extractor.ClipExtractor._get_vertical_filter",
+    return_value="crop=608:1080:236:0",
+)
 class TestClipExtractorExtractClip:
     """Tests for ClipExtractor.extract_clip (FFmpeg mocked)."""
 
-    def _make_extractor(self, vertical: bool = False) -> ClipExtractor:
-        return ClipExtractor(vertical=vertical, context_padding=2.0)
+    def _make_extractor(self) -> ClipExtractor:
+        return ClipExtractor(context_padding=2.0)
 
     @patch("viral_clip_extractor.extractors.clip_extractor.subprocess.run")
     @patch(
@@ -322,7 +326,8 @@ class TestClipExtractorExtractClip:
         return_value=120.0,
     )
     def test_successful_extraction(
-        self, mock_dur: MagicMock, mock_run: MagicMock, tmp_path: Path,
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
     ) -> None:
         output = tmp_path / "out.mp4"
         # Simulate FFmpeg creating a file
@@ -345,7 +350,8 @@ class TestClipExtractorExtractClip:
         return_value=120.0,
     )
     def test_ffmpeg_failure_returns_false(
-        self, mock_dur: MagicMock, mock_run: MagicMock, tmp_path: Path,
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
     ) -> None:
         mock_run.return_value = MagicMock(returncode=1, stderr="encoding error")
         output = tmp_path / "out.mp4"
@@ -362,7 +368,8 @@ class TestClipExtractorExtractClip:
         return_value=120.0,
     )
     def test_ffmpeg_not_found(
-        self, mock_dur: MagicMock, mock_run: MagicMock, tmp_path: Path,
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
     ) -> None:
         output = tmp_path / "out.mp4"
         ext = self._make_extractor()
@@ -375,7 +382,8 @@ class TestClipExtractorExtractClip:
         return_value=120.0,
     )
     def test_output_too_small_returns_false(
-        self, mock_dur: MagicMock, mock_run: MagicMock, tmp_path: Path,
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
     ) -> None:
         output = tmp_path / "out.mp4"
 
@@ -394,7 +402,8 @@ class TestClipExtractorExtractClip:
         return_value=120.0,
     )
     def test_context_padding_applied(
-        self, mock_dur: MagicMock, mock_run: MagicMock, tmp_path: Path,
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
     ) -> None:
         output = tmp_path / "out.mp4"
 
@@ -404,7 +413,7 @@ class TestClipExtractorExtractClip:
 
         mock_run.side_effect = side_effect
 
-        ext = ClipExtractor(vertical=False, context_padding=3.0)
+        ext = ClipExtractor(context_padding=3.0)
         ext.extract_clip("/fake/video.mp4", 10.0, 20.0, str(output))
 
         # Check that -ss and -t reflect padding: start=7.0, duration=16.0
@@ -420,7 +429,8 @@ class TestClipExtractorExtractClip:
         return_value=12.0,
     )
     def test_padding_clamped_to_video_bounds(
-        self, mock_dur: MagicMock, mock_run: MagicMock, tmp_path: Path,
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
     ) -> None:
         output = tmp_path / "out.mp4"
 
@@ -430,7 +440,7 @@ class TestClipExtractorExtractClip:
 
         mock_run.side_effect = side_effect
 
-        ext = ClipExtractor(vertical=False, context_padding=5.0)
+        ext = ClipExtractor(context_padding=5.0)
         ext.extract_clip("/fake/video.mp4", 1.0, 11.0, str(output))
 
         call_args = mock_run.call_args[0][0]
@@ -457,7 +467,7 @@ class TestClipExtractorBatchExtract:
             SceneSegment(start_time=15.0, end_time=30.0, scene_index=1),
         ]
         scores = [85.0, 72.0]
-        ext = ClipExtractor(vertical=False)
+        ext = ClipExtractor()
 
         paths = ext.batch_extract(
             "/fake/video.mp4", segments, str(tmp_path), scores,
@@ -475,7 +485,7 @@ class TestClipExtractorBatchExtract:
             SceneSegment(start_time=10.0, end_time=20.0, scene_index=1),
             SceneSegment(start_time=20.0, end_time=30.0, scene_index=2),
         ]
-        ext = ClipExtractor(vertical=False)
+        ext = ClipExtractor()
         paths = ext.batch_extract("/fake/video.mp4", segments, str(tmp_path))
         assert len(paths) == 2
 
@@ -483,7 +493,7 @@ class TestClipExtractorBatchExtract:
     def test_batch_empty_segments(
         self, mock_extract: MagicMock, tmp_path: Path,
     ) -> None:
-        ext = ClipExtractor(vertical=False)
+        ext = ClipExtractor()
         paths = ext.batch_extract("/fake/video.mp4", [], str(tmp_path))
         assert paths == []
         assert not mock_extract.called
@@ -511,11 +521,16 @@ class TestClipExtractorExtractBatch:
                     motion_score=10.0, face_presence=0.5,
                     visual_interest=50.0, composition_score=5.0,
                 ),
+                semantic=SemanticFeatures(
+                    emotional_intensity=5.0, narrative_interest=5.0,
+                    hook_potential=5.0, asmr_quality=5.0,
+                    visual_appeal=5.0, uniqueness=5.0,
+                ),
                 virality=ViralityScore(total_score=88.5),
             ),
         ]
         config = PipelineConfig(output_dir=str(tmp_path))
-        ext = ClipExtractor(vertical=False, config=config)
+        ext = ClipExtractor(config=config)
         paths = ext.extract_batch("/fake/video.mp4", clips)
         assert len(paths) == 1
         assert mock_extract.called

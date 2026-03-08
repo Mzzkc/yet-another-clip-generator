@@ -5,3 +5,7 @@ logs/
 score-artifacts/
 .mozart/
 /tmp/
+.coverage
+site/
+*-workspace/
+workspaces/

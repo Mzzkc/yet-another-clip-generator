@@ -11,6 +11,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Optional
@@ -18,6 +19,41 @@ from typing import Generator, Optional
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# Lazy-loaded OpenCV reference — shared across modules
+_cv2 = None
+
+
+def get_cv2():  # type: ignore[no-untyped-def]
+    """Lazy-import cv2 so modules can be imported even without OpenCV."""
+    global _cv2
+    if _cv2 is None:
+        try:
+            import cv2
+
+            _cv2 = cv2
+        except ImportError:
+            raise ImportError(
+                "OpenCV (cv2) is required. "
+                "Install it with: pip install opencv-python-headless"
+            )
+    return _cv2
+
+
+def translate_ffmpeg_error(stderr: str) -> str:
+    """Translate raw FFmpeg stderr into a human-readable message."""
+    s = stderr.lower()
+    if "no such file" in s:
+        return "Input file not found. Check that the video path is correct."
+    if "invalid data" in s or "invalid argument" in s:
+        return "The video file appears to be corrupt or in an unsupported format."
+    if "permission denied" in s:
+        return "Permission denied — check file/folder permissions."
+    if "no space" in s:
+        return "Disk is full — free up space and try again."
+    if "does not contain" in s or ("stream" in s and "not found" in s):
+        return "The video file is missing a required stream (video or audio)."
+    return stderr.strip()[:300]
 
 
 def extract_metadata(video_path: str) -> dict:
@@ -133,6 +169,19 @@ def extract_audio(
         str(output_path),
     ])
 
+    duration_str = ""
+    segment_dur = None
+    if start is not None and end is not None:
+        segment_dur = end - start
+        duration_str = f" ({segment_dur:.1f}s segment)"
+    elif end is not None:
+        segment_dur = end
+        duration_str = f" ({segment_dur:.1f}s)"
+    logger.info("Extracting audio%s...", duration_str)
+    if segment_dur is not None and segment_dur > 60:
+        logger.warning(
+            "Long audio extraction (%.0fs) — this may take a while", segment_dur,
+        )
     logger.debug("Running: %s", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
@@ -285,11 +334,41 @@ def ensure_compatible_video(video_path: str) -> str:
     ]
 
     logger.info("Transcoding: %s -> %s", video_path, transcoded_path)
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
 
-    if result.returncode != 0:
+    # Use Popen for progress logging instead of subprocess.run with a
+    # 1-hour silent timeout.  FFmpeg writes progress to stderr; we log
+    # periodic updates so the user knows the transcode is still running.
+    import re as _re
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    stderr_lines: list[str] = []
+    last_log_time = time.time()
+    try:
+        assert proc.stderr is not None  # for type checker
+        for line in proc.stderr:
+            stderr_lines.append(line)
+            # FFmpeg progress lines look like: "frame= 1234 fps=..."
+            # or "time=00:01:23.45"
+            now = time.time()
+            if now - last_log_time >= 10:  # log every 10 seconds
+                time_match = _re.search(r"time=(\S+)", line)
+                if time_match:
+                    logger.info("Transcoding progress: %s", time_match.group(1))
+                else:
+                    logger.info("Transcoding in progress...")
+                last_log_time = now
+        proc.wait(timeout=3600)
+    except subprocess.TimeoutExpired:
+        proc.kill()
         raise RuntimeError(
-            f"Transcoding failed for {video_path}: {result.stderr.strip()}"
+            f"Transcoding timed out after 1 hour for {video_path}"
+        )
+
+    if proc.returncode != 0:
+        stderr_text = "".join(stderr_lines).strip()
+        raise RuntimeError(
+            f"Transcoding failed for {video_path}: {stderr_text[-500:]}"
         )
 
     logger.info("Transcoding complete: %s", transcoded_path)
@@ -316,21 +395,3 @@ def temp_audio_file(suffix: str = ".wav") -> Generator[str, None, None]:
             logger.debug("Cleaned up temp file: %s", path)
 
 
-@contextmanager
-def temp_dir(prefix: str = "vce_") -> Generator[str, None, None]:
-    """Context manager for a temporary directory that is removed on exit.
-
-    Args:
-        prefix: Prefix for the directory name.
-
-    Yields:
-        Path to the temporary directory.
-    """
-    tmp = tempfile.mkdtemp(prefix=prefix)
-    try:
-        yield tmp
-    finally:
-        import shutil
-        if os.path.exists(tmp):
-            shutil.rmtree(tmp)
-            logger.debug("Cleaned up temp dir: %s", tmp)

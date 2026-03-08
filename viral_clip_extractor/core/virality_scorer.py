@@ -19,24 +19,13 @@ from viral_clip_extractor.models import (
 
 logger = logging.getLogger(__name__)
 
-# Default ASMR-optimized weights (from design doc)
-_DEFAULT_WEIGHTS: dict[str, float] = {
-    "hook": 0.20,
-    "emotional": 0.15,
-    "audio_peaks": 0.15,
-    "asmr": 0.12,
-    "motion": 0.12,
-    "narrative": 0.10,
-    "high_freq": 0.10,
-    "uniqueness": 0.08,
-    "visual": 0.07,
-    "duration": 0.05,
-}
+# Single source of truth — derive from PipelineConfig defaults
+_DEFAULT_WEIGHTS: dict[str, float] = dict(PipelineConfig().scoring_weights)
 
 # Weight categories for redistribution when semantic is unavailable
 _SEMANTIC_KEYS = {"hook", "emotional", "asmr", "narrative", "uniqueness"}
 _AUDIO_KEYS = {"audio_peaks", "high_freq"}
-_VISUAL_KEYS = {"motion", "visual"}
+_VISUAL_KEYS = {"motion", "visual", "composition"}
 
 
 class ViralityScorer:
@@ -107,13 +96,15 @@ class ViralityScorer:
         # Build component scores (all on 0-10 scale)
         components: dict[str, float] = {}
 
-        # Audio components — raw values are typically 0-1 from librosa
-        components["audio_peaks"] = self._normalize(audio.audio_peak_score, 0.0, 1.0)
+        # Audio components — RMS can exceed 1.0 for loud audio; clamp to [0, 2]
+        # to avoid silently discarding dynamic range for non-ASMR content
+        components["audio_peaks"] = self._normalize(audio.audio_peak_score, 0.0, 2.0)
         components["high_freq"] = self._normalize(audio.high_freq_score, 0.0, 1.0)
 
-        # Visual components
-        components["motion"] = self._normalize(visual.motion_score, 0.0, 50.0)
-        components["visual"] = self._normalize(visual.visual_interest, 0.0, 100.0)
+        # Visual components — VisualAnalyzer outputs are 0.0–1.0
+        components["motion"] = self._normalize(visual.motion_score, 0.0, 1.0)
+        components["visual"] = self._normalize(visual.visual_interest, 0.0, 1.0)
+        components["composition"] = self._normalize(visual.composition_score, 0.0, 1.0)
 
         # Semantic components (already on 0-10 scale per SemanticFeatures doc)
         if semantic is not None:

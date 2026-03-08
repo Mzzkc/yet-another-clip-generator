@@ -22,10 +22,6 @@ PYTHON_DEPS = {
     "scenedetect": "scenedetect[opencv]>=0.6",
     "requests": "requests>=2.28",
     "yt_dlp": "yt-dlp",
-}
-
-# Optional deps that enhance functionality but aren't required
-OPTIONAL_DEPS = {
     "faster_whisper": "faster-whisper",
 }
 
@@ -103,19 +99,45 @@ def print_ffmpeg_instructions(os_info: dict) -> None:
     print("=" * 60 + "\n")
 
 
+def _in_virtualenv() -> bool:
+    """Check if running inside a virtualenv, venv, or conda environment."""
+    import os
+    return (
+        hasattr(sys, "real_prefix")  # virtualenv
+        or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix)  # venv
+        or os.environ.get("CONDA_DEFAULT_ENV") is not None  # conda
+    )
+
+
 def _pip_install(packages: list[str]) -> bool:
-    """Install packages via pip with multiple fallback strategies."""
-    strategies = [
-        [sys.executable, "-m", "pip", "install", "--break-system-packages", *packages],
-        [sys.executable, "-m", "pip", "install", "--user", "--break-system-packages", *packages],
-        [sys.executable, "-m", "pip", "install", "--user", *packages],
-        [sys.executable, "-m", "pip", "install", *packages],
+    """Install packages via pip with multiple fallback strategies.
+
+    Tries safe strategies first (plain pip, --user). Only falls back to
+    --break-system-packages as a last resort with a warning, since it can
+    corrupt system Python on PEP 668 systems (Debian 12+, Ubuntu 23.04+,
+    Fedora 38+).
+    """
+    # Safe strategies first; --break-system-packages only as last resort
+    strategies: list[tuple[list[str], bool]] = [
+        ([sys.executable, "-m", "pip", "install", *packages], False),
+        ([sys.executable, "-m", "pip", "install", "--user", *packages], False),
     ]
 
-    for cmd in strategies:
+    # Only add --break-system-packages if NOT in a virtualenv
+    if not _in_virtualenv():
+        strategies.append(
+            ([sys.executable, "-m", "pip", "install", "--user", "--break-system-packages", *packages], True),
+        )
+
+    for cmd, is_break_system in strategies:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             if result.returncode == 0:
+                if is_break_system:
+                    print(
+                        "  Warning: installed with --break-system-packages. "
+                        "Consider using a virtualenv to avoid modifying system Python."
+                    )
                 # Refresh import paths
                 importlib.invalidate_caches()
                 user_site = site.getusersitepackages()
@@ -161,37 +183,27 @@ def ensure_python_deps() -> bool:
     return False
 
 
-def ensure_optional_deps() -> dict[str, bool]:
-    """Check optional dependencies. Install if possible, report status."""
-    status = {}
-    for import_name, pip_name in OPTIONAL_DEPS.items():
-        try:
-            __import__(import_name)
-            status[import_name] = True
-        except ImportError:
-            # Try to install silently
-            if _pip_install([pip_name]):
-                try:
-                    __import__(import_name)
-                    status[import_name] = True
-                except ImportError:
-                    status[import_name] = False
-            else:
-                status[import_name] = False
-    return status
-
-
 def check_ollama(host: str = "http://localhost:11434") -> dict:
-    """Check Ollama availability and loaded models."""
+    """Check Ollama availability and loaded models.
+
+    Returns a dict with 'available' (bool), 'models' (list), and
+    optionally 'error' (str) describing why the check failed.
+    """
     try:
         import requests
         resp = requests.get(f"{host}/api/tags", timeout=5)
         if resp.status_code == 200:
             models = [m["name"] for m in resp.json().get("models", [])]
             return {"available": True, "models": models}
-    except Exception:
-        pass
-    return {"available": False, "models": []}
+        return {
+            "available": False,
+            "models": [],
+            "error": f"Ollama returned HTTP {resp.status_code}",
+        }
+    except ImportError:
+        return {"available": False, "models": [], "error": "requests package not installed"}
+    except Exception as exc:
+        return {"available": False, "models": [], "error": str(exc)}
 
 
 def ensure_ready(verbose: bool = True) -> bool:
@@ -217,13 +229,6 @@ def ensure_ready(verbose: bool = True) -> bool:
             print("  Some required Python packages could not be installed.")
             print("  Try manually: pip install -r requirements-clip-extractor.txt")
         ok = False
-
-    # 3. Check optional deps (non-blocking)
-    if verbose:
-        opt_status = ensure_optional_deps()
-        for name, available in opt_status.items():
-            if not available:
-                print(f"  Optional: {name} not available ({OPTIONAL_DEPS[name]})")
 
     if ok:
         _bootstrapped = True

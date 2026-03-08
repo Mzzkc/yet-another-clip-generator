@@ -51,6 +51,17 @@ class YouTubeDownloader:
         output_template = os.path.join(self.output_dir, "%(id)s.%(ext)s")
 
         # Force h264 video codec — AV1/VP9 can't be decoded by OpenCV/scenedetect
+        def _log_progress(d: dict) -> None:
+            """Log yt-dlp download progress."""
+            status = d.get("status")
+            if status == "downloading":
+                pct = d.get("_percent_str", "?%").strip()
+                speed = d.get("_speed_str", "?").strip()
+                eta = d.get("_eta_str", "?").strip()
+                logger.info("Downloading: %s at %s (ETA: %s)", pct, speed, eta)
+            elif status == "finished":
+                logger.info("Download finished, post-processing...")
+
         ydl_opts = {
             "format": (
                 "bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/"
@@ -68,6 +79,7 @@ class YouTubeDownloader:
             }],
             "quiet": True,
             "no_warnings": True,
+            "progress_hooks": [_log_progress],
         }
 
         logger.info("Downloading video %s ...", video_id)

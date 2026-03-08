@@ -2,7 +2,7 @@
 Clip extraction module.
 
 Extracts scored video segments as standalone clip files using FFmpeg,
-with optional vertical (9:16) reformatting for Instagram Reels / TikTok.
+with vertical (9:16) reformatting for Instagram Reels / TikTok.
 Supports single-clip and batch extraction with configurable context padding.
 """
 
@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from viral_clip_extractor.models import ClipData, PipelineConfig, SceneSegment
+from viral_clip_extractor.utils.video_utils import translate_ffmpeg_error
 
 logger = logging.getLogger(__name__)
 
@@ -21,28 +22,25 @@ class ClipExtractor:
     """Extract and format video clips for social media.
 
     Wraps FFmpeg to cut segments from a source video, re-encode to
-    H.264/AAC, and optionally apply a smart vertical crop via
-    :class:`SmartCropper`.
+    H.264/AAC, and apply a smart vertical crop via :class:`SmartCropper`.
 
     Args:
-        vertical: If ``True``, apply 9:16 vertical cropping.
         context_padding: Seconds to add before/after the segment
             boundaries (clamped to video duration).
-        config: Pipeline configuration (overrides *vertical* and
-            *context_padding* if supplied).
+        config: Pipeline configuration (overrides *context_padding*
+            if supplied).
     """
 
     def __init__(
         self,
-        vertical: bool = True,
         context_padding: float = 2.0,
         config: Optional[PipelineConfig] = None,
     ) -> None:
         self.config = config or PipelineConfig()
-        self.vertical = vertical if config is None else config.vertical_crop
         self.context_padding = (
             context_padding if config is None else config.context_padding
         )
+        self._cropper = None  # cached SmartCropper instance
 
     def extract_clip(
         self,
@@ -51,11 +49,11 @@ class ClipExtractor:
         end_time: float,
         output_path: str,
     ) -> bool:
-        """Extract a single clip with context padding and optional vertical crop.
+        """Extract a single clip with context padding and vertical crop.
 
         Pads segment boundaries by :attr:`context_padding` seconds (clamped
         to ``[0, video_duration]``), re-encodes with libx264/CRF 23/AAC 128k,
-        applies the SmartCropper filter when *vertical* is enabled, and
+        applies the SmartCropper filter for 9:16 vertical cropping, and
         validates that the output exists and is at least 10 KB.
 
         Args:
@@ -92,10 +90,9 @@ class ClipExtractor:
             "-t", str(duration),
         ]
 
-        # Apply vertical crop filter if enabled
-        vf_filter = self._get_vertical_filter(video_path) if self.vertical else None
-        if vf_filter:
-            cmd.extend(["-vf", vf_filter])
+        # Apply vertical crop filter (_get_vertical_filter raises on failure)
+        vf_filter = self._get_vertical_filter(video_path, start_time, end_time)
+        cmd.extend(["-vf", vf_filter])
 
         cmd.extend([
             "-c:v", "libx264",
@@ -107,22 +104,39 @@ class ClipExtractor:
             str(output_path),
         ])
 
-        # Execute FFmpeg
-        try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=300,
-            )
-        except FileNotFoundError:
-            logger.error("FFmpeg not found — install FFmpeg to extract clips")
-            return False
-        except subprocess.TimeoutExpired:
-            logger.error("FFmpeg timed out while extracting clip")
-            return False
+        # Execute FFmpeg with single retry on failure
+        max_ffmpeg_attempts = 2
+        for ffmpeg_attempt in range(1, max_ffmpeg_attempts + 1):
+            try:
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=300,
+                )
+            except FileNotFoundError:
+                logger.error("FFmpeg not found — install FFmpeg to extract clips")
+                return False
+            except subprocess.TimeoutExpired:
+                logger.error("FFmpeg timed out while extracting clip")
+                if ffmpeg_attempt < max_ffmpeg_attempts:
+                    logger.info("Retrying FFmpeg extraction (attempt %d/%d)...", ffmpeg_attempt + 1, max_ffmpeg_attempts)
+                    import time
+                    time.sleep(2)
+                    continue
+                return False
 
-        if result.returncode != 0:
-            logger.error("FFmpeg encoding failed (exit %d): %s",
-                         result.returncode, result.stderr.strip()[:500])
-            return False
+            if result.returncode == 0:
+                break
+
+            human_msg = translate_ffmpeg_error(result.stderr)
+            if ffmpeg_attempt < max_ffmpeg_attempts:
+                logger.warning(
+                    "FFmpeg attempt %d failed: %s — retrying in 2s",
+                    ffmpeg_attempt, human_msg,
+                )
+                import time
+                time.sleep(2)
+            else:
+                logger.error("Clip extraction failed: %s", human_msg)
+                return False
 
         # Validate output
         out = Path(output_path)
@@ -212,25 +226,48 @@ class ClipExtractor:
     # ------------------------------------------------------------------
 
     def _get_video_duration(self, video_path: str) -> float:
-        """Query video duration via ffprobe, falling back to a large value."""
+        """Query video duration via ffprobe, falling back to a large but finite value.
+
+        Returns 86400.0 (24 hours) as a safe upper bound when duration cannot be
+        determined, rather than ``float("inf")`` which could produce absurdly
+        long clips from corrupt metadata.
+        """
+        _FALLBACK_DURATION = 86400.0  # 24 hours
         try:
             from viral_clip_extractor.utils.video_utils import extract_metadata
             meta = extract_metadata(video_path)
-            return float(meta.get("duration", 0)) or float("inf")
+            duration = float(meta.get("duration", 0))
+            if duration > 0:
+                return duration
+            logger.warning(
+                "Video duration is zero or missing for %s — using fallback %.0fs",
+                video_path, _FALLBACK_DURATION,
+            )
+            return _FALLBACK_DURATION
         except Exception as exc:
-            logger.debug("Could not get video duration: %s", exc)
-            return float("inf")
+            logger.warning(
+                "Could not determine video duration for %s: %s — using fallback %.0fs",
+                video_path, exc, _FALLBACK_DURATION,
+            )
+            return _FALLBACK_DURATION
 
-    def _get_vertical_filter(self, video_path: str) -> Optional[str]:
-        """Attempt to build a SmartCropper filter; return None on failure."""
+    def _get_vertical_filter(
+        self, video_path: str, start_time: float = 0, end_time: float | None = None,
+    ) -> str:
+        """Build a SmartCropper filter. Raises on failure."""
         try:
-            from viral_clip_extractor.extractors.smart_cropper import SmartCropper
-            cropper = SmartCropper(config=self.config)
-            vf = cropper.get_ffmpeg_filter(video_path, start_time=0)
-            return vf if vf else None
-        except ImportError:
-            logger.debug("SmartCropper unavailable (missing cv2), skipping vertical crop")
-            return None
-        except Exception as exc:
-            logger.warning("SmartCropper failed, skipping vertical crop: %s", exc)
-            return None
+            if self._cropper is None:
+                from viral_clip_extractor.extractors.smart_cropper import SmartCropper
+                self._cropper = SmartCropper(config=self.config)
+            vf = self._cropper.get_ffmpeg_filter(
+                video_path, start_time=start_time, end_time=end_time,
+            )
+            if not vf:
+                raise RuntimeError(
+                    f"SmartCropper returned empty filter for {video_path}"
+                )
+            return vf
+        except ImportError as exc:
+            raise RuntimeError(
+                "SmartCropper unavailable — cv2 is required for vertical cropping"
+            ) from exc
