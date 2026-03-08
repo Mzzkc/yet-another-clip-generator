@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer, _DEFAULT_SCORE
+from viral_clip_extractor.core.semantic_analyzer import SemanticAnalyzer
 from viral_clip_extractor.models import SemanticFeatures
 
 
@@ -55,7 +55,7 @@ class TestCheckAvailability:
         mock_resp.status_code = 200
         mock_resp.json.return_value = ollama_tags_response
 
-        with patch("viral_clip_extractor.core.semantic_analyzer.requests.get", return_value=mock_resp):
+        with patch.object(analyzer._session, "get", return_value=mock_resp):
             assert analyzer.check_availability() is True
 
     def test_returns_false_when_model_missing(self, analyzer: SemanticAnalyzer) -> None:
@@ -63,21 +63,21 @@ class TestCheckAvailability:
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"models": [{"name": "other:latest"}]}
 
-        with patch("viral_clip_extractor.core.semantic_analyzer.requests.get", return_value=mock_resp):
+        with patch.object(analyzer._session, "get", return_value=mock_resp):
             assert analyzer.check_availability() is False
 
     def test_returns_false_on_connection_error(self, analyzer: SemanticAnalyzer) -> None:
         import requests as req
-        with patch(
-            "viral_clip_extractor.core.semantic_analyzer.requests.get",
+        with patch.object(
+            analyzer._session, "get",
             side_effect=req.ConnectionError("refused"),
         ):
             assert analyzer.check_availability() is False
 
     def test_returns_false_on_timeout(self, analyzer: SemanticAnalyzer) -> None:
         import requests as req
-        with patch(
-            "viral_clip_extractor.core.semantic_analyzer.requests.get",
+        with patch.object(
+            analyzer._session, "get",
             side_effect=req.Timeout("timed out"),
         ):
             assert analyzer.check_availability() is False
@@ -85,7 +85,7 @@ class TestCheckAvailability:
     def test_returns_false_on_non_200_status(self, analyzer: SemanticAnalyzer) -> None:
         mock_resp = MagicMock()
         mock_resp.status_code = 500
-        with patch("viral_clip_extractor.core.semantic_analyzer.requests.get", return_value=mock_resp):
+        with patch.object(analyzer._session, "get", return_value=mock_resp):
             assert analyzer.check_availability() is False
 
 
@@ -164,129 +164,70 @@ class TestCreateViralityPrompt:
 
 
 class TestAnalyzeSegment:
-    @patch("viral_clip_extractor.core.semantic_analyzer.extract_segment")
-    @patch("viral_clip_extractor.core.semantic_analyzer.requests.post")
     def test_successful_analysis(
         self,
-        mock_post: MagicMock,
-        mock_extract: MagicMock,
         analyzer: SemanticAnalyzer,
         valid_llm_json: str,
-        tmp_path: pytest.TempPathFactory,
     ) -> None:
-        # Create a fake segment file that _encode_video can read
-        fake_segment = tmp_path / "seg.mp4"
-        fake_segment.write_bytes(b"fake video data")
-
-        # Make extract_segment write to the temp path (we patch mkstemp to use it)
-        def fake_extract(vp: str, start: float, end: float, out: str) -> str:
-            with open(out, "wb") as f:
-                f.write(b"fake video data")
-            return out
-
-        mock_extract.side_effect = fake_extract
-
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"response": valid_llm_json}
-        mock_post.return_value = mock_resp
 
-        result = analyzer.analyze_segment("/fake/video.mp4", 0.0, 15.0, "Test")
+        # Mock _extract_frames_base64 to return fake JPEG data
+        with patch.object(analyzer, "_extract_frames_base64", return_value=["fake_b64_jpg"]):
+            with patch.object(analyzer._session, "post", return_value=mock_resp) as mock_post:
+                result = analyzer.analyze_segment("/fake/video.mp4", 0.0, 15.0, "Test")
 
         assert isinstance(result, SemanticFeatures)
         assert result.emotional_intensity == 7.5
         assert result.hook_potential == 8.0
-        mock_extract.assert_called_once()
         mock_post.assert_called_once()
+        # Verify images field contains JPEG frames, not raw video bytes
+        call_args = mock_post.call_args
+        assert call_args[1]["json"]["images"] == ["fake_b64_jpg"]
 
-    @patch("viral_clip_extractor.core.semantic_analyzer.extract_segment")
-    def test_extract_failure_returns_defaults(
-        self, mock_extract: MagicMock, analyzer: SemanticAnalyzer
-    ) -> None:
-        mock_extract.side_effect = RuntimeError("ffmpeg not found")
-
-        result = analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
-        assert isinstance(result, SemanticFeatures)
-        assert result.emotional_intensity == _DEFAULT_SCORE
-        assert result.description == "Analysis unavailable — using default scores"
-
-    def test_invalid_duration_returns_defaults(self, analyzer: SemanticAnalyzer) -> None:
-        result = analyzer.analyze_segment("/fake/video.mp4", 10.0, 5.0)
-        assert isinstance(result, SemanticFeatures)
-        assert result.emotional_intensity == _DEFAULT_SCORE
+    def test_invalid_duration_raises(self, analyzer: SemanticAnalyzer) -> None:
+        with pytest.raises(RuntimeError, match="duration must be positive"):
+            analyzer.analyze_segment("/fake/video.mp4", 10.0, 5.0)
 
     @patch("viral_clip_extractor.core.semantic_analyzer.time.sleep")
-    @patch("viral_clip_extractor.core.semantic_analyzer.extract_segment")
-    @patch("viral_clip_extractor.core.semantic_analyzer.requests.post")
-    def test_retries_on_failure_then_returns_defaults(
+    def test_retries_on_failure_then_raises(
         self,
-        mock_post: MagicMock,
-        mock_extract: MagicMock,
         mock_sleep: MagicMock,
         analyzer: SemanticAnalyzer,
     ) -> None:
-        def fake_extract(vp: str, start: float, end: float, out: str) -> str:
-            with open(out, "wb") as f:
-                f.write(b"fake")
-            return out
-
-        mock_extract.side_effect = fake_extract
-
         # All attempts return unparseable response
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"response": "not json at all"}
-        mock_post.return_value = mock_resp
 
-        result = analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
-        assert isinstance(result, SemanticFeatures)
-        assert result.emotional_intensity == _DEFAULT_SCORE
+        with patch.object(analyzer, "_extract_frames_base64", return_value=["fake_b64"]):
+            with patch.object(analyzer._session, "post", return_value=mock_resp) as mock_post:
+                with pytest.raises(RuntimeError, match="Semantic analysis failed after"):
+                    analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
         assert mock_post.call_count == 3  # _MAX_RETRIES
 
     @patch("viral_clip_extractor.core.semantic_analyzer.time.sleep")
-    @patch("viral_clip_extractor.core.semantic_analyzer.extract_segment")
-    @patch("viral_clip_extractor.core.semantic_analyzer.requests.post")
-    def test_connection_error_retries(
+    def test_connection_error_retries_then_raises(
         self,
-        mock_post: MagicMock,
-        mock_extract: MagicMock,
         mock_sleep: MagicMock,
         analyzer: SemanticAnalyzer,
     ) -> None:
         import requests as req
 
-        def fake_extract(vp: str, start: float, end: float, out: str) -> str:
-            with open(out, "wb") as f:
-                f.write(b"fake")
-            return out
-
-        mock_extract.side_effect = fake_extract
-        mock_post.side_effect = req.ConnectionError("refused")
-
-        result = analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
-        assert isinstance(result, SemanticFeatures)
-        assert result.emotional_intensity == _DEFAULT_SCORE
+        with patch.object(analyzer, "_extract_frames_base64", return_value=["fake_b64"]):
+            with patch.object(analyzer._session, "post", side_effect=req.ConnectionError("refused")) as mock_post:
+                with pytest.raises(RuntimeError, match="Semantic analysis failed after"):
+                    analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
         assert mock_post.call_count == 3
 
-
-# ---------------------------------------------------------------------------
-# _default_features
-# ---------------------------------------------------------------------------
-
-
-class TestDefaultFeatures:
-    def test_all_defaults_at_midpoint(self, analyzer: SemanticAnalyzer) -> None:
-        features = analyzer._default_features()
-        assert features.emotional_intensity == _DEFAULT_SCORE
-        assert features.narrative_interest == _DEFAULT_SCORE
-        assert features.hook_potential == _DEFAULT_SCORE
-        assert features.asmr_quality == _DEFAULT_SCORE
-        assert features.visual_appeal == _DEFAULT_SCORE
-        assert features.uniqueness == _DEFAULT_SCORE
-
-    def test_default_has_description(self, analyzer: SemanticAnalyzer) -> None:
-        features = analyzer._default_features()
-        assert "default" in features.description.lower() or "unavailable" in features.description.lower()
+    def test_frame_extraction_failure_raises(
+        self, analyzer: SemanticAnalyzer,
+    ) -> None:
+        """If no frames can be extracted, analyze_segment raises RuntimeError."""
+        with patch.object(analyzer, "_extract_frames_base64", return_value=[]):
+            with pytest.raises(RuntimeError, match="Failed to extract frames"):
+                analyzer.analyze_segment("/fake/video.mp4", 0.0, 10.0)
 
 
 # ---------------------------------------------------------------------------
