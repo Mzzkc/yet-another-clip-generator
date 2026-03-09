@@ -2,7 +2,7 @@
 
 ## Overview
 
-YACG is a 10-step pipeline that takes a video file, segments it using LLM-driven transcript analysis, scores segments across audio/visual/semantic dimensions, extracts the top clips in parallel as vertical (9:16) videos with burned subtitles and thumbnails, and generates Instagram-optimized captions.
+YACG is a 7-step pipeline that takes a video file, segments it using LLM-driven transcript analysis, scores segments across audio/visual/semantic dimensions, extracts the top clips in parallel as vertical (9:16) videos with burned subtitles and thumbnails, and generates Instagram-optimized captions.
 
 The pipeline uses **protocol-based dependency injection** — all 8 core components are defined as `Protocol` interfaces and can be swapped via constructor injection. Components are lazily initialized to keep import time fast.
 
@@ -26,7 +26,7 @@ The pipeline uses **protocol-based dependency injection** — all 8 core compone
                                     │
                 ┌───────────────────▼─────────────────────┐
                 │    ViralClipPipeline (pipeline.py)       │
-                │  Orchestrates the 10-step workflow        │
+                │  Orchestrates the 7-step workflow          │
                 │  8 Protocol-based injectable components   │
                 │  progress_callback for GUI/web embedding  │
                 └───┬───┬───┬───┬───┬───┬───┬───┬───┬────┘
@@ -36,7 +36,7 @@ The pipeline uses **protocol-based dependency injection** — all 8 core compone
 ┌──────────┐    ┌──────────┐│   │   │   │   │ ┌──────────┐ ┌──────────┐
 │Transcript│    │  Audio   ││   │   │   │   │ │ Caption  │ │   CSV    │
 │Segmenter │    │ Analyzer ││   │   │   │   │ │Generator │ │  Report  │
-│(step 1-2)│    │ (step 3) ││   │   │   │   │ │(step 8)  │ │(step 10) │
+│(step 1-2)│    │ (step 3) ││   │   │   │   │ │(step 7)  │ │(private) │
 └──────────┘    └──────────┘│   │   │   │   │ └──────────┘ └──────────┘
                             │   │   │   │   │
                    ┌────────┘   │   │   │   └────────┐
@@ -73,17 +73,17 @@ External Dependencies:
 
 | Step | Label | Component | What Happens |
 |------|-------|-----------|--------------|
-| 1 | Transcribe | `TranscriptSegmenter.full_transcribe()` | faster-whisper produces word-level timestamps from the full video (auto device/precision) |
-| 2 | Segment | `TranscriptSegmenter.segment_by_content()` + `refine_boundaries()` | Transcript sent to Ollama text model (`qwen2.5:7b`) for segmentation; boundaries snapped to speech pauses |
-| 3 | Analyze | `AudioAnalyzer` + `VisualAnalyzer` + `SemanticAnalyzer` + `ViralityScorer` | Each segment scored on audio, visual, and semantic signals (multi-frame VLM analysis) |
-| 4 | Rank | Sort + filter | Segments sorted by virality score, filtered by threshold, top N selected |
+| 1/7 | Transcribe | `TranscriptSegmenter.full_transcribe()` | faster-whisper produces word-level timestamps from the full video (auto device/precision) |
+| 2/7 | Segment | `TranscriptSegmenter.segment_by_content()` + `refine_boundaries()` | Transcript sent to Ollama text model (`qwen2.5:7b`) for segmentation; boundaries snapped to speech pauses |
+| 3/7 | Analyze | `AudioAnalyzer` + `VisualAnalyzer` + `SemanticAnalyzer` + `ViralityScorer` | Each segment scored on audio, visual, and semantic signals (multi-frame VLM analysis) |
+| 4/7 | Rank | Sort + filter | Segments sorted by virality score, filtered by threshold, top N selected |
 | | | | *(dry-run exits here)* |
-| 5 | Extract | `ClipExtractor` + `SmartCropper` | FFmpeg cuts clips **in parallel** (up to 4 workers) to `.vce_tmp/` staging dir, applies face-aware 9:16 crop |
-| 6 | Subtitles | `SubtitleBurner` | Word-pop ASS subtitles generated and burned **in parallel** via FFmpeg libass filter. **Failure deletes the clip** (mandatory step) |
-| 7 | Thumbnails | FFmpeg | Midpoint JPEG thumbnail extracted for each clip |
-| 8 | Captions | `OllamaVideoAnalyzer` | 3 JPEG frames (at 25%, 50%, 75% of clip) sent to Ollama VLM for Instagram caption generation. **Failure deletes clip and thumbnail** (mandatory step) |
-| 9 | Stage | File move | Clips and thumbnails moved from `.vce_tmp/` staging dir to final output dir. Staging dir cleaned up |
-| 10 | Report | CSV write | `clips_report.csv` written with 17 columns of metadata |
+| 5/7 | Extract | `ClipExtractor` + `SmartCropper` | FFmpeg cuts clips **in parallel** (up to 4 workers) to `.yacg_tmp/` staging dir, applies face-aware 9:16 crop |
+| 6/7 | Subtitles | `SubtitleBurner` | Word-pop ASS subtitles generated and burned **in parallel** via FFmpeg libass filter. **Failure deletes the clip** (mandatory step) |
+| — | Thumbnails | FFmpeg | Midpoint JPEG thumbnail extracted for each clip (unlabeled in CLI output) |
+| 7/7 | Captions | `OllamaVideoAnalyzer` | 3 JPEG frames (at 25%, 50%, 75% of clip) sent to Ollama VLM for Instagram caption generation. **Failure deletes clip and thumbnail** (mandatory step) |
+| — | Stage | File move | Clips and thumbnails moved from `.yacg_tmp/` staging dir to final output dir. Staging dir cleaned up |
+| — | Report | CSV write | `clips_report.csv` written with 17 columns of metadata |
 
 ## Data Flow
 
@@ -111,10 +111,10 @@ _analyze_segment() → ClipData
   ▼
 sort + filter → list[ClipData] (top N)
   │
-  ▼ (per clip, parallel — ThreadPoolExecutor, 4 workers)
-ClipExtractor.extract_clip() → MP4 file (9:16) in .vce_tmp/ staging
+  ▼ (per clip, parallel — ThreadPoolExecutor, min(4, num_clips) workers, 600s batch timeout)
+ClipExtractor.extract_clip() → MP4 file (9:16) in .yacg_tmp/ staging
   │
-  ▼ (per clip, parallel — ThreadPoolExecutor, 4 workers)
+  ▼ (per clip, parallel — ThreadPoolExecutor, min(4, num_clips) workers, 600s batch timeout)
 SubtitleBurner.process_clip(words, width, height, style) → MP4 with burned subtitles
   │
   ▼ (per clip)
@@ -124,7 +124,7 @@ Thumbnail extraction → JPEG thumbnail
 OllamaVideoAnalyzer.analyze_video() → CaptionData
   │
   ▼
-Move from staging (.vce_tmp/) → output dir
+Move from staging (.yacg_tmp/) → output dir
   │
   ▼
 ProcessingResult + clips_report.csv
@@ -136,7 +136,7 @@ ProcessingResult + clips_report.csv
 
 2. **Word filtering for subtitles**: Words are filtered to each clip's time range with 50ms boundary tolerance, then timestamps are re-zeroed relative to the clip start.
 
-3. **Staging directory**: Clips are extracted to `.vce_tmp/` staging dir, then moved to the final output directory only after subtitles, thumbnails, and captions all succeed. Failed clips are deleted in-place. Staging dir is cleaned up in a `finally` block.
+3. **Staging directory**: Clips are extracted to `.yacg_tmp/` staging dir, then moved to the final output directory only after subtitles, thumbnails, and captions all succeed. Failed clips are deleted in-place. Staging dir is cleaned up in a `finally` block.
 
 4. **Mandatory post-processing**: Both subtitle burning and caption generation are mandatory. Failure in either deletes the clip file (and thumbnail if present), preventing un-subtitled or un-captioned clips from reaching the output.
 
@@ -174,11 +174,16 @@ Layer 1: PipelineConfig defaults (models.py)
 
 Layer 2: INI file overrides (utils/config.py)
   └── configparser reads [Model], [SceneDetection], [Segmentation], [ClipSelection],
-      [ASMR Optimization], [Output], [Temporal], [Subtitle], [Scoring] sections.
+      [ASMR Optimization], [ContentProfile], [Output], [Temporal], [Subtitle], [Scoring] sections.
+      [ContentProfile] is preferred over [ASMR Optimization] for content_type.
+      The [ASMR Optimization] section is accepted as a legacy alias for [ContentProfile] for the
+      content_type key. A log message recommends renaming to [ContentProfile].
 
 Layer 3: CLI argument overrides (cli.py)
-  └── 35+ argparse flags override INI values. CLI flags always win.
+  └── 40+ argparse flags override INI values. CLI flags always win.
 ```
+
+Note: `top_n_clips` and `min_virality_score` are config-level fields that are effectively unused. `process_video()` defaults `top_n=20` and `min_score=70.0` via method parameters, and the CLI always passes its own defaults. No code path reads `config.top_n_clips` or `config.min_virality_score`. To control clip selection, pass `top_n` and `min_score` directly to `process_video()` or use CLI flags `--top-n` and `--min-score`.
 
 ## Package Structure
 
@@ -188,8 +193,11 @@ yacg/
     __main__.py              # python -m entry point
     models.py                # Dataclasses: SceneSegment, AudioFeatures, VisualFeatures,
                              #   SemanticFeatures, ViralityScore, WordTimestamp, SegmentBoundary,
-                             #   CaptionData, ClipData, SubtitleStyle, PipelineConfig,
-                             #   ProcessingResult, VALID_SCORING_KEYS
+                             #   CaptionData, ClipData, SubtitleStyle, ContentProfile,
+                             #   PipelineConfig, ProcessingResult
+                             #   Constants: VALID_SCORING_KEYS, VALID_CONTENT_TYPES,
+                             #   VALID_TONES, VALID_PLATFORMS, VALID_CAPTION_LENGTHS,
+                             #   CONTENT_PRESETS
     cli.py                   # argparse CLI (6 subcommands: process, youtube, batch, check,
                              #   show-config, generate-config)
     bootstrap.py             # Dependency checking/auto-install (24h cache)
@@ -209,7 +217,7 @@ yacg/
         clip_extractor.py    # FFmpeg clip cutting (1 retry, 10KB output validation)
         smart_cropper.py     # Face-aware 9:16 vertical crop (DNN SSD → Haar → brightness fallback)
     utils/
-        config.py            # INI config file loader (30 keys across 9 sections)
+        config.py            # INI config file loader (~33 keys across 10 sections)
         video_utils.py       # FFmpeg/FFprobe wrappers, translate_ffmpeg_error(), get_cv2()
 ```
 
@@ -230,9 +238,11 @@ YACG communicates with Ollama via HTTP (`POST /api/generate`). Three modules cal
 |--------|---------|-------|-------|
 | `TranscriptSegmenter` | Segment identification from transcript | Text only | `segmentation_model` (default: `qwen2.5:7b`, text-only) |
 | `SemanticAnalyzer` | Semantic scoring of video segments | Text + 1-5 JPEG frames (configurable via `num_frames`) | `model_name` (default: `qwen2.5-vl:7b`) |
-| `OllamaVideoAnalyzer` | Instagram caption generation | Text + 3 JPEG frames (25%, 50%, 75%) | `model_name` (default: `qwen2.5-vl:7b`) |
+| `OllamaVideoAnalyzer` | Instagram caption generation | Text + transcript + 3 JPEG frames (25%, 50%, 75%) — frame count hardcoded, not affected by `num_frames` config | `model_name` (default: `qwen2.5-vl:7b`) |
 
 Retry behavior: all three use 3 retries with exponential backoff. Default host: `http://localhost:11434` (configurable via `--ollama-host`).
+
+**LLM temperatures:** `SemanticAnalyzer` uses `temperature=0.3` for deterministic, consistent scoring. `OllamaVideoAnalyzer` uses `temperature=0.7` for creative, varied caption generation. Neither is configurable via CLI or config. This explains why semantic scores are more consistent than captions across runs of the same video.
 
 ### faster-whisper
 
@@ -251,6 +261,23 @@ Used for video metadata extraction, audio extraction, segment cutting, smart cro
 
 Downloads YouTube videos with H.264 codec preference via `YouTubeDownloader.download()`. Progress is logged during download.
 
+### Hardcoded Timeouts
+
+All timeout values are hardcoded and not configurable:
+
+| Operation | Timeout | Source File |
+|-----------|---------|------------|
+| FFprobe metadata extraction | 30s | `video_utils.py` |
+| Audio extraction (FFmpeg) | 120s | `video_utils.py` |
+| Semantic analysis (Ollama) | 120s | `semantic_analyzer.py` |
+| Caption generation (Ollama) | 120s | `caption_generator.py` |
+| Transcript segmentation (Ollama) | 180s | `transcript_segmenter.py` |
+| Segment extraction (FFmpeg) | 300s | `video_utils.py` |
+| Clip extraction (FFmpeg) | 300s | `clip_extractor.py` |
+| Subtitle burning (FFmpeg) | 300s | `subtitle_burner.py` |
+| ThreadPoolExecutor batch | 600s | `pipeline.py` |
+| Video transcoding (FFmpeg) | 3600s | `video_utils.py` |
+
 ## Error Handling
 
 - **Fatal errors** (no transcription, no segments): Pipeline returns early with errors in `ProcessingResult.errors`
@@ -260,9 +287,36 @@ Downloads YouTube videos with H.264 codec preference via `YouTubeDownloader.down
 - **Ollama failures**: 3 retries with exponential backoff; `RuntimeError` after exhaustion
 - **FFmpeg failures**: 1 retry on clip extraction failure; errors translated to human-readable messages
 - **CSV report failure**: Caught, error appended to `ProcessingResult.errors`
+- **Clip size validation**: Extracted clips smaller than 10KB (10,240 bytes) are detected as potentially corrupt and automatically deleted
+- **Semantic analysis frame fallback**: If all multi-frame extractions fail, `SemanticAnalyzer` falls back to a single frame at the segment midpoint
 - **Error summary**: Errors are printed as a highlighted block at the end of processing
 
 All non-fatal errors accumulate in `ProcessingResult.errors` for post-run inspection.
+
+### Degraded-Mode Scoring
+
+When Ollama/VLM semantic analysis is unavailable (returns `None`), the `ViralityScorer` adapts:
+
+- Semantic weights are redistributed proportionally across audio and visual components
+- Confidence drops from 1.0 to 0.5
+- Clips scored without VLM analysis will have different weight distributions and lower confidence values
+
+When the DNN face detection model is missing, face detection falls back to the Haar cascade (lower accuracy for side profiles and diverse skin tones). Each ASMR audio sub-detector (tapping, crinkle, mouth-sound) has independent error handling — failure of one doesn't affect others.
+
+**ASMR audio sub-detector boost values:**
+
+| Detector | Measurement | Boost Target | Max Boost |
+|----------|------------|--------------|-----------|
+| Tapping | Onset transient density | `audio_peak_score` | +0.1 |
+| Crinkle | High-frequency spectral flux | `high_freq_score` | +0.05 |
+| Mouth-sound | Mid-frequency (1-4kHz) energy ratio | `zcr_score` | +0.02 |
+
+**Trigger word lists** (not configurable):
+
+- **ASMR content:** `tingles`, `relax`, `sleep`, `cozy`, `gentle`, `dragon`, `scales`, `whisper`, `magic`
+- **Non-ASMR content:** `amazing`, `incredible`, `wow`, `unbelievable`, `shocking`, `secret`, `hack`, `trick`, `tip`
+
+These affect the `trigger_words` field in `AudioFeatures` and vary based on content type.
 
 ### Exit Codes
 

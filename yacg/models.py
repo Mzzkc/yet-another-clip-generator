@@ -343,7 +343,7 @@ class PipelineConfig:
     # Number of frames to extract per segment for VLM analysis.
     # qwen2.5-vl:7b produces garbled output with multiple images,
     # so default is 1. Increase only if your VLM handles multi-image well.
-    num_frames: int = 1
+    num_frames: int = 3
 
     # Output
     output_dir: str = "./clip_output"

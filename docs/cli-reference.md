@@ -1,10 +1,14 @@
 # CLI Reference
 
-YACG is invoked as a Python module:
+YACG is invoked via command line:
 
 ```bash
+yacg <command> [options]
+# or
 python -m yacg <command> [options]
 ```
+
+The `yacg` command is available after `pip install -e .` (or `pip install .`).
 
 ## Commands
 
@@ -55,6 +59,9 @@ Supported URL formats include:
 - `https://youtube.com/watch?v=XXXXX`
 - `https://youtu.be/XXXXX`
 - `https://www.youtube.com/watch?v=XXXXX`
+- `https://youtube.com/shorts/XXXXX`
+- `https://youtube.com/embed/XXXXX`
+- `https://youtube.com/v/XXXXX` (legacy format)
 
 **Example:**
 
@@ -63,6 +70,8 @@ python -m yacg youtube \
   --url "https://youtube.com/watch?v=dQw4w9WgXcQ" \
   --top-n 3
 ```
+
+YouTube videos are downloaded to a `downloads/` subdirectory under `--output-dir`. YACG forces H.264 codec selection during download because OpenCV cannot decode AV1/VP9. If H.264 is unavailable at the requested quality, the video may be automatically transcoded after download.
 
 ---
 
@@ -81,6 +90,10 @@ python -m yacg batch --videos-dir <path> [options]
 All [common options](#common-options) are also accepted. Each video gets its own subdirectory under `--output-dir`.
 
 Recognized video extensions: `.mp4`, `.mov`, `.avi`, `.mkv`, `.webm`.
+
+In batch mode, the Whisper model is loaded once and shared across all videos, saving 5-15 seconds per video compared to processing them individually. Video titles are auto-generated from filenames by replacing underscores and hyphens with spaces and title-casing (e.g., `my_cool_video.mp4` becomes "My Cool Video"). Use the `process` command with `--title` for precise control over titles.
+
+In the batch summary, a video with ANY errors counts as "had errors" even if it produced clips (partial success). Exit code 2 indicates at least one video had partial success.
 
 **Example:**
 
@@ -111,6 +124,9 @@ No additional flags. Checks:
 - Whisper model cache status (whether the model needs to be downloaded on first run)
 - DNN face detection model availability (optional — Caffe SSD model)
 
+!!! note "Ollama Check Limitation"
+    The `check` command always tests Ollama connectivity at `http://localhost:11434`, regardless of the `--ollama-host` setting. Users with remote Ollama servers should verify connectivity manually (e.g., `curl http://your-host:11434/api/tags`).
+
 **Example output:**
 
 ```
@@ -125,9 +141,9 @@ No additional flags. Checks:
   faster-whisper: OK
   Ollama: OK (3 models loaded)
   qwen2.5-vl:7b: OK
-  qwen2.5:7b: OK
-  Whisper model 'small': cached
-  DNN face detection: OK (Caffe SSD model found)
+  qwen2.5:7b (segmentation): OK
+  Whisper model 'small': CACHED
+  DNN face detection: OK (models in ~/.yacg/models)
 
 All required dependencies satisfied.
 ```
@@ -174,6 +190,8 @@ python -m yacg generate-config
 python -m yacg generate-config --output my_config.ini
 ```
 
+`generate-config` exits with code 1 if the output file already exists — it will not overwrite. Delete or rename the existing file first.
+
 ---
 
 ## Common Options
@@ -185,11 +203,11 @@ These flags are shared across `process`, `youtube`, and `batch`:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--output-dir` | `./clip_output` | Where clips and reports are written |
-| `--top-n` | `10` | Maximum number of clips to extract |
-| `--min-score` | `70` | Clips below this virality score (0-100) are discarded |
+| `--top-n` | `20` | Maximum number of clips to extract |
+| `--min-score` | `70` | Clips below this virality score (0-100) are discarded. Score ranges: below 50 = rarely viral, 60-70 = moderate, 70-85 = strong, 85+ = exceptional |
 | `--config` | *(none)* | INI config file; CLI flags override config values |
-| `-v` / `--verbose` | off | Show debug-level log output |
-| `--dry-run` | off | Run analysis only (steps 1-4), skip extraction |
+| `-v` / `--verbose` | off | Show debug-level log output. Also reveals warnings suppressed by default: pynvml FutureWarning (GPU detection), librosa audioread FutureWarning, PySoundFile UserWarning |
+| `--dry-run` | off | Run analysis only (steps 1-4) — no extraction, subtitles, or captions |
 
 ### Model Options
 
@@ -197,7 +215,7 @@ These flags are shared across `process`, `youtube`, and `batch`:
 |------|---------|-------------|
 | `--model` | `qwen2.5-vl:7b` | Ollama vision model for semantic analysis and captions |
 | `--whisper-model` | `small` | Whisper model size (`tiny`, `base`, `small`, `medium`, `large-v3`). Larger = more accurate but slower/more RAM |
-| `--segmentation-model` | *(uses `--model`)* | Text-only Ollama model for transcript segmentation. Default `qwen2.5:7b` avoids loading the vision encoder |
+| `--segmentation-model` | `qwen2.5:7b` | Text-only Ollama model for transcript segmentation. Avoids loading the vision encoder. Uses the PipelineConfig default (`qwen2.5:7b`) when omitted from the CLI. Falls back to `--model` only when explicitly set to an empty string in an INI config file (not reachable from CLI alone) |
 | `--ollama-host` | `http://localhost:11434` | Ollama API base URL |
 | `--scoring-weights` | *(none)* | JSON dict of scoring weight overrides (e.g., `'{"hook": 0.3}'`) |
 
@@ -212,9 +230,12 @@ These flags are shared across `process`, `youtube`, and `batch`:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--num-frames` | `3` | Number of JPEG frames per segment for VLM analysis (1-5) |
+| `--num-frames` | `3` | Number of JPEG frames per segment for VLM semantic analysis (1-5). Set to `1` if your VLM produces garbled output with multiple images. Affects semantic analysis only — caption generation always uses 3 frames regardless of this setting |
 
-### Scene Detection Options
+### Scene Detection Options (Legacy)
+
+!!! warning "Legacy Options"
+    These parameters configure the legacy PySceneDetect-based scene detector. The current pipeline uses LLM-driven transcript segmentation instead. These options are accepted for backward compatibility but have no effect on the default pipeline.
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -236,14 +257,21 @@ These flags are shared across `process`, `youtube`, and `batch`:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--asmr-mode` / `--no-asmr-mode` | on | Enable/disable ASMR-optimized scoring |
-| `--content-type` | `asmr` | Content type for LLM prompts: `asmr` or `general` |
+| `--asmr-mode` / `--no-asmr-mode` | off | Enable/disable ASMR-optimized scoring. Auto-enabled when `--content-type asmr` is set |
+| `--content-type` | `general` | Content type preset for LLM prompts. Options: `general`, `gaming`, `cooking`, `asmr`, `educational`, `fitness`, `comedy`, `music`, `beauty`, `tech`, `vlog`. Loads a preset that sets tone, audience, platform, and caption defaults (overridable individually) |
+| `--channel-description` | *(empty)* | Channel/creator description for caption context |
+| `--target-audience` | *(empty)* | Target audience description for tone adjustment |
+| `--tone` | `engaging` | Caption tone: `energetic`, `calm`, `professional`, `casual`, `humorous`, `inspirational`, `dramatic`, `engaging` |
+| `--platform` | `all` | Target platform: `tiktok`, `reels`, `shorts`, `all` |
+| `--caption-length` | `medium` | Caption length: `short`, `medium`, `long` |
+| `--hashtag-count` | `5` | Number of hashtags per caption (3-7) |
+| `--custom-instructions` | *(empty)* | Custom instructions appended to LLM prompts |
 
 ### Subtitle Styling Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--subtitle-font` | *(auto-detected)* | Font name for subtitles. Auto-detects a suitable system font if empty |
+| `--subtitle-font` | *(auto-detected)* | Font name for subtitles. When empty, auto-detects by probing in order: Liberation Sans, Arial, Helvetica Neue, Helvetica, DejaVu Sans, Noto Sans, sans-serif. Uses `fc-list` on Linux/macOS; assumes Arial on Windows. In minimal environments (Docker), install at least one of these fonts (e.g., `apt install fonts-liberation`) |
 | `--subtitle-font-size` | `0.055` | Font size as fraction of video height (e.g., 0.055 = 5.5%) |
 | `--subtitle-color` | `&H00FFFFFF` | Primary subtitle color in ASS `&HAABBGGRR` format (default: white) |
 | `--subtitle-outline-color` | `&H00000000` | Outline color in ASS format (default: black) |
@@ -257,7 +285,7 @@ These flags are shared across `process`, `youtube`, and `batch`:
 | Code | Meaning |
 |------|---------|
 | `0` | Success — all videos processed without errors |
-| `1` | Failure — missing dependencies, invalid arguments, or all videos failed |
+| `1` | Failure — missing dependencies, invalid arguments, all videos failed, no subcommand given, invalid YouTube URL, no video files found in batch directory, config file already exists (generate-config), `--min-score` outside 0-100 range, or bootstrap dependency check failure |
 | `2` | Partial success — clips were produced but some errors occurred (applies to all commands, not just `batch`) |
 
 ## Output Structure
@@ -274,6 +302,10 @@ clip_output/
 ```
 
 Clip filenames follow the pattern `{title_slug}_clip_{NN}_score{score}.mp4`. If no title is provided, the `{title_slug}_` prefix is omitted.
+
+The title slug is generated by lowercasing, replacing non-alphanumeric characters with hyphens, and truncating to 40 characters. The `clips_report.csv` is overwritten (not appended) on each run — rename or copy previous reports if needed.
+
+All clip outputs are encoded with libx264, CRF 23, `fast` preset, AAC 128k audio, and `+faststart` flag. Subtitle burning re-encodes video with the same settings but copies the audio stream unchanged. These encoding settings are hardcoded and not configurable via CLI or config file.
 
 ### CSV Report Columns
 

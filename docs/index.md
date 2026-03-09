@@ -2,7 +2,7 @@
 
 **Automatically extract viral-potential clips from long-form videos using multi-modal AI analysis.**
 
-YACG (YACG) takes a long-form video — local file or YouTube URL — and produces short, vertical (9:16) clips optimized for TikTok, Instagram Reels, and YouTube Shorts. It uses LLM-driven transcript segmentation, multi-signal virality scoring, face-aware smart cropping, word-pop subtitle burning, and AI-generated Instagram captions.
+YACG (Yet Another Clip Generator) takes a long-form video — local file or YouTube URL — and produces short, vertical (9:16) clips optimized for TikTok, Instagram Reels, and YouTube Shorts. It uses LLM-driven transcript segmentation, multi-signal virality scoring, face-aware smart cropping, word-pop subtitle burning, and AI-generated Instagram captions.
 
 ---
 
@@ -19,7 +19,7 @@ YACG (YACG) takes a long-form video — local file or YouTube URL — and produc
 - **Progress callbacks** — hookable progress reporting for GUI/web embedding
 - **YouTube support** — download and process YouTube videos via yt-dlp
 - **Batch processing** — process entire directories of videos in one command
-- **Content type system** — ASMR-optimized by default, with `--content-type general` for non-ASMR content
+- **Content type system** — 11 content type presets (general, gaming, cooking, ASMR, educational, fitness, comedy, music, beauty, tech, vlog) with content-aware LLM prompts, customizable tone, platform targeting, and caption options
 - **GPU acceleration** — automatic CUDA detection for faster-whisper (configurable device/compute type)
 
 ---
@@ -62,7 +62,7 @@ python -m yacg check
 
 ## How It Works
 
-YACG runs a 10-step pipeline on each video:
+YACG runs a 7-step pipeline on each video (plus post-processing):
 
 1. **Transcribe** — full-video transcription with word-level timestamps (faster-whisper, auto device/precision)
 2. **Segment** — LLM identifies viral-worthy segments from the transcript (text-only model, default `qwen2.5:7b`)
@@ -70,10 +70,9 @@ YACG runs a 10-step pipeline on each video:
 4. **Rank** — segments sorted by composite virality score, filtered by threshold
 5. **Extract** — top clips cut with FFmpeg in parallel, smart-cropped to 9:16 vertical (to staging dir)
 6. **Subtitles** — word-pop subtitles generated and burned into each clip in parallel
-7. **Thumbnails** — midpoint JPEG thumbnail extracted for each clip
-8. **Captions** — Instagram-optimized captions generated via Ollama VLM (multi-frame analysis)
-9. **Stage** — clips and thumbnails moved from staging dir to final output
-10. **Report** — CSV report with 17 columns of metadata for all clips
+7. **Captions** — Instagram-optimized captions generated via Ollama VLM (multi-frame analysis)
+
+Between steps 6 and 7, YACG generates a thumbnail for each clip. After step 7, clips and thumbnails are moved from staging to the output directory and a CSV report with 17 columns of metadata is written.
 
 ---
 
