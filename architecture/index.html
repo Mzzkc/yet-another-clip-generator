@@ -1,0 +1,1625 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Extract viral-potential clips from long-form videos using AI">
+      
+      
+      
+      
+        <link rel="prev" href="../cli-reference/">
+      
+      
+        <link rel="next" href="../api-reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>Architecture - YACG — Yet Another Clip Generator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="YACG — Yet Another Clip Generator" class="md-header__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            YACG — Yet Another Clip Generator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="YACG — Yet Another Clip Generator" class="md-nav__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    YACG — Yet Another Clip Generator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-data-flow-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Data Flow Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-based-dependency-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol-Based Dependency Injection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#package-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#module-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="External Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ollama" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#faster-whisper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        faster-whisper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffmpeg-ffprobe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFmpeg / FFprobe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yt-dlp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        yt-dlp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hardcoded-timeouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardcoded Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#degraded-mode-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Degraded-Mode Scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lazy-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lazy Initialization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bootstrap-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap Caching
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-data-flow-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Data Flow Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-based-dependency-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol-Based Dependency Injection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#package-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#module-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="External Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ollama" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#faster-whisper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        faster-whisper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffmpeg-ffprobe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFmpeg / FFprobe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yt-dlp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        yt-dlp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hardcoded-timeouts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardcoded Timeouts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#degraded-mode-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Degraded-Mode Scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lazy-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lazy Initialization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bootstrap-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap Caching
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>YACG is a 7-step pipeline that takes a video file, segments it using LLM-driven transcript analysis, scores segments across audio/visual/semantic dimensions, extracts the top clips in parallel as vertical (9:16) videos with burned subtitles and thumbnails, and generates Instagram-optimized captions.</p>
+<p>The pipeline uses <strong>protocol-based dependency injection</strong> — all 8 core components are defined as <code>Protocol</code> interfaces and can be swapped via constructor injection. Components are lazily initialized to keep import time fast.</p>
+<h2 id="pipeline-flow">Pipeline Flow<a class="headerlink" href="#pipeline-flow" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                          ┌─────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                          │     CLI (cli.py)          │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                          │  process / youtube        │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                          │  batch / check            │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                          │  show-config              │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                          │  generate-config          │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                          └─────────┬─────────────────┘
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                                    │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                          ┌─────────▼─────────────────┐
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                          │ bootstrap.py               │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>                          │ ensure_ready()             │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>                          │ ffmpeg + pip deps           │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                          │ (cached for 24h)            │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                          └─────────┬─────────────────┘
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                                    │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                ┌───────────────────▼─────────────────────┐
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                │    ViralClipPipeline (pipeline.py)       │
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                │  Orchestrates the 7-step workflow          │
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                │  8 Protocol-based injectable components   │
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                │  progress_callback for GUI/web embedding  │
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                └───┬───┬───┬───┬───┬───┬───┬───┬───┬────┘
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                    │   │   │   │   │   │   │   │   │
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>   ┌────────────────┘   │   │   │   │   │   │   │   └────────┐
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>   ▼                    ▼   │   │   │   │   │   ▼            ▼
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>┌──────────┐    ┌──────────┐│   │   │   │   │ ┌──────────┐ ┌──────────┐
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│Transcript│    │  Audio   ││   │   │   │   │ │ Caption  │ │   CSV    │
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│Segmenter │    │ Analyzer ││   │   │   │   │ │Generator │ │  Report  │
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│(step 1-2)│    │ (step 3) ││   │   │   │   │ │(step 7)  │ │(private) │
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>└──────────┘    └──────────┘│   │   │   │   │ └──────────┘ └──────────┘
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>                            │   │   │   │   │
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>                   ┌────────┘   │   │   │   └────────┐
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>                   ▼            ▼   ▼   ▼            ▼
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>             ┌──────────┐ ┌──────────┐  ┌──────────────┐
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>             │  Visual   │ │Virality  │  │    Clip      │
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>             │ Analyzer  │ │ Scorer   │  │  Extractor   │
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>             │ (step 3)  │ │(step 3-4)│  │  (step 5)    │
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>             └──────────┘ └──────────┘  └──────┬───────┘
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>                                               │
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>                                        ┌──────▼───────┐
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>                                        │SmartCropper   │
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>                                        │(DNN SSD face  │
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>                                        │ detection +   │
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>                                        │ Haar fallback)│
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>                                        └───────────────┘
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>                                               │
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>                                        ┌──────▼───────┐
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>                                        │SubtitleBurner │
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>                                        │ (step 6)      │
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>                                        │ ASS → FFmpeg  │
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>                                        │ Configurable  │
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>                                        │ SubtitleStyle │
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>                                        └───────────────┘
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>External Dependencies:
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>  ┌──────────┐  ┌─────────────┐  ┌──────────┐  ┌─────────┐
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>  │ FFmpeg / │  │faster-whisper│  │  Ollama  │  │  yt-dlp │
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>  │ FFprobe  │  │(auto device) │  │ (VLM API)│  │         │
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>  └──────────┘  └─────────────┘  └──────────┘  └─────────┘
+</code></pre></div>
+<h2 id="pipeline-steps">Pipeline Steps<a class="headerlink" href="#pipeline-steps" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Label</th>
+<th>Component</th>
+<th>What Happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1/7</td>
+<td>Transcribe</td>
+<td><code>TranscriptSegmenter.full_transcribe()</code></td>
+<td>faster-whisper produces word-level timestamps from the full video (auto device/precision)</td>
+</tr>
+<tr>
+<td>2/7</td>
+<td>Segment</td>
+<td><code>TranscriptSegmenter.segment_by_content()</code> + <code>refine_boundaries()</code></td>
+<td>Transcript sent to Ollama text model (<code>qwen2.5:7b</code>) for segmentation; boundaries snapped to speech pauses</td>
+</tr>
+<tr>
+<td>3/7</td>
+<td>Analyze</td>
+<td><code>AudioAnalyzer</code> + <code>VisualAnalyzer</code> + <code>SemanticAnalyzer</code> + <code>ViralityScorer</code></td>
+<td>Each segment scored on audio, visual, and semantic signals (multi-frame VLM analysis)</td>
+</tr>
+<tr>
+<td>4/7</td>
+<td>Rank</td>
+<td>Sort + filter</td>
+<td>Segments sorted by virality score, filtered by threshold, top N selected</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td><em>(dry-run exits here)</em></td>
+</tr>
+<tr>
+<td>5/7</td>
+<td>Extract</td>
+<td><code>ClipExtractor</code> + <code>SmartCropper</code></td>
+<td>FFmpeg cuts clips <strong>in parallel</strong> (up to 4 workers) to <code>.yacg_tmp/</code> staging dir, applies face-aware 9:16 crop</td>
+</tr>
+<tr>
+<td>6/7</td>
+<td>Subtitles</td>
+<td><code>SubtitleBurner</code></td>
+<td>Word-pop ASS subtitles generated and burned <strong>in parallel</strong> via FFmpeg libass filter. <strong>Failure deletes the clip</strong> (mandatory step)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Thumbnails</td>
+<td>FFmpeg</td>
+<td>Midpoint JPEG thumbnail extracted for each clip (unlabeled in CLI output)</td>
+</tr>
+<tr>
+<td>7/7</td>
+<td>Captions</td>
+<td><code>OllamaVideoAnalyzer</code></td>
+<td>3 JPEG frames (at 25%, 50%, 75% of clip) sent to Ollama VLM for Instagram caption generation. <strong>Failure deletes clip and thumbnail</strong> (mandatory step)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Stage</td>
+<td>File move</td>
+<td>Clips and thumbnails moved from <code>.yacg_tmp/</code> staging dir to final output dir. Staging dir cleaned up</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Report</td>
+<td>CSV write</td>
+<td><code>clips_report.csv</code> written with 17 columns of metadata</td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Video file
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  │
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  ├── [codec compat check: ensure_compatible_video()]
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  │
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  ▼
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>full_transcribe() → list[WordTimestamp]
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  │
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  ▼
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>segment_by_content() → list[SegmentBoundary]
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  │
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  ▼
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>refine_boundaries() → list[SceneSegment]
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  │
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>  ▼ (per segment)
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>_analyze_segment() → ClipData
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>  ├── AudioAnalyzer.analyze_segment() → AudioFeatures
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>  ├── VisualAnalyzer.analyze_segment() → VisualFeatures
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>  ├── SemanticAnalyzer.analyze_segment() → SemanticFeatures (1-5 JPEG frames)
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>  └── ViralityScorer.calculate_score() → ViralityScore
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>  │
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>  ▼
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>sort + filter → list[ClipData] (top N)
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>  │
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>  ▼ (per clip, parallel — ThreadPoolExecutor, min(4, num_clips) workers, 600s batch timeout)
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>ClipExtractor.extract_clip() → MP4 file (9:16) in .yacg_tmp/ staging
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>  │
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>  ▼ (per clip, parallel — ThreadPoolExecutor, min(4, num_clips) workers, 600s batch timeout)
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>SubtitleBurner.process_clip(words, width, height, style) → MP4 with burned subtitles
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>  │
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>  ▼ (per clip)
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>Thumbnail extraction → JPEG thumbnail
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>  │
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>  ▼ (per clip, sequential)
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>OllamaVideoAnalyzer.analyze_video() → CaptionData
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>  │
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>  ▼
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>Move from staging (.yacg_tmp/) → output dir
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>  │
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>  ▼
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>ProcessingResult + clips_report.csv
+</code></pre></div>
+<h3 id="key-data-flow-patterns">Key Data Flow Patterns<a class="headerlink" href="#key-data-flow-patterns" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Single-transcription reuse</strong>: Whisper runs once on the full video. The resulting <code>list[WordTimestamp]</code> is reused for: LLM segmentation input, boundary refinement/snap-to-pause, subtitle word filtering per clip, and audio analyzer trigger word detection.</p>
+</li>
+<li>
+<p><strong>Word filtering for subtitles</strong>: Words are filtered to each clip's time range with 50ms boundary tolerance, then timestamps are re-zeroed relative to the clip start.</p>
+</li>
+<li>
+<p><strong>Staging directory</strong>: Clips are extracted to <code>.yacg_tmp/</code> staging dir, then moved to the final output directory only after subtitles, thumbnails, and captions all succeed. Failed clips are deleted in-place. Staging dir is cleaned up in a <code>finally</code> block.</p>
+</li>
+<li>
+<p><strong>Mandatory post-processing</strong>: Both subtitle burning and caption generation are mandatory. Failure in either deletes the clip file (and thumbnail if present), preventing un-subtitled or un-captioned clips from reaching the output.</p>
+</li>
+</ol>
+<h2 id="protocol-based-dependency-injection">Protocol-Based Dependency Injection<a class="headerlink" href="#protocol-based-dependency-injection" title="Permanent link">&para;</a></h2>
+<p>The pipeline defines 8 <code>Protocol</code> interfaces (all <code>@runtime_checkable</code>) for full component substitution:</p>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Methods</th>
+<th>Default Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TranscriptSegmenterProtocol</code></td>
+<td><code>full_transcribe</code>, <code>segment_by_content</code>, <code>refine_boundaries</code></td>
+<td><code>TranscriptSegmenter</code></td>
+</tr>
+<tr>
+<td><code>SubtitleBurnerProtocol</code></td>
+<td><code>get_video_dimensions</code>, <code>process_clip</code></td>
+<td><code>SubtitleBurner</code></td>
+</tr>
+<tr>
+<td><code>SemanticAnalyzerProtocol</code></td>
+<td><code>analyze_segment</code></td>
+<td><code>SemanticAnalyzer</code></td>
+</tr>
+<tr>
+<td><code>CaptionGeneratorProtocol</code></td>
+<td><code>analyze_video</code></td>
+<td><code>OllamaVideoAnalyzer</code></td>
+</tr>
+<tr>
+<td><code>AudioAnalyzerProtocol</code></td>
+<td><code>analyze_segment</code></td>
+<td><code>AudioAnalyzer</code></td>
+</tr>
+<tr>
+<td><code>VisualAnalyzerProtocol</code></td>
+<td><code>analyze_segment</code></td>
+<td><code>VisualAnalyzer</code></td>
+</tr>
+<tr>
+<td><code>ViralityScorerProtocol</code></td>
+<td><code>calculate_score</code></td>
+<td><code>ViralityScorer</code></td>
+</tr>
+<tr>
+<td><code>ClipExtractorProtocol</code></td>
+<td><code>extract_clip</code></td>
+<td><code>ClipExtractor</code></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">ViralClipPipeline</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">transcript_segmenter</span><span class="o">=</span><span class="n">custom_segmenter</span><span class="p">,</span>  <span class="c1"># inject custom implementation</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">audio_analyzer</span><span class="o">=</span><span class="n">mock_analyzer</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">progress_callback</span><span class="o">=</span><span class="n">my_callback</span><span class="p">,</span>          <span class="c1"># (step_name, current, total) → None</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
+</code></pre></div>
+<h2 id="configuration-architecture">Configuration Architecture<a class="headerlink" href="#configuration-architecture" title="Permanent link">&para;</a></h2>
+<p>Configuration flows through three layers, each overriding the previous:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Layer 1: PipelineConfig defaults (models.py)
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  └── All 23 fields have defaults. Scoring weights validated in __post_init__.
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Layer 2: INI file overrides (utils/config.py)
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  └── configparser reads [Model], [SceneDetection], [Segmentation], [ClipSelection],
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>      [ASMR Optimization], [ContentProfile], [Output], [Temporal], [Subtitle], [Scoring] sections.
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>      [ContentProfile] is preferred over [ASMR Optimization] for content_type.
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>      The [ASMR Optimization] section is accepted as a legacy alias for [ContentProfile] for the
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>      content_type key. A log message recommends renaming to [ContentProfile].
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>Layer 3: CLI argument overrides (cli.py)
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  └── 40+ argparse flags override INI values. CLI flags always win.
+</code></pre></div>
+<p>Note: <code>top_n_clips</code> and <code>min_virality_score</code> are config-level fields that are effectively unused. <code>process_video()</code> defaults <code>top_n=20</code> and <code>min_score=70.0</code> via method parameters, and the CLI always passes its own defaults. No code path reads <code>config.top_n_clips</code> or <code>config.min_virality_score</code>. To control clip selection, pass <code>top_n</code> and <code>min_score</code> directly to <code>process_video()</code> or use CLI flags <code>--top-n</code> and <code>--min-score</code>.</p>
+<h2 id="package-structure">Package Structure<a class="headerlink" href="#package-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>yacg/
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    __init__.py              # Exports: ClipData, PipelineConfig, ViralClipPipeline, __version__
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    __main__.py              # python -m entry point
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    models.py                # Dataclasses: SceneSegment, AudioFeatures, VisualFeatures,
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>                             #   SemanticFeatures, ViralityScore, WordTimestamp, SegmentBoundary,
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>                             #   CaptionData, ClipData, SubtitleStyle, ContentProfile,
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>                             #   PipelineConfig, ProcessingResult
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>                             #   Constants: VALID_SCORING_KEYS, VALID_CONTENT_TYPES,
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>                             #   VALID_TONES, VALID_PLATFORMS, VALID_CAPTION_LENGTHS,
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>                             #   CONTENT_PRESETS
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    cli.py                   # argparse CLI (6 subcommands: process, youtube, batch, check,
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>                             #   show-config, generate-config)
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    bootstrap.py             # Dependency checking/auto-install (24h cache)
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    pipeline.py              # Main orchestrator (ViralClipPipeline), 8 Protocol interfaces
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    caption_generator.py     # Ollama VLM → Instagram captions (multi-frame, content-type-aware)
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    subtitle_burner.py       # ASS subtitle generation + FFmpeg burn (configurable SubtitleStyle,
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>                             #   platform-aware font auto-detection)
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>    transcript_segmenter.py  # faster-whisper + Ollama segmentation (configurable device/compute)
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    youtube_downloader.py    # yt-dlp wrapper (H.264 preference, progress logging)
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    core/
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        audio_analyzer.py    # librosa-based audio features (tapping, crinkle, mouth-sound detection)
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        scene_detector.py    # PySceneDetect (legacy, unused — replaced by LLM segmentation)
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>        semantic_analyzer.py # Qwen2.5-VL via Ollama (multi-frame, content-type-aware prompts)
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>        virality_scorer.py   # Weighted multi-signal scorer (duration curve, semantic redistribution)
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>        visual_analyzer.py   # OpenCV optical flow, DNN SSD face detection (Haar cascade fallback)
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>    extractors/
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>        clip_extractor.py    # FFmpeg clip cutting (1 retry, 10KB output validation)
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>        smart_cropper.py     # Face-aware 9:16 vertical crop (DNN SSD → Haar → brightness fallback)
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>    utils/
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>        config.py            # INI config file loader (~33 keys across 10 sections)
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>        video_utils.py       # FFmpeg/FFprobe wrappers, translate_ffmpeg_error(), get_cv2()
+</code></pre></div>
+<h2 id="module-dependencies">Module Dependencies<a class="headerlink" href="#module-dependencies" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>models.py</code></strong> is the leaf node — every other module imports from it, it imports nothing from the package.</li>
+<li><strong><code>utils/video_utils.py</code></strong> is the shared FFmpeg/OpenCV utility layer — used by audio, semantic, clip, subtitle, and caption modules.</li>
+<li><strong><code>pipeline.py</code></strong> is the sole orchestrator — it imports all components but nothing imports it except <code>cli.py</code> and <code>__init__.py</code>.</li>
+<li>All heavy dependencies (OpenCV, librosa, faster-whisper) are <strong>lazy-imported</strong> behind accessor guards to keep import time fast.</li>
+</ul>
+<h2 id="external-systems">External Systems<a class="headerlink" href="#external-systems" title="Permanent link">&para;</a></h2>
+<h3 id="ollama">Ollama<a class="headerlink" href="#ollama" title="Permanent link">&para;</a></h3>
+<p>YACG communicates with Ollama via HTTP (<code>POST /api/generate</code>). Three modules call Ollama, all using <code>requests.Session()</code> for HTTP connection reuse:</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Purpose</th>
+<th>Input</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TranscriptSegmenter</code></td>
+<td>Segment identification from transcript</td>
+<td>Text only</td>
+<td><code>segmentation_model</code> (default: <code>qwen2.5:7b</code>, text-only)</td>
+</tr>
+<tr>
+<td><code>SemanticAnalyzer</code></td>
+<td>Semantic scoring of video segments</td>
+<td>Text + 1-5 JPEG frames (configurable via <code>num_frames</code>)</td>
+<td><code>model_name</code> (default: <code>qwen2.5-vl:7b</code>)</td>
+</tr>
+<tr>
+<td><code>OllamaVideoAnalyzer</code></td>
+<td>Instagram caption generation</td>
+<td>Text + transcript + 3 JPEG frames (25%, 50%, 75%) — frame count hardcoded, not affected by <code>num_frames</code> config</td>
+<td><code>model_name</code> (default: <code>qwen2.5-vl:7b</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Retry behavior: all three use 3 retries with exponential backoff. Default host: <code>http://localhost:11434</code> (configurable via <code>--ollama-host</code>).</p>
+<p><strong>LLM temperatures:</strong> <code>SemanticAnalyzer</code> uses <code>temperature=0.3</code> for deterministic, consistent scoring. <code>OllamaVideoAnalyzer</code> uses <code>temperature=0.7</code> for creative, varied caption generation. Neither is configurable via CLI or config. This explains why semantic scores are more consistent than captions across runs of the same video.</p>
+<h3 id="faster-whisper">faster-whisper<a class="headerlink" href="#faster-whisper" title="Permanent link">&para;</a></h3>
+<p>Runs full-video transcription with configurable device and precision. Model cached across batch runs.</p>
+<ul>
+<li>Default model: <code>small</code> (configurable: <code>tiny</code>, <code>base</code>, <code>small</code>, <code>medium</code>, <code>large-v3</code>)</li>
+<li>Device: <code>"auto"</code> — uses CUDA if available, else CPU (configurable via <code>--whisper-device</code>)</li>
+<li>Compute type: <code>"auto"</code> — float16 on CUDA, int8 on CPU (configurable via <code>--whisper-compute-type</code>)</li>
+<li>VAD filter: configurable (<code>--vad-filter</code> / <code>--no-vad-filter</code>)</li>
+</ul>
+<h3 id="ffmpeg-ffprobe">FFmpeg / FFprobe<a class="headerlink" href="#ffmpeg-ffprobe" title="Permanent link">&para;</a></h3>
+<p>Used for video metadata extraction, audio extraction, segment cutting, smart cropping, subtitle burning, thumbnail extraction, and codec compatibility checks. Both must be on <code>PATH</code>. FFmpeg errors are translated to human-readable messages via <code>translate_ffmpeg_error()</code>.</p>
+<h3 id="yt-dlp">yt-dlp<a class="headerlink" href="#yt-dlp" title="Permanent link">&para;</a></h3>
+<p>Downloads YouTube videos with H.264 codec preference via <code>YouTubeDownloader.download()</code>. Progress is logged during download.</p>
+<h3 id="hardcoded-timeouts">Hardcoded Timeouts<a class="headerlink" href="#hardcoded-timeouts" title="Permanent link">&para;</a></h3>
+<p>All timeout values are hardcoded and not configurable:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Timeout</th>
+<th>Source File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FFprobe metadata extraction</td>
+<td>30s</td>
+<td><code>video_utils.py</code></td>
+</tr>
+<tr>
+<td>Audio extraction (FFmpeg)</td>
+<td>120s</td>
+<td><code>video_utils.py</code></td>
+</tr>
+<tr>
+<td>Semantic analysis (Ollama)</td>
+<td>120s</td>
+<td><code>semantic_analyzer.py</code></td>
+</tr>
+<tr>
+<td>Caption generation (Ollama)</td>
+<td>120s</td>
+<td><code>caption_generator.py</code></td>
+</tr>
+<tr>
+<td>Transcript segmentation (Ollama)</td>
+<td>180s</td>
+<td><code>transcript_segmenter.py</code></td>
+</tr>
+<tr>
+<td>Segment extraction (FFmpeg)</td>
+<td>300s</td>
+<td><code>video_utils.py</code></td>
+</tr>
+<tr>
+<td>Clip extraction (FFmpeg)</td>
+<td>300s</td>
+<td><code>clip_extractor.py</code></td>
+</tr>
+<tr>
+<td>Subtitle burning (FFmpeg)</td>
+<td>300s</td>
+<td><code>subtitle_burner.py</code></td>
+</tr>
+<tr>
+<td>ThreadPoolExecutor batch</td>
+<td>600s</td>
+<td><code>pipeline.py</code></td>
+</tr>
+<tr>
+<td>Video transcoding (FFmpeg)</td>
+<td>3600s</td>
+<td><code>video_utils.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Fatal errors</strong> (no transcription, no segments): Pipeline returns early with errors in <code>ProcessingResult.errors</code></li>
+<li><strong>Per-segment errors</strong>: Caught individually, logged, pipeline continues with remaining segments</li>
+<li><strong>Per-clip mandatory errors</strong> (subtitles, captions): Clip AND thumbnail deleted, error recorded — un-subtitled or un-captioned clips never reach output</li>
+<li><strong>Per-clip non-fatal errors</strong> (thumbnail generation, clip extraction): Error recorded, pipeline continues</li>
+<li><strong>Ollama failures</strong>: 3 retries with exponential backoff; <code>RuntimeError</code> after exhaustion</li>
+<li><strong>FFmpeg failures</strong>: 1 retry on clip extraction failure; errors translated to human-readable messages</li>
+<li><strong>CSV report failure</strong>: Caught, error appended to <code>ProcessingResult.errors</code></li>
+<li><strong>Clip size validation</strong>: Extracted clips smaller than 10KB (10,240 bytes) are detected as potentially corrupt and automatically deleted</li>
+<li><strong>Semantic analysis frame fallback</strong>: If all multi-frame extractions fail, <code>SemanticAnalyzer</code> falls back to a single frame at the segment midpoint</li>
+<li><strong>Error summary</strong>: Errors are printed as a highlighted block at the end of processing</li>
+</ul>
+<p>All non-fatal errors accumulate in <code>ProcessingResult.errors</code> for post-run inspection.</p>
+<h3 id="degraded-mode-scoring">Degraded-Mode Scoring<a class="headerlink" href="#degraded-mode-scoring" title="Permanent link">&para;</a></h3>
+<p>When Ollama/VLM semantic analysis is unavailable (returns <code>None</code>), the <code>ViralityScorer</code> adapts:</p>
+<ul>
+<li>Semantic weights are redistributed proportionally across audio and visual components</li>
+<li>Confidence drops from 1.0 to 0.5</li>
+<li>Clips scored without VLM analysis will have different weight distributions and lower confidence values</li>
+</ul>
+<p>When the DNN face detection model is missing, face detection falls back to the Haar cascade (lower accuracy for side profiles and diverse skin tones). Each ASMR audio sub-detector (tapping, crinkle, mouth-sound) has independent error handling — failure of one doesn't affect others.</p>
+<p><strong>ASMR audio sub-detector boost values:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Detector</th>
+<th>Measurement</th>
+<th>Boost Target</th>
+<th>Max Boost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tapping</td>
+<td>Onset transient density</td>
+<td><code>audio_peak_score</code></td>
+<td>+0.1</td>
+</tr>
+<tr>
+<td>Crinkle</td>
+<td>High-frequency spectral flux</td>
+<td><code>high_freq_score</code></td>
+<td>+0.05</td>
+</tr>
+<tr>
+<td>Mouth-sound</td>
+<td>Mid-frequency (1-4kHz) energy ratio</td>
+<td><code>zcr_score</code></td>
+<td>+0.02</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Trigger word lists</strong> (not configurable):</p>
+<ul>
+<li><strong>ASMR content:</strong> <code>tingles</code>, <code>relax</code>, <code>sleep</code>, <code>cozy</code>, <code>gentle</code>, <code>dragon</code>, <code>scales</code>, <code>whisper</code>, <code>magic</code></li>
+<li><strong>Non-ASMR content:</strong> <code>amazing</code>, <code>incredible</code>, <code>wow</code>, <code>unbelievable</code>, <code>shocking</code>, <code>secret</code>, <code>hack</code>, <code>trick</code>, <code>tip</code></li>
+</ul>
+<p>These affect the <code>trigger_words</code> field in <code>AudioFeatures</code> and vary based on content type.</p>
+<h3 id="exit-codes">Exit Codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>0</code>: No errors</li>
+<li><code>1</code>: Total failure (errors and zero clips produced)</li>
+<li><code>2</code>: Partial success (some clips produced but with errors — applies to all commands)</li>
+</ul>
+<h2 id="lazy-initialization">Lazy Initialization<a class="headerlink" href="#lazy-initialization" title="Permanent link">&para;</a></h2>
+<p><code>ViralClipPipeline</code> lazily initializes all 8 component objects. Each has a <code>_get_*()</code> accessor that imports and constructs on first call. This avoids loading heavy dependencies (OpenCV, librosa, whisper) for lightweight commands like <code>check</code> or <code>--help</code>. Components injected via constructor skip lazy initialization.</p>
+<h2 id="bootstrap-caching">Bootstrap Caching<a class="headerlink" href="#bootstrap-caching" title="Permanent link">&para;</a></h2>
+<p>The dependency check result (<code>bootstrap.ensure_ready()</code>) is cached via a <code>~/.yacg_bootstrap_ok</code> marker file with a 24-hour TTL, avoiding the startup penalty on every invocation.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

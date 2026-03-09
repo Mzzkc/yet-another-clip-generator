@@ -1,0 +1,2716 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Extract viral-potential clips from long-form videos using AI">
+      
+      
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>API Reference - YACG — Yet Another Clip Generator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="YACG — Yet Another Clip Generator" class="md-header__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            YACG — Yet Another Clip Generator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="YACG — Yet Another Clip Generator" class="md-nav__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    YACG — Yet Another Clip Generator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#public-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Exports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pipelineconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PipelineConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subtitlestyle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubtitleStyle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contentprofile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContentProfile
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ContentProfile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Presets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#captiondata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CaptionData
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenesegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SceneSegment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wordtimestamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WordTimestamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#segmentboundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SegmentBoundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audiofeatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioFeatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualfeatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VisualFeatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semanticfeatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SemanticFeatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viralityscore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralityScore
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clipdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClipData
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#processingresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProcessingResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#viralclippipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralClipPipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ViralClipPipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process_video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        process_video()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process_youtube" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        process_youtube()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol Interfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Protocol Interfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transcriptsegmenterprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TranscriptSegmenterProtocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TranscriptSegmenterProtocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transcriptsegmenter-concrete-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TranscriptSegmenter (Concrete Class)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subtitleburnerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubtitleBurnerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semanticanalyzerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SemanticAnalyzerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#captiongeneratorprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CaptionGeneratorProtocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CaptionGeneratorProtocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ollamavideoanalyzer-concrete-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OllamaVideoAnalyzer (Concrete Class)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audioanalyzerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioAnalyzerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualanalyzerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VisualAnalyzerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viralityscorerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralityScorerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clipextractorprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClipExtractorProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analyzers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analyzers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Analyzers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#audioanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioAnalyzer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VisualAnalyzer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semanticanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SemanticAnalyzer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viralityscorer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralityScorer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extractors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extractors
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extractors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clipextractor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClipExtractor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#youtubedownloader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YouTubeDownloader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smartcropper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SmartCropper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subtitleburner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubtitleBurner
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenedetector-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SceneDetector (Legacy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#utilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Utilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Utilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#video-utilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Video Utilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#public-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Exports
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pipelineconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PipelineConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subtitlestyle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubtitleStyle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contentprofile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ContentProfile
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ContentProfile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Presets
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#captiondata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CaptionData
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenesegment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SceneSegment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wordtimestamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WordTimestamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#segmentboundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SegmentBoundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audiofeatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioFeatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualfeatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VisualFeatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semanticfeatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SemanticFeatures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viralityscore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralityScore
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clipdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClipData
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#processingresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProcessingResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#viralclippipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralClipPipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ViralClipPipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constructor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process_video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        process_video()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process_youtube" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        process_youtube()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol Interfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Protocol Interfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transcriptsegmenterprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TranscriptSegmenterProtocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TranscriptSegmenterProtocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transcriptsegmenter-concrete-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TranscriptSegmenter (Concrete Class)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subtitleburnerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubtitleBurnerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semanticanalyzerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SemanticAnalyzerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#captiongeneratorprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CaptionGeneratorProtocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CaptionGeneratorProtocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ollamavideoanalyzer-concrete-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OllamaVideoAnalyzer (Concrete Class)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audioanalyzerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioAnalyzerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualanalyzerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VisualAnalyzerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viralityscorerprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralityScorerProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clipextractorprotocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClipExtractorProtocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analyzers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analyzers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Analyzers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#audioanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioAnalyzer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VisualAnalyzer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#semanticanalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SemanticAnalyzer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viralityscorer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ViralityScorer
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extractors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extractors
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extractors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clipextractor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClipExtractor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#youtubedownloader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YouTubeDownloader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smartcropper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SmartCropper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subtitleburner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SubtitleBurner
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenedetector-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SceneDetector (Legacy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#utilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Utilities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Utilities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#video-utilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Video Utilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<p>This page documents the key public classes and functions in the <code>yacg</code> package.</p>
+<h2 id="public-exports">Public Exports<a class="headerlink" href="#public-exports" title="Permanent link">&para;</a></h2>
+<p>The package exports these symbols from <code>yacg/__init__.py</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClipData</span><span class="p">,</span> <span class="n">PipelineConfig</span><span class="p">,</span> <span class="n">ViralClipPipeline</span><span class="p">,</span> <span class="n">__version__</span>
+</code></pre></div>
+<h2 id="data-models">Data Models<a class="headerlink" href="#data-models" title="Permanent link">&para;</a></h2>
+<p>All data models are defined in <code>yacg/models.py</code>.</p>
+<h3 id="pipelineconfig">PipelineConfig<a class="headerlink" href="#pipelineconfig" title="Permanent link">&para;</a></h3>
+<p>Configuration for the viral clip extraction pipeline.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineConfig</span><span class="p">,</span> <span class="n">ContentProfile</span><span class="p">,</span> <span class="n">SubtitleStyle</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">PipelineConfig</span><span class="p">(</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;qwen2.5-vl:7b&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">ollama_host</span><span class="o">=</span><span class="s2">&quot;http://localhost:11434&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">whisper_model</span><span class="o">=</span><span class="s2">&quot;small&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">segmentation_model</span><span class="o">=</span><span class="s2">&quot;qwen2.5:7b&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">whisper_device</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">whisper_compute_type</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">scene_threshold</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">min_scene_len</span><span class="o">=</span><span class="mf">7.0</span><span class="p">,</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">max_scene_len</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">top_n_clips</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">min_virality_score</span><span class="o">=</span><span class="mf">70.0</span><span class="p">,</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">asmr_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">content_profile</span><span class="o">=</span><span class="n">ContentProfile</span><span class="p">(</span><span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;general&quot;</span><span class="p">),</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">num_frames</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;./clip_output&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">subtitle_style</span><span class="o">=</span><span class="n">SubtitleStyle</span><span class="p">(),</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">context_padding</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">pause_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="n">min_segment_duration</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="n">max_segment_duration</span><span class="o">=</span><span class="mf">45.0</span><span class="p">,</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="n">vad_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="n">scoring_weights</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="p">)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model_name</code></td>
+<td><code>str</code></td>
+<td><code>"qwen2.5-vl:7b"</code></td>
+<td>Ollama vision model for semantic analysis and captions</td>
+</tr>
+<tr>
+<td><code>ollama_host</code></td>
+<td><code>str</code></td>
+<td><code>"http://localhost:11434"</code></td>
+<td>Ollama API endpoint</td>
+</tr>
+<tr>
+<td><code>whisper_model</code></td>
+<td><code>str</code></td>
+<td><code>"small"</code></td>
+<td>faster-whisper model size (<code>tiny</code>, <code>base</code>, <code>small</code>, <code>medium</code>, <code>large-v3</code>)</td>
+</tr>
+<tr>
+<td><code>segmentation_model</code></td>
+<td><code>str</code></td>
+<td><code>"qwen2.5:7b"</code></td>
+<td>Ollama text-only model for transcript segmentation</td>
+</tr>
+<tr>
+<td><code>whisper_device</code></td>
+<td><code>str</code></td>
+<td><code>"auto"</code></td>
+<td>Whisper device: <code>auto</code> (CUDA if available), <code>cpu</code>, <code>cuda</code></td>
+</tr>
+<tr>
+<td><code>whisper_compute_type</code></td>
+<td><code>str</code></td>
+<td><code>"auto"</code></td>
+<td>Whisper precision: <code>auto</code>, <code>int8</code>, <code>float16</code>, <code>float32</code></td>
+</tr>
+<tr>
+<td><code>scene_threshold</code></td>
+<td><code>float</code></td>
+<td><code>3.0</code></td>
+<td>Scene detection threshold</td>
+</tr>
+<tr>
+<td><code>min_scene_len</code></td>
+<td><code>float</code></td>
+<td><code>7.0</code></td>
+<td>Minimum scene length in seconds</td>
+</tr>
+<tr>
+<td><code>max_scene_len</code></td>
+<td><code>float</code></td>
+<td><code>60.0</code></td>
+<td>Maximum scene length in seconds</td>
+</tr>
+<tr>
+<td><code>top_n_clips</code></td>
+<td><code>int</code></td>
+<td><code>10</code></td>
+<td>Default number of clips to extract. <strong>Note:</strong> This field is effectively unused — <code>process_video()</code> defaults <code>top_n=20</code> via its method signature, and the CLI always passes <code>--top-n</code>. No code path reads <code>config.top_n_clips</code>. Pass <code>top_n</code> directly to <code>process_video()</code> instead</td>
+</tr>
+<tr>
+<td><code>min_virality_score</code></td>
+<td><code>float</code></td>
+<td><code>70.0</code></td>
+<td>Default minimum virality score. <strong>Note:</strong> This field is effectively unused — <code>process_video()</code> defaults <code>min_score=70.0</code> via its method signature, and the CLI always passes <code>--min-score</code>. No code path reads <code>config.min_virality_score</code>. Pass <code>min_score</code> directly to <code>process_video()</code> instead</td>
+</tr>
+<tr>
+<td><code>asmr_mode</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Enable ASMR-optimized scoring. Auto-enabled when <code>content_profile.content_type == "asmr"</code></td>
+</tr>
+<tr>
+<td><code>content_profile</code></td>
+<td><code>ContentProfile</code></td>
+<td><code>ContentProfile()</code></td>
+<td>Content type and caption configuration (see <a href="#contentprofile">ContentProfile</a> below)</td>
+</tr>
+<tr>
+<td><code>num_frames</code></td>
+<td><code>int</code></td>
+<td><code>3</code></td>
+<td>Number of JPEG frames per segment for VLM semantic analysis (1-5). Set to <code>1</code> if your VLM produces garbled output with multiple images. Affects <code>SemanticAnalyzer</code> only — <code>OllamaVideoAnalyzer</code> (caption generation) always uses 3 frames regardless</td>
+</tr>
+<tr>
+<td><code>output_dir</code></td>
+<td><code>str</code></td>
+<td><code>"./clip_output"</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>subtitle_style</code></td>
+<td><code>SubtitleStyle</code></td>
+<td><code>SubtitleStyle()</code></td>
+<td>Subtitle appearance configuration</td>
+</tr>
+<tr>
+<td><code>context_padding</code></td>
+<td><code>float</code></td>
+<td><code>2.0</code></td>
+<td>Seconds of padding around clip boundaries</td>
+</tr>
+<tr>
+<td><code>dry_run</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Analysis only — stop after step 4</td>
+</tr>
+<tr>
+<td><code>pause_threshold</code></td>
+<td><code>float</code></td>
+<td><code>0.3</code></td>
+<td>Speech pause duration (seconds) that triggers a segment boundary</td>
+</tr>
+<tr>
+<td><code>min_segment_duration</code></td>
+<td><code>float</code></td>
+<td><code>15.0</code></td>
+<td>Minimum segment duration in seconds</td>
+</tr>
+<tr>
+<td><code>max_segment_duration</code></td>
+<td><code>float</code></td>
+<td><code>45.0</code></td>
+<td>Maximum segment duration in seconds</td>
+</tr>
+<tr>
+<td><code>vad_filter</code></td>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td>Voice Activity Detection filter for Whisper</td>
+</tr>
+<tr>
+<td><code>scoring_weights</code></td>
+<td><code>dict[str, float]</code></td>
+<td><em>(see below)</em></td>
+<td>Virality scoring weight dictionary (11 keys, sum=1.14)</td>
+</tr>
+</tbody>
+</table>
+<p>Scoring weights are validated on construction: keys must be from <code>VALID_SCORING_KEYS</code> (<code>hook</code>, <code>emotional</code>, <code>audio_peaks</code>, <code>asmr</code>, <code>motion</code>, <code>narrative</code>, <code>high_freq</code>, <code>uniqueness</code>, <code>composition</code>, <code>visual</code>, <code>duration</code>). Invalid keys raise <code>ValueError</code>.</p>
+<h3 id="subtitlestyle">SubtitleStyle<a class="headerlink" href="#subtitlestyle" title="Permanent link">&para;</a></h3>
+<p>Configuration for subtitle appearance. All values can be set via CLI flags or INI config.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">SubtitleStyle</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">font_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>            <span class="c1"># auto-detected if empty</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">font_size_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.055</span>   <span class="c1"># fraction of video height</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">primary_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&amp;H00FFFFFF&quot;</span>   <span class="c1"># white (ASS &amp;HAABBGGRR format)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">outline_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&amp;H00000000&quot;</span>   <span class="c1"># black</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">outline_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">shadow</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.5</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">margin_v_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.38</span>     <span class="c1"># fraction of video height</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">margin_h_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.15</span>     <span class="c1"># fraction of video width</span>
+</code></pre></div>
+<p>Colors use the ASS <code>&amp;HAABBGGRR</code> hex format (note: blue-green-red order, not RGB).</p>
+<h3 id="contentprofile">ContentProfile<a class="headerlink" href="#contentprofile" title="Permanent link">&para;</a></h3>
+<p>Configuration for content-type-aware LLM prompts and caption generation. Defined in <code>yacg/models.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContentProfile</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Use a preset</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">profile</span> <span class="o">=</span> <span class="n">ContentProfile</span><span class="p">(</span><span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;gaming&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># Customize fully</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">profile</span> <span class="o">=</span> <span class="n">ContentProfile</span><span class="p">(</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;cooking&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">channel_description</span><span class="o">=</span><span class="s2">&quot;Home chef sharing quick recipes&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">target_audience</span><span class="o">=</span><span class="s2">&quot;busy professionals who want to cook&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">tone</span><span class="o">=</span><span class="s2">&quot;casual&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">platform</span><span class="o">=</span><span class="s2">&quot;reels&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="n">caption_length</span><span class="o">=</span><span class="s2">&quot;short&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">hashtag_count</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">custom_instructions</span><span class="o">=</span><span class="s2">&quot;Always mention the recipe name&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="p">)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Valid Values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>content_type</code></td>
+<td><code>str</code></td>
+<td><code>"general"</code></td>
+<td><code>general</code>, <code>gaming</code>, <code>cooking</code>, <code>asmr</code>, <code>educational</code>, <code>fitness</code>, <code>comedy</code>, <code>music</code>, <code>beauty</code>, <code>tech</code>, <code>vlog</code></td>
+</tr>
+<tr>
+<td><code>channel_description</code></td>
+<td><code>str</code></td>
+<td><code>""</code></td>
+<td>Free text</td>
+</tr>
+<tr>
+<td><code>target_audience</code></td>
+<td><code>str</code></td>
+<td><code>""</code></td>
+<td>Free text</td>
+</tr>
+<tr>
+<td><code>tone</code></td>
+<td><code>str</code></td>
+<td><code>"engaging"</code></td>
+<td><code>energetic</code>, <code>calm</code>, <code>professional</code>, <code>casual</code>, <code>humorous</code>, <code>inspirational</code>, <code>dramatic</code>, <code>engaging</code></td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td><code>str</code></td>
+<td><code>"all"</code></td>
+<td><code>tiktok</code>, <code>reels</code>, <code>shorts</code>, <code>all</code></td>
+</tr>
+<tr>
+<td><code>caption_length</code></td>
+<td><code>str</code></td>
+<td><code>"medium"</code></td>
+<td><code>short</code>, <code>medium</code>, <code>long</code></td>
+</tr>
+<tr>
+<td><code>hashtag_count</code></td>
+<td><code>int</code></td>
+<td><code>5</code></td>
+<td><code>3</code>-<code>7</code></td>
+</tr>
+<tr>
+<td><code>custom_instructions</code></td>
+<td><code>str</code></td>
+<td><code>""</code></td>
+<td>Free text appended to LLM prompts</td>
+</tr>
+</tbody>
+</table>
+<p>All enum-like fields are validated in <code>__post_init__</code> — invalid values raise <code>ValueError</code>.</p>
+<h4 id="content-presets">Content Presets<a class="headerlink" href="#content-presets" title="Permanent link">&para;</a></h4>
+<p><code>CONTENT_PRESETS</code> is a <code>dict[str, ContentProfile]</code> with 11 pre-built profiles (one per content type). When <code>--content-type</code> is set via CLI, the corresponding preset is loaded, pre-filling <code>target_audience</code>, <code>tone</code>, <code>platform</code>, <code>caption_length</code>, and <code>hashtag_count</code>. Individual CLI flags (e.g., <code>--tone calm</code>) override the preset values.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CONTENT_PRESETS</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">gaming_profile</span> <span class="o">=</span> <span class="n">CONTENT_PRESETS</span><span class="p">[</span><span class="s2">&quot;gaming&quot;</span><span class="p">]</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># ContentProfile(content_type=&quot;gaming&quot;, tone=&quot;energetic&quot;, platform=&quot;all&quot;, ...)</span>
+</code></pre></div>
+<h3 id="captiondata">CaptionData<a class="headerlink" href="#captiondata" title="Permanent link">&para;</a></h3>
+<p>AI-generated caption data for a clip.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">CaptionData</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">hook</span><span class="p">:</span> <span class="nb">str</span>              <span class="c1"># Opening hook line</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>       <span class="c1"># Caption body text</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">hashtags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>    <span class="c1"># Hashtag list</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># Content category</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">virality_score</span><span class="p">:</span> <span class="nb">int</span>    <span class="c1"># LLM-predicted virality (0-100)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">full_caption</span><span class="p">:</span> <span class="nb">str</span>      <span class="c1"># Assembled ready-to-post caption</span>
+</code></pre></div>
+<h3 id="scenesegment">SceneSegment<a class="headerlink" href="#scenesegment" title="Permanent link">&para;</a></h3>
+<p>A detected scene boundary within a video.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">SceneSegment</span><span class="p">:</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">start_time</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">end_time</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">scene_index</span><span class="p">:</span> <span class="nb">int</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="nd">@property</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">duration</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h3 id="wordtimestamp">WordTimestamp<a class="headerlink" href="#wordtimestamp" title="Permanent link">&para;</a></h3>
+<p>A single word with its timing from Whisper transcription.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">WordTimestamp</span><span class="p">:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">word</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span>        <span class="c1"># seconds</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">end</span><span class="p">:</span> <span class="nb">float</span>          <span class="c1"># seconds</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">probability</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># 0-1, default 1.0</span>
+</code></pre></div>
+<h3 id="segmentboundary">SegmentBoundary<a class="headerlink" href="#segmentboundary" title="Permanent link">&para;</a></h3>
+<p>LLM-identified segment boundary from transcript analysis.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">SegmentBoundary</span><span class="p">:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">start_time</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">end_time</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">hook_summary</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">segment_type</span><span class="p">:</span> <span class="nb">str</span>   <span class="c1"># &quot;hook&quot;, &quot;narrative_arc&quot;, &quot;complete_thought&quot;, &quot;emotional_peak&quot;</span>
+</code></pre></div>
+<h3 id="audiofeatures">AudioFeatures<a class="headerlink" href="#audiofeatures" title="Permanent link">&para;</a></h3>
+<p>Audio analysis results for a video segment.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">AudioFeatures</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">audio_peak_score</span><span class="p">:</span> <span class="nb">float</span>    <span class="c1"># 0-2, 90th percentile RMS energy (normalized to 0-10 by ViralityScorer)</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">high_freq_score</span><span class="p">:</span> <span class="nb">float</span>     <span class="c1"># 0-1, fraction of frames &gt;4kHz</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">dynamic_range</span><span class="p">:</span> <span class="nb">float</span>       <span class="c1"># std of RMS</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="n">zcr_score</span><span class="p">:</span> <span class="nb">float</span>           <span class="c1"># zero-crossing rate</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    <span class="n">trigger_words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>   <span class="c1"># detected trigger words</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="n">overall_energy</span><span class="p">:</span> <span class="nb">float</span>      <span class="c1"># mean RMS energy</span>
+</code></pre></div>
+<h3 id="visualfeatures">VisualFeatures<a class="headerlink" href="#visualfeatures" title="Permanent link">&para;</a></h3>
+<p>Visual analysis results for a video segment.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">VisualFeatures</span><span class="p">:</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">motion_score</span><span class="p">:</span> <span class="nb">float</span>        <span class="c1"># 0-1, optical flow magnitude</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">face_presence</span><span class="p">:</span> <span class="nb">float</span>       <span class="c1"># 0-1, fraction of frames with faces</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">visual_interest</span><span class="p">:</span> <span class="nb">float</span>     <span class="c1"># 0-1, HSV color variance</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">composition_score</span><span class="p">:</span> <span class="nb">float</span>   <span class="c1"># 0-1, rule-of-thirds proximity</span>
+</code></pre></div>
+<h3 id="semanticfeatures">SemanticFeatures<a class="headerlink" href="#semanticfeatures" title="Permanent link">&para;</a></h3>
+<p>Semantic analysis results from LLM-based video understanding.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">SemanticFeatures</span><span class="p">:</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">emotional_intensity</span><span class="p">:</span> <span class="nb">float</span>  <span class="c1"># 0-10</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">narrative_interest</span><span class="p">:</span> <span class="nb">float</span>   <span class="c1"># 0-10</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">hook_potential</span><span class="p">:</span> <span class="nb">float</span>       <span class="c1"># 0-10</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="n">asmr_quality</span><span class="p">:</span> <span class="nb">float</span>         <span class="c1"># 0-10</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    <span class="n">visual_appeal</span><span class="p">:</span> <span class="nb">float</span>        <span class="c1"># 0-10</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    <span class="n">uniqueness</span><span class="p">:</span> <span class="nb">float</span>           <span class="c1"># 0-10</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>            <span class="c1"># LLM-generated description</span>
+</code></pre></div>
+<h3 id="viralityscore">ViralityScore<a class="headerlink" href="#viralityscore" title="Permanent link">&para;</a></h3>
+<p>Composite virality score with component breakdown.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ViralityScore</span><span class="p">:</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">total_score</span><span class="p">:</span> <span class="nb">float</span>                  <span class="c1"># 0-100</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">component_scores</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>  <span class="c1"># per-component breakdown</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span>                   <span class="c1"># 0-1 (1.0 with semantic, 0.5 without)</span>
+</code></pre></div>
+<h3 id="clipdata">ClipData<a class="headerlink" href="#clipdata" title="Permanent link">&para;</a></h3>
+<p>Complete data for a single extracted clip.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ClipData</span><span class="p">:</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">scene</span><span class="p">:</span> <span class="n">SceneSegment</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">audio</span><span class="p">:</span> <span class="n">AudioFeatures</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">visual</span><span class="p">:</span> <span class="n">VisualFeatures</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">semantic</span><span class="p">:</span> <span class="n">SemanticFeatures</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    <span class="n">virality</span><span class="p">:</span> <span class="n">ViralityScore</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    <span class="n">output_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>    <span class="n">caption</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CaptionData</span><span class="p">]</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>    <span class="n">words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WordTimestamp</span><span class="p">]</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    <span class="n">thumbnail_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="processingresult">ProcessingResult<a class="headerlink" href="#processingresult" title="Permanent link">&para;</a></h3>
+<p>Final result of processing a video through the pipeline.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProcessingResult</span><span class="p">:</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">video_title</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">clips</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ClipData</span><span class="p">]</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="n">total_scenes</span><span class="p">:</span> <span class="nb">int</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    <span class="n">processing_time_seconds</span><span class="p">:</span> <span class="nb">float</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</code></pre></div>
+<hr />
+<h2 id="pipeline">Pipeline<a class="headerlink" href="#pipeline" title="Permanent link">&para;</a></h2>
+<h3 id="viralclippipeline">ViralClipPipeline<a class="headerlink" href="#viralclippipeline" title="Permanent link">&para;</a></h3>
+<p>The main orchestrator class. Defined in <code>yacg/pipeline.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineConfig</span><span class="p">,</span> <span class="n">ViralClipPipeline</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">PipelineConfig</span><span class="p">(</span><span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;./my_clips&quot;</span><span class="p">)</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">ViralClipPipeline</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="constructor">Constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h4>
+<p>The constructor accepts optional injectable implementations for all 8 pipeline components, plus a progress callback:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">ViralClipPipeline</span><span class="p">(</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">transcript_segmenter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Optional[TranscriptSegmenterProtocol]</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">subtitle_burner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>       <span class="c1"># Optional[SubtitleBurnerProtocol]</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">semantic_analyzer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>     <span class="c1"># Optional[SemanticAnalyzerProtocol]</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="n">caption_generator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>     <span class="c1"># Optional[CaptionGeneratorProtocol]</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="n">audio_analyzer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>        <span class="c1"># Optional[AudioAnalyzerProtocol]</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="n">visual_analyzer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>       <span class="c1"># Optional[VisualAnalyzerProtocol]</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="n">virality_scorer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>       <span class="c1"># Optional[ViralityScorerProtocol]</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    <span class="n">clip_extractor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>        <span class="c1"># Optional[ClipExtractorProtocol]</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    <span class="n">progress_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>     <span class="c1"># Optional[Callable[[str, int, int], None]]</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="p">)</span>
+</code></pre></div>
+<p>All component parameters default to <code>None</code>, in which case the default implementation is lazily initialized on first use.</p>
+<p>The <code>progress_callback</code> receives <code>(step_name: str, current: int, total: int)</code> and can be used for GUI/web progress reporting.</p>
+<p>Exceptions raised by the <code>progress_callback</code> are caught silently and logged at DEBUG level. They will not propagate to the caller or affect pipeline execution.</p>
+<p>Progress step names emitted by the pipeline: <code>transcribe</code>, <code>segment</code>, <code>analyze</code>, <code>analyze_segment</code>, <code>extract</code>, <code>subtitles</code>, <code>captions</code>.</p>
+<h4 id="process_video"><code>process_video()</code><a class="headerlink" href="#process_video" title="Permanent link">&para;</a></h4>
+<p>Process a local video file through the full pipeline (7 numbered steps plus post-processing).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">process_video</span><span class="p">(</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;My Video&quot;</span><span class="p">,</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">top_n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">min_score</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>video_path</code></td>
+<td><code>str</code></td>
+<td><em>(required)</em></td>
+<td>Path to the video file</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td><code>str</code></td>
+<td><code>""</code></td>
+<td>Video title for captions (auto-detected from FFprobe metadata if empty)</td>
+</tr>
+<tr>
+<td><code>top_n</code></td>
+<td><code>int</code></td>
+<td><code>20</code></td>
+<td>Number of top clips to extract</td>
+</tr>
+<tr>
+<td><code>min_score</code></td>
+<td><code>float</code></td>
+<td><code>70.0</code></td>
+<td>Minimum virality score threshold</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <code>ProcessingResult</code></p>
+<h4 id="process_youtube"><code>process_youtube()</code><a class="headerlink" href="#process_youtube" title="Permanent link">&para;</a></h4>
+<p>Download and process a YouTube video.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">process_youtube</span><span class="p">(</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://youtube.com/watch?v=XXXXX&quot;</span><span class="p">,</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">top_n</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">min_score</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code></td>
+<td><code>str</code></td>
+<td><em>(required)</em></td>
+<td>YouTube video URL</td>
+</tr>
+<tr>
+<td><code>top_n</code></td>
+<td><code>int</code></td>
+<td><code>20</code></td>
+<td>Number of top clips to extract</td>
+</tr>
+<tr>
+<td><code>min_score</code></td>
+<td><code>float</code></td>
+<td><code>70.0</code></td>
+<td>Minimum virality score threshold</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <code>ProcessingResult</code></p>
+<hr />
+<h2 id="protocol-interfaces">Protocol Interfaces<a class="headerlink" href="#protocol-interfaces" title="Permanent link">&para;</a></h2>
+<p>The pipeline defines 8 <code>Protocol</code> interfaces in <code>pipeline.py</code> for dependency injection. All are <code>@runtime_checkable</code>.</p>
+<h3 id="transcriptsegmenterprotocol">TranscriptSegmenterProtocol<a class="headerlink" href="#transcriptsegmenterprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">TranscriptSegmenterProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">full_transcribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">WordTimestamp</span><span class="p">]:</span> <span class="o">...</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">segment_by_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WordTimestamp</span><span class="p">],</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SegmentBoundary</span><span class="p">]:</span> <span class="o">...</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">refine_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundaries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SegmentBoundary</span><span class="p">],</span> <span class="n">words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WordTimestamp</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SceneSegment</span><span class="p">]:</span> <span class="o">...</span>
+</code></pre></div>
+<h4 id="transcriptsegmenter-concrete-class">TranscriptSegmenter (Concrete Class)<a class="headerlink" href="#transcriptsegmenter-concrete-class" title="Permanent link">&para;</a></h4>
+<p>The default implementation with Whisper transcription and Ollama LLM segmentation. Defined in <code>yacg/transcript_segmenter.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.transcript_segmenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">TranscriptSegmenter</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="n">segmenter</span> <span class="o">=</span> <span class="n">TranscriptSegmenter</span><span class="p">(</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    <span class="n">whisper_model</span><span class="o">=</span><span class="s2">&quot;small&quot;</span><span class="p">,</span>           <span class="c1"># Whisper model size</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>    <span class="n">ollama_host</span><span class="o">=</span><span class="s2">&quot;http://localhost:11434&quot;</span><span class="p">,</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;qwen2.5-vl:7b&quot;</span><span class="p">,</span>     <span class="c1"># Ollama model for segmentation (pipeline passes config.segmentation_model)</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">whisper_device</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>           <span class="c1"># &quot;auto&quot;, &quot;cpu&quot;, or &quot;cuda&quot;</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="n">whisper_compute_type</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>     <span class="c1"># &quot;auto&quot;, &quot;int8&quot;, &quot;float16&quot;, &quot;float32&quot;</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>    <span class="n">pause_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>             <span class="c1"># speech pause duration (seconds) for boundary snapping</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>    <span class="n">min_segment_duration</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>       <span class="c1"># minimum segment length</span>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>    <span class="n">max_segment_duration</span><span class="o">=</span><span class="mf">45.0</span><span class="p">,</span>       <span class="c1"># maximum segment length</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>    <span class="n">vad_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>                 <span class="c1"># Voice Activity Detection filter</span>
+<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>                 <span class="c1"># content type for genre-specific segmentation guidance</span>
+<a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>    <span class="n">channel_description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>          <span class="c1"># optional channel context</span>
+<a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>    <span class="n">target_audience</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>              <span class="c1"># optional audience context</span>
+<a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>    <span class="n">custom_instructions</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>          <span class="c1"># optional custom LLM instructions</span>
+<a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="p">)</span>
+</code></pre></div>
+<p><strong>Convenience method:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># High-level method chaining full_transcribe → segment_by_content → refine_boundaries</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="n">scenes</span><span class="p">,</span> <span class="n">words</span> <span class="o">=</span> <span class="n">segmenter</span><span class="o">.</span><span class="n">segment_video</span><span class="p">(</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;My Video&quot;</span><span class="p">,</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="p">)</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="c1"># scenes: list[SceneSegment], words: list[WordTimestamp]</span>
+</code></pre></div>
+<p>The Whisper model instance is cached and keyed by <code>(model, device, compute_type)</code> — reused across calls and batch processing.</p>
+<h3 id="subtitleburnerprotocol">SubtitleBurnerProtocol<a class="headerlink" href="#subtitleburnerprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SubtitleBurnerProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_video_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span> <span class="o">...</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">process_clip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">WordTimestamp</span><span class="p">],</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>                     <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">style</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SubtitleStyle</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h3 id="semanticanalyzerprotocol">SemanticAnalyzerProtocol<a class="headerlink" href="#semanticanalyzerprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">SemanticAnalyzerProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_segment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>                        <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SemanticFeatures</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h3 id="captiongeneratorprotocol">CaptionGeneratorProtocol<a class="headerlink" href="#captiongeneratorprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CaptionGeneratorProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_video</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">transcript_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CaptionData</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h4 id="ollamavideoanalyzer-concrete-class">OllamaVideoAnalyzer (Concrete Class)<a class="headerlink" href="#ollamavideoanalyzer-concrete-class" title="Permanent link">&para;</a></h4>
+<p>The default caption generator using Ollama VLM. Defined in <code>yacg/caption_generator.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.caption_generator</span><span class="w"> </span><span class="kn">import</span> <span class="n">OllamaVideoAnalyzer</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="n">analyzer</span> <span class="o">=</span> <span class="n">OllamaVideoAnalyzer</span><span class="p">(</span>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;qwen2.5-vl:7b&quot;</span><span class="p">,</span>          <span class="c1"># Ollama vision model</span>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>    <span class="n">ollama_host</span><span class="o">=</span><span class="s2">&quot;http://localhost:11434&quot;</span><span class="p">,</span>
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;general&quot;</span><span class="p">,</span>          <span class="c1"># content type persona for captions</span>
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>    <span class="n">channel_description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>          <span class="c1"># channel context for captions</span>
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>    <span class="n">target_audience</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>              <span class="c1"># audience context</span>
+<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>    <span class="n">tone</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>                         <span class="c1"># caption tone (empty = default per content type)</span>
+<a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>    <span class="n">platform</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>                     <span class="c1"># target platform (empty = all)</span>
+<a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a>    <span class="n">caption_length</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>               <span class="c1"># caption length (empty = medium)</span>
+<a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>    <span class="n">hashtag_count</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>                 <span class="c1"># hashtags per caption</span>
+<a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a>    <span class="n">custom_instructions</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>          <span class="c1"># appended to LLM prompt</span>
+<a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a><span class="p">)</span>
+</code></pre></div>
+<p>The <code>analyze_video()</code> method accepts an additional <code>max_retries: int = 3</code> parameter not present in the Protocol interface:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="n">caption</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">analyze_video</span><span class="p">(</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/clip.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;My Video&quot;</span><span class="p">,</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>    <span class="n">max_retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>          <span class="c1"># retry count (default: 3)</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>    <span class="n">transcript_text</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span>  <span class="c1"># optional transcript for context</span>
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="p">)</span>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="c1"># caption: CaptionData</span>
+</code></pre></div>
+<p>Caption generation always extracts 3 JPEG frames at 25%, 50%, and 75% of clip duration, regardless of <code>PipelineConfig.num_frames</code>. Uses <code>temperature=0.7</code> for creative output.</p>
+<h3 id="audioanalyzerprotocol">AudioAnalyzerProtocol<a class="headerlink" href="#audioanalyzerprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">AudioAnalyzerProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_segment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>                        <span class="n">end_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">words</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">WordTimestamp</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AudioFeatures</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h3 id="visualanalyzerprotocol">VisualAnalyzerProtocol<a class="headerlink" href="#visualanalyzerprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">VisualAnalyzerProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_segment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>                        <span class="n">end_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VisualFeatures</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h3 id="viralityscorerprotocol">ViralityScorerProtocol<a class="headerlink" href="#viralityscorerprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ViralityScorerProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">:</span> <span class="n">AudioFeatures</span><span class="p">,</span> <span class="n">visual</span><span class="p">:</span> <span class="n">VisualFeatures</span><span class="p">,</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>                        <span class="n">semantic</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SemanticFeatures</span><span class="p">],</span>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>                        <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ViralityScore</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<h3 id="clipextractorprotocol">ClipExtractorProtocol<a class="headerlink" href="#clipextractorprotocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ClipExtractorProtocol</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">extract_clip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>                     <span class="n">end_time</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<hr />
+<h2 id="analyzers">Analyzers<a class="headerlink" href="#analyzers" title="Permanent link">&para;</a></h2>
+<h3 id="audioanalyzer">AudioAnalyzer<a class="headerlink" href="#audioanalyzer" title="Permanent link">&para;</a></h3>
+<p>Computes audio features using librosa. Defined in <code>yacg/core/audio_analyzer.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.core.audio_analyzer</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioAnalyzer</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="n">analyzer</span> <span class="o">=</span> <span class="n">AudioAnalyzer</span><span class="p">(</span><span class="n">asmr_keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;tapping&quot;</span><span class="p">,</span> <span class="s2">&quot;scratching&quot;</span><span class="p">,</span> <span class="s2">&quot;whispering&quot;</span><span class="p">])</span>
+<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="n">features</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">analyze_segment</span><span class="p">(</span>
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>    <span class="n">start_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>    <span class="n">end_time</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span>
+<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>    <span class="n">words</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>  <span class="c1"># optional list[WordTimestamp] — reused from pipeline transcription</span>
+<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="p">)</span>
+<a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a><span class="c1"># features: AudioFeatures</span>
+</code></pre></div>
+<p>Detects: audio peaks, high-frequency content, tapping (onset transients), crinkle (spectral flux), mouth-sounds (mid-frequency energy), and trigger words (from pipeline's existing word timestamps).</p>
+<h3 id="visualanalyzer">VisualAnalyzer<a class="headerlink" href="#visualanalyzer" title="Permanent link">&para;</a></h3>
+<p>Computes visual features using OpenCV. Defined in <code>yacg/core/visual_analyzer.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.core.visual_analyzer</span><span class="w"> </span><span class="kn">import</span> <span class="n">VisualAnalyzer</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="n">analyzer</span> <span class="o">=</span> <span class="n">VisualAnalyzer</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>  <span class="c1"># optional PipelineConfig</span>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="n">features</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">analyze_segment</span><span class="p">(</span>
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>    <span class="n">start_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>    <span class="n">end_time</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span>
+<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a><span class="p">)</span>
+<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a><span class="c1"># features: VisualFeatures</span>
+</code></pre></div>
+<p>Computes: motion (optical flow), face presence (DNN SSD detector with Haar cascade fallback), visual interest (HSV variance), composition (rule-of-thirds).</p>
+<p><code>detect_faces(video_path: str, time_seconds: float) -&gt; int</code> — Count faces at a specific timestamp. Uses DNN SSD detector with Haar cascade fallback.</p>
+<h3 id="semanticanalyzer">SemanticAnalyzer<a class="headerlink" href="#semanticanalyzer" title="Permanent link">&para;</a></h3>
+<p>Semantic analysis via Ollama VLM. Defined in <code>yacg/core/semantic_analyzer.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.core.semantic_analyzer</span><span class="w"> </span><span class="kn">import</span> <span class="n">SemanticAnalyzer</span>
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="n">analyzer</span> <span class="o">=</span> <span class="n">SemanticAnalyzer</span><span class="p">(</span>
+<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;qwen2.5-vl:7b&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>    <span class="n">ollama_host</span><span class="o">=</span><span class="s2">&quot;http://localhost:11434&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>    <span class="n">num_frames</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>            <span class="c1"># 1-5 JPEG frames per segment</span>
+<a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a>    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;general&quot;</span><span class="p">,</span>  <span class="c1"># 11 content types — controls prompt language</span>
+<a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a>    <span class="n">channel_description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>  <span class="c1"># optional channel context</span>
+<a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a>    <span class="n">target_audience</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>      <span class="c1"># optional audience context</span>
+<a id="__codelineno-33-10" name="__codelineno-33-10" href="#__codelineno-33-10"></a>    <span class="n">tone</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>                 <span class="c1"># optional tone override</span>
+<a id="__codelineno-33-11" name="__codelineno-33-11" href="#__codelineno-33-11"></a>    <span class="n">custom_instructions</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>  <span class="c1"># optional custom LLM instructions</span>
+<a id="__codelineno-33-12" name="__codelineno-33-12" href="#__codelineno-33-12"></a><span class="p">)</span>
+<a id="__codelineno-33-13" name="__codelineno-33-13" href="#__codelineno-33-13"></a><span class="n">features</span> <span class="o">=</span> <span class="n">analyzer</span><span class="o">.</span><span class="n">analyze_segment</span><span class="p">(</span>
+<a id="__codelineno-33-14" name="__codelineno-33-14" href="#__codelineno-33-14"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-15" name="__codelineno-33-15" href="#__codelineno-33-15"></a>    <span class="n">start_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-33-16" name="__codelineno-33-16" href="#__codelineno-33-16"></a>    <span class="n">end_time</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span>
+<a id="__codelineno-33-17" name="__codelineno-33-17" href="#__codelineno-33-17"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;My Video&quot;</span><span class="p">,</span>
+<a id="__codelineno-33-18" name="__codelineno-33-18" href="#__codelineno-33-18"></a><span class="p">)</span>
+<a id="__codelineno-33-19" name="__codelineno-33-19" href="#__codelineno-33-19"></a><span class="c1"># features: SemanticFeatures</span>
+</code></pre></div>
+<p>Extracts <code>num_frames</code> JPEG frames at evenly-spaced positions and sends them to the Ollama VLM. Parses 6 ratings (0-10 scale). Uses <code>requests.Session()</code> for HTTP connection reuse.</p>
+<p><code>check_availability() -&gt; bool</code> — Pre-flight check for Ollama connectivity and model availability. Useful for GUI/web integrations.</p>
+<h3 id="viralityscorer">ViralityScorer<a class="headerlink" href="#viralityscorer" title="Permanent link">&para;</a></h3>
+<p>Weighted multi-signal scoring engine. Defined in <code>yacg/core/virality_scorer.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.core.virality_scorer</span><span class="w"> </span><span class="kn">import</span> <span class="n">ViralityScorer</span>
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="n">scorer</span> <span class="o">=</span> <span class="n">ViralityScorer</span><span class="p">(</span><span class="n">weights</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="n">score</span> <span class="o">=</span> <span class="n">scorer</span><span class="o">.</span><span class="n">calculate_score</span><span class="p">(</span>
+<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>    <span class="n">audio</span><span class="o">=</span><span class="n">audio_features</span><span class="p">,</span>
+<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>    <span class="n">visual</span><span class="o">=</span><span class="n">visual_features</span><span class="p">,</span>
+<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>    <span class="n">semantic</span><span class="o">=</span><span class="n">semantic_features</span><span class="p">,</span>  <span class="c1"># Optional — weights redistributed if None</span>
+<a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>    <span class="n">duration</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span>
+<a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a><span class="p">)</span>
+<a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a><span class="c1"># score: ViralityScore (total_score 0-100)</span>
+</code></pre></div>
+<p>When <code>semantic</code> is <code>None</code>, semantic weights are redistributed proportionally to audio and visual weights. Duration scoring uses an optimal range curve (7-30 seconds).</p>
+<p><code>duration_score(duration: float) -&gt; float</code> — Public method exposing the 5-zone duration scoring algorithm (backward-compatible alias). Returns 0-10 score.</p>
+<hr />
+<h2 id="extractors">Extractors<a class="headerlink" href="#extractors" title="Permanent link">&para;</a></h2>
+<h3 id="clipextractor">ClipExtractor<a class="headerlink" href="#clipextractor" title="Permanent link">&para;</a></h3>
+<p>Extracts and formats video clips. Defined in <code>yacg/extractors/clip_extractor.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.extractors.clip_extractor</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClipExtractor</span>
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="n">extractor</span> <span class="o">=</span> <span class="n">ClipExtractor</span><span class="p">(</span><span class="n">context_padding</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="n">success</span> <span class="o">=</span> <span class="n">extractor</span><span class="o">.</span><span class="n">extract_clip</span><span class="p">(</span>
+<a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>    <span class="n">start_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>    <span class="n">end_time</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span>
+<a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>    <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;/path/to/output.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a><span class="p">)</span>
+</code></pre></div>
+<p>Adds context padding, applies SmartCropper for 9:16 vertical format, re-encodes with H.264/AAC. Includes 1 retry on failure and validates output is at least 10KB.</p>
+<p>Additional batch methods:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>batch_extract</code></td>
+<td><code>(video_path, segments, output_dir, scores)</code></td>
+<td>Extract multiple clips in parallel</td>
+</tr>
+<tr>
+<td><code>extract_batch</code></td>
+<td><code>(video_path, clips)</code></td>
+<td>Backward-compatible wrapper accepting <code>ClipData</code> objects</td>
+</tr>
+</tbody>
+</table>
+<h3 id="youtubedownloader">YouTubeDownloader<a class="headerlink" href="#youtubedownloader" title="Permanent link">&para;</a></h3>
+<p>Downloads YouTube videos with H.264 codec preference. Defined in <code>yacg/youtube_downloader.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.youtube_downloader</span><span class="w"> </span><span class="kn">import</span> <span class="n">YouTubeDownloader</span>
+<a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>
+<a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="n">downloader</span> <span class="o">=</span> <span class="n">YouTubeDownloader</span><span class="p">(</span><span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;./downloads&quot;</span><span class="p">)</span>
+<a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">downloader</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://youtube.com/watch?v=XXXXX&quot;</span><span class="p">)</span>
+<a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="c1"># result: dict with keys: video_path, title, duration, channel</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Signature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>download</code></td>
+<td><code>(url: str) -&gt; dict</code></td>
+<td>Download video; returns <code>{video_path, title, duration, channel}</code></td>
+</tr>
+<tr>
+<td><code>extract_video_id</code></td>
+<td><code>(url: str) -&gt; str</code></td>
+<td>Parse video ID from 6 URL formats</td>
+</tr>
+</tbody>
+</table>
+<p>The downloader uses a 5-level format preference cascade to force H.264 codec selection (required for OpenCV compatibility). Progress is logged during download.</p>
+<h3 id="smartcropper">SmartCropper<a class="headerlink" href="#smartcropper" title="Permanent link">&para;</a></h3>
+<p>Face-aware vertical cropping. Defined in <code>yacg/extractors/smart_cropper.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.extractors.smart_cropper</span><span class="w"> </span><span class="kn">import</span> <span class="n">SmartCropper</span>
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>
+<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="n">cropper</span> <span class="o">=</span> <span class="n">SmartCropper</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a><span class="n">crop_params</span> <span class="o">=</span> <span class="n">cropper</span><span class="o">.</span><span class="n">get_crop_params</span><span class="p">(</span>
+<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a>    <span class="n">start_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a>    <span class="n">target_ratio</span><span class="o">=</span><span class="mi">9</span><span class="o">/</span><span class="mi">16</span><span class="p">,</span>
+<a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a><span class="p">)</span>
+<a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a><span class="c1"># crop_params: dict[str, int] with crop parameters</span>
+<a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a>
+<a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a><span class="n">filter_str</span> <span class="o">=</span> <span class="n">cropper</span><span class="o">.</span><span class="n">get_ffmpeg_filter</span><span class="p">(</span>
+<a id="__codelineno-37-12" name="__codelineno-37-12" href="#__codelineno-37-12"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-37-13" name="__codelineno-37-13" href="#__codelineno-37-13"></a>    <span class="n">start_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-37-14" name="__codelineno-37-14" href="#__codelineno-37-14"></a>    <span class="n">target_ratio</span><span class="o">=</span><span class="mi">9</span><span class="o">/</span><span class="mi">16</span><span class="p">,</span>   <span class="c1"># desired width/height ratio (default: 9/16)</span>
+<a id="__codelineno-37-15" name="__codelineno-37-15" href="#__codelineno-37-15"></a>    <span class="n">end_time</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>        <span class="c1"># when provided, enables multi-frame face sampling</span>
+<a id="__codelineno-37-16" name="__codelineno-37-16" href="#__codelineno-37-16"></a><span class="p">)</span>
+<a id="__codelineno-37-17" name="__codelineno-37-17" href="#__codelineno-37-17"></a><span class="c1"># filter_str: &quot;crop=608:1080:656:0&quot; (example)</span>
+</code></pre></div>
+<p>Additional public methods:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># Backward-compatible convenience wrapper</span>
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="n">crop_filter</span> <span class="o">=</span> <span class="n">cropper</span><span class="o">.</span><span class="n">get_crop_filter</span><span class="p">(</span>
+<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">1920</span><span class="p">,</span>
+<a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">1080</span><span class="p">,</span>
+<a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a><span class="p">)</span>
+<a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a><span class="c1"># crop_filter: &quot;crop=608:1080:656:0&quot; (delegates to get_ffmpeg_filter)</span>
+<a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a>
+<a id="__codelineno-38-9" name="__codelineno-38-9" href="#__codelineno-38-9"></a><span class="c1"># Detect primary subject center point</span>
+<a id="__codelineno-38-10" name="__codelineno-38-10" href="#__codelineno-38-10"></a><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">cropper</span><span class="o">.</span><span class="n">detect_subject_center</span><span class="p">(</span>
+<a id="__codelineno-38-11" name="__codelineno-38-11" href="#__codelineno-38-11"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/video.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-38-12" name="__codelineno-38-12" href="#__codelineno-38-12"></a>    <span class="n">time_seconds</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+<a id="__codelineno-38-13" name="__codelineno-38-13" href="#__codelineno-38-13"></a><span class="p">)</span>
+<a id="__codelineno-38-14" name="__codelineno-38-14" href="#__codelineno-38-14"></a><span class="c1"># Returns (x, y) center of primary subject using face detection → brightness fallback</span>
+</code></pre></div>
+<p>When <code>end_time</code> is provided to <code>get_crop_params()</code> or <code>get_ffmpeg_filter()</code>, SmartCropper samples 3 frames at 25%, 50%, and 75% of the segment for face detection, uses median positioning for stability, and validates spatial consistency (faces must be within 30% of frame width). This multi-frame sampling prevents crops from jumping when faces move.</p>
+<p>Uses DNN SSD face detection (ResNet-10 Caffe model) with Haar cascade fallback, then brightness-center as final fallback. Opens the video file once per <code>get_crop_params()</code>/<code>get_ffmpeg_filter()</code> call. The <code>detect_subject_center()</code> method opens the video independently.</p>
+<h3 id="subtitleburner">SubtitleBurner<a class="headerlink" href="#subtitleburner" title="Permanent link">&para;</a></h3>
+<p>TikTok word-pop subtitle generation and burning. Defined in <code>yacg/subtitle_burner.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.subtitle_burner</span><span class="w"> </span><span class="kn">import</span> <span class="n">SubtitleBurner</span>
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">SubtitleStyle</span>
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>
+<a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="n">burner</span> <span class="o">=</span> <span class="n">SubtitleBurner</span><span class="p">()</span>
+<a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="n">output_path</span> <span class="o">=</span> <span class="n">burner</span><span class="o">.</span><span class="n">process_clip</span><span class="p">(</span>
+<a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a>    <span class="n">video_path</span><span class="o">=</span><span class="s2">&quot;/path/to/clip.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-39-7" name="__codelineno-39-7" href="#__codelineno-39-7"></a>    <span class="n">words</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>         <span class="c1"># list[WordTimestamp] for the clip&#39;s time range</span>
+<a id="__codelineno-39-8" name="__codelineno-39-8" href="#__codelineno-39-8"></a>    <span class="n">width</span><span class="o">=</span><span class="mi">1080</span><span class="p">,</span>          <span class="c1"># video width in pixels</span>
+<a id="__codelineno-39-9" name="__codelineno-39-9" href="#__codelineno-39-9"></a>    <span class="n">height</span><span class="o">=</span><span class="mi">1920</span><span class="p">,</span>         <span class="c1"># video height in pixels</span>
+<a id="__codelineno-39-10" name="__codelineno-39-10" href="#__codelineno-39-10"></a>    <span class="n">style</span><span class="o">=</span><span class="n">SubtitleStyle</span><span class="p">(</span><span class="n">font_name</span><span class="o">=</span><span class="s2">&quot;Arial&quot;</span><span class="p">,</span> <span class="n">primary_color</span><span class="o">=</span><span class="s2">&quot;&amp;H0000FFFF&quot;</span><span class="p">),</span>  <span class="c1"># optional</span>
+<a id="__codelineno-39-11" name="__codelineno-39-11" href="#__codelineno-39-11"></a><span class="p">)</span>
+</code></pre></div>
+<p>Generates ASS v4+ subtitles with configurable styling and burns them via FFmpeg libass filter. Auto-detects a suitable system font if none specified (<code>_find_system_font()</code> probes platform-specific font directories). FFmpeg errors are translated to human-readable messages.</p>
+<p>Additional public methods for fine-grained control:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="c1"># Generate ASS subtitle content without burning</span>
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a><span class="n">ass_content</span> <span class="o">=</span> <span class="n">burner</span><span class="o">.</span><span class="n">generate_ass</span><span class="p">(</span>
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>    <span class="n">words</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>         <span class="c1"># list[WordTimestamp]</span>
+<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a>    <span class="n">frame_width</span><span class="o">=</span><span class="mi">1080</span><span class="p">,</span>
+<a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a>    <span class="n">frame_height</span><span class="o">=</span><span class="mi">1920</span><span class="p">,</span>
+<a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a>    <span class="n">style</span><span class="o">=</span><span class="n">SubtitleStyle</span><span class="p">(),</span>
+<a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a><span class="p">)</span>
+<a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a>
+<a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a><span class="c1"># Burn pre-generated ASS content into a video</span>
+<a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a><span class="n">output</span> <span class="o">=</span> <span class="n">burner</span><span class="o">.</span><span class="n">burn_subtitles</span><span class="p">(</span>
+<a id="__codelineno-40-11" name="__codelineno-40-11" href="#__codelineno-40-11"></a>    <span class="n">clip_path</span><span class="o">=</span><span class="s2">&quot;/path/to/clip.mp4&quot;</span><span class="p">,</span>
+<a id="__codelineno-40-12" name="__codelineno-40-12" href="#__codelineno-40-12"></a>    <span class="n">ass_content</span><span class="o">=</span><span class="n">ass_content</span><span class="p">,</span>
+<a id="__codelineno-40-13" name="__codelineno-40-13" href="#__codelineno-40-13"></a><span class="p">)</span>
+</code></pre></div>
+<p>Word grouping constants (not configurable): <code>WORD_GROUP_GAP = 0.2s</code> (pause triggers new group), <code>SENTENCE_BREAK_GAP = 0.3s</code> (minimum display time), <code>MAX_GROUP_DURATION = 2.0s</code> (maximum display time). Words appear 1-3 at a time in TikTok-style "word-pop" groups.</p>
+<h3 id="scenedetector-legacy">SceneDetector (Legacy)<a class="headerlink" href="#scenedetector-legacy" title="Permanent link">&para;</a></h3>
+<p>PySceneDetect-based scene detector. Not used by the default pipeline but available for dependency injection. Defined in <code>yacg/core/scene_detector.py</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.core.scene_detector</span><span class="w"> </span><span class="kn">import</span> <span class="n">SceneDetector</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>
+<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="n">detector</span> <span class="o">=</span> <span class="n">SceneDetector</span><span class="p">(</span>
+<a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a>    <span class="n">threshold</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span>
+<a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a>    <span class="n">min_scene_len</span><span class="o">=</span><span class="mf">7.0</span><span class="p">,</span>
+<a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>    <span class="n">max_scene_len</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
+<a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a><span class="p">)</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>detect_scenes(video_path)</code></td>
+<td>Detect scene boundaries using PySceneDetect</td>
+</tr>
+<tr>
+<td><code>merge_short_scenes(scenes)</code></td>
+<td>Merge scenes shorter than <code>min_scene_len</code></td>
+</tr>
+<tr>
+<td><code>split_long_scenes(scenes)</code></td>
+<td>Split scenes longer than <code>max_scene_len</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="utilities">Utilities<a class="headerlink" href="#utilities" title="Permanent link">&para;</a></h2>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.utils.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_config</span><span class="p">,</span> <span class="n">save_default_config</span>
+<a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>
+<a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a><span class="c1"># Load from file (or get defaults)</span>
+<a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="s2">&quot;config.ini&quot;</span><span class="p">)</span>
+<a id="__codelineno-42-5" name="__codelineno-42-5" href="#__codelineno-42-5"></a>
+<a id="__codelineno-42-6" name="__codelineno-42-6" href="#__codelineno-42-6"></a><span class="c1"># Generate a default config file (or use CLI: generate-config)</span>
+<a id="__codelineno-42-7" name="__codelineno-42-7" href="#__codelineno-42-7"></a><span class="n">save_default_config</span><span class="p">(</span><span class="s2">&quot;config.ini&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="video-utilities">Video Utilities<a class="headerlink" href="#video-utilities" title="Permanent link">&para;</a></h3>
+<p>Defined in <code>yacg/utils/video_utils.py</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>extract_metadata(path)</code></td>
+<td>Get video metadata via FFprobe. Returns dict with keys: <code>filename</code>, <code>filepath</code>, <code>duration</code> (float), <code>width</code> (int), <code>height</code> (int), <code>file_size</code> (int), <code>fps</code> (float), <code>codec</code> (str), <code>audio_codec</code> (str), <code>sample_rate</code> (int), <code>channels</code> (int)</td>
+</tr>
+<tr>
+<td><code>extract_audio(video_path, output_path, start=None, end=None)</code></td>
+<td>Extract audio track to WAV via FFmpeg. Optional <code>start</code>/<code>end</code> for segment extraction</td>
+</tr>
+<tr>
+<td><code>extract_segment(video, start, end, output)</code></td>
+<td>Cut a video segment with H.264 re-encode</td>
+</tr>
+<tr>
+<td><code>get_frame_at_time(video, time)</code></td>
+<td>Capture a single frame as numpy array</td>
+</tr>
+<tr>
+<td><code>ensure_compatible_video(path)</code></td>
+<td>Transcode to compatible codec if needed</td>
+</tr>
+<tr>
+<td><code>temp_audio_file(suffix=".wav")</code></td>
+<td>Context manager yielding a temporary file path, cleaned up on exit</td>
+</tr>
+<tr>
+<td><code>translate_ffmpeg_error(stderr)</code></td>
+<td>Translate raw FFmpeg stderr to human-readable error messages</td>
+</tr>
+<tr>
+<td><code>get_cv2()</code></td>
+<td>Lazy OpenCV loader shared across modules</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bootstrap">Bootstrap<a class="headerlink" href="#bootstrap" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">yacg.bootstrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_ready</span>
+<a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a>
+<a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a><span class="c1"># Returns True if all dependencies are satisfied</span>
+<a id="__codelineno-43-4" name="__codelineno-43-4" href="#__codelineno-43-4"></a><span class="n">ready</span> <span class="o">=</span> <span class="n">ensure_ready</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<p>Checks FFmpeg/FFprobe availability and auto-installs missing Python packages via pip. Result is cached for 24 hours via <code>~/.yacg_bootstrap_ok</code> marker file.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

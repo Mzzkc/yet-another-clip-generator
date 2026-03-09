@@ -1,0 +1,1549 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Extract viral-potential clips from long-form videos using AI">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>YACG - Implementation Roadmap - YACG — Yet Another Clip Generator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#yacg-implementation-roadmap" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="YACG — Yet Another Clip Generator" class="md-header__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            YACG — Yet Another Clip Generator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              YACG - Implementation Roadmap
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="YACG — Yet Another Clip Generator" class="md-nav__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    YACG — Yet Another Clip Generator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-decision-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚦 Quick Decision Framework
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🚦 Quick Decision Framework">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#should-you-build-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Should You Build This?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-vs-buy-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Build vs. Buy Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Build vs. Buy Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commercial-solutions-buy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commercial Solutions (Buy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-solution-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Solution (Build)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 Implementation Phases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📋 Implementation Phases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-0-quick-prototype-8-12-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0: Quick Prototype (8-12 hours)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-core-pipeline-20-25-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Core Pipeline (20-25 hours)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-advanced-analysis-15-20-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Advanced Analysis (15-20 hours)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-caption-integration-8-10-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Caption Integration (8-10 hours)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-optimization-polish-10-15-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Optimization &amp; Polish (10-15 hours)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔧 Technical Implementation Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Technical Implementation Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture-decision-modular-vs-monolithic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Decision: Modular vs Monolithic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-optimization-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Optimization Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-algorithm-the-heart-of-the-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring Algorithm: The Heart of the System
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-breakdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💰 Cost Breakdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💰 Cost Breakdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-costs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Costs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ongoing-costs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ongoing Costs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skills-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎓 Skills Required
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎓 Skills Required">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#must-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Must Have:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nice-to-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nice to Have:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#will-learn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Will Learn:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started-if-you-decide-to-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚀 Getting Started (If You Decide to Build)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🚀 Getting Started (If You Decide to Build)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-validate-approach-day-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Validate Approach (Day 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-prototype-weekend-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Prototype (Weekend Project)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-build-mvp-week-1-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Build MVP (Week 1-2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-iterate-week-3-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Iterate (Week 3-5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expected-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Expected Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📊 Expected Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#after-phase-1-mvp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After Phase 1 (MVP):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-phase-2-advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After Phase 2 (Advanced):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-phase-3-integrated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After Phase 3 (Integrated):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-phase-4-optimized" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After Phase 4 (Optimized):
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Success Metrics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Success Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Performance:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#business-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Business Impact:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hybrid-approach-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Hybrid Approach (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎉 Conclusion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎉 Conclusion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TL;DR:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="yacg-implementation-roadmap">YACG - Implementation Roadmap<a class="headerlink" href="#yacg-implementation-roadmap" title="Permanent link">&para;</a></h1>
+<h2 id="quick-decision-framework">🚦 Quick Decision Framework<a class="headerlink" href="#quick-decision-framework" title="Permanent link">&para;</a></h2>
+<h3 id="should-you-build-this">Should You Build This?<a class="headerlink" href="#should-you-build-this" title="Permanent link">&para;</a></h3>
+<p><strong>YES, if:</strong>
+- ✅ You post 2+ long-form videos per week
+- ✅ Manual clipping takes &gt;2 hours per video
+- ✅ You want 10-20 clips from each video
+- ✅ You have development time/resources
+- ✅ You want maximum content leverage</p>
+<p><strong>MAYBE, if:</strong>
+- ⚠️ You post irregularly
+- ⚠️ You enjoy manual editing
+- ⚠️ You only need 2-3 clips per video
+- ⚠️ Commercial tools meet your needs</p>
+<p><strong>NO, if:</strong>
+- ❌ You post rarely (&lt;1/week)
+- ❌ You prefer manual creative control
+- ❌ Time savings don't justify development cost
+- ❌ OpusClip/Captions.ai already work well</p>
+<h2 id="build-vs-buy-analysis">🎯 Build vs. Buy Analysis<a class="headerlink" href="#build-vs-buy-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="commercial-solutions-buy"><strong>Commercial Solutions</strong> (Buy)<a class="headerlink" href="#commercial-solutions-buy" title="Permanent link">&para;</a></h3>
+<p><strong>OpusClip</strong> - $29-99/month
+- ✅ Ready to use immediately
+- ✅ Proven 0.93 mAP accuracy
+- ✅ ClipAnything model (state-of-art)
+- ✅ Auto-captions, templates, editing
+- ❌ Monthly cost ($348-1,188/year)
+- ❌ Limited customization
+- ❌ Generic for all content types
+- ❌ No ASMR-specific optimization</p>
+<p><strong>Captions.ai</strong> - $20-80/month
+- ✅ Good emotion detection
+- ✅ Multi-language support
+- ❌ Less accurate than OpusClip
+- ❌ Monthly cost</p>
+<p><strong>Eklipse</strong> - Free-$8/month
+- ✅ Best for gaming
+- ❌ Not optimized for ASMR
+- ❌ Limited general content support</p>
+<h3 id="custom-solution-build"><strong>Custom Solution</strong> (Build)<a class="headerlink" href="#custom-solution-build" title="Permanent link">&para;</a></h3>
+<p><strong>One-Time Development:</strong>
+- ⏱️ 40-80 hours development time
+- 💰 $0 ongoing cost (local processing)
+- ✅ Full customization
+- ✅ ASMR-optimized algorithms
+- ✅ Integration with existing caption system
+- ✅ No data sent to external services
+- ✅ Unlimited processing
+- ❌ Upfront time investment
+- ❌ Requires technical skills
+- ❌ Ongoing maintenance</p>
+<p><strong>ROI Calculation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Commercial Tool Cost: $348-1,188/year
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Development Time: 60 hours @ $50/hr = $3,000 one-time
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Break-even: 2.5-8.5 years
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>BUT:
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>- Custom ASMR optimization: +20% performance
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>- No ongoing fees: Infinite videos
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>- Integration with your workflow: Priceless
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>- Learning experience: Valuable skill
+</code></pre></div></p>
+<h2 id="implementation-phases">📋 Implementation Phases<a class="headerlink" href="#implementation-phases" title="Permanent link">&para;</a></h2>
+<h3 id="phase-0-quick-prototype-8-12-hours"><strong>Phase 0: Quick Prototype (8-12 hours)</strong><a class="headerlink" href="#phase-0-quick-prototype-8-12-hours" title="Permanent link">&para;</a></h3>
+<p>Test feasibility before full build</p>
+<p><strong>Deliverables:</strong>
+- Basic scene detection working
+- Simple audio analysis
+- Scoring formula prototype
+- Extract 1 clip successfully</p>
+<p><strong>Technology:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>scenedetect<span class="w"> </span>librosa
+</code></pre></div></p>
+<p><strong>Minimal Code:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">scenedetect</span><span class="w"> </span><span class="kn">import</span> <span class="n">detect</span><span class="p">,</span> <span class="n">AdaptiveDetector</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">librosa</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Detect scenes</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">scenes</span> <span class="o">=</span> <span class="n">detect</span><span class="p">(</span><span class="s1">&#39;video.mp4&#39;</span><span class="p">,</span> <span class="n">AdaptiveDetector</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">3.0</span><span class="p">))</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Analyze audio of first scene</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">scenes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">y</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;video.mp4&#39;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">start</span><span class="o">.</span><span class="n">get_seconds</span><span class="p">(),</span> 
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>                     <span class="n">duration</span><span class="o">=</span><span class="p">(</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">get_seconds</span><span class="p">())</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">rms</span> <span class="o">=</span> <span class="n">librosa</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">rms</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Scene: </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Audio energy: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">rms</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Decision Point:</strong>
+- Works well? → Continue to Phase 1
+- Struggles? → Consider commercial tool</p>
+<h3 id="phase-1-core-pipeline-20-25-hours"><strong>Phase 1: Core Pipeline (20-25 hours)</strong><a class="headerlink" href="#phase-1-core-pipeline-20-25-hours" title="Permanent link">&para;</a></h3>
+<p>Build minimum viable system</p>
+<p><strong>Week 1-2 Tasks:</strong>
+1. ✅ Scene segmentation pipeline
+2. ✅ Basic audio analysis (peaks, RMS)
+3. ✅ Simple visual analysis (motion)
+4. ✅ Naive scoring algorithm
+5. ✅ Clip extraction with FFmpeg
+6. ✅ Test on 3 sample videos</p>
+<p><strong>Deliverables:</strong>
+- Processes 60-min video → 10 clips
+- Basic virality scoring
+- Vertical crop working
+- CSV output with scores</p>
+<p><strong>Expected Accuracy:</strong> 60-70%
+<strong>Processing Time:</strong> 30-45 min per video</p>
+<h3 id="phase-2-advanced-analysis-15-20-hours"><strong>Phase 2: Advanced Analysis (15-20 hours)</strong><a class="headerlink" href="#phase-2-advanced-analysis-15-20-hours" title="Permanent link">&para;</a></h3>
+<p>Improve detection accuracy</p>
+<p><strong>Week 3 Tasks:</strong>
+1. ✅ Semantic analysis (Qwen2.5-VL integration)
+2. ✅ Advanced audio features (spectral, ZCR)
+3. ✅ Face detection + smart cropping
+4. ✅ Refined scoring weights
+5. ✅ ASMR-specific optimizations</p>
+<p><strong>Deliverables:</strong>
+- Multi-modal virality scoring
+- ASMR trigger detection
+- Intelligent vertical cropping
+- 70-80% accuracy</p>
+<p><strong>Processing Time:</strong> 20-30 min per video</p>
+<h3 id="phase-3-caption-integration-8-10-hours"><strong>Phase 3: Caption Integration (8-10 hours)</strong><a class="headerlink" href="#phase-3-caption-integration-8-10-hours" title="Permanent link">&para;</a></h3>
+<p>Connect with existing system</p>
+<p><strong>Week 4 Tasks:</strong>
+1. ✅ Call caption_generator.py for each clip
+2. ✅ Unified output CSV
+3. ✅ Batch processing interface
+4. ✅ Error handling &amp; logging</p>
+<p><strong>Deliverables:</strong>
+- One command: video → clips + captions
+- Staging-tool compatible CSV
+- Production-ready pipeline</p>
+<h3 id="phase-4-optimization-polish-10-15-hours"><strong>Phase 4: Optimization &amp; Polish (10-15 hours)</strong><a class="headerlink" href="#phase-4-optimization-polish-10-15-hours" title="Permanent link">&para;</a></h3>
+<p>Make it production-grade</p>
+<p><strong>Week 5 Tasks:</strong>
+1. ✅ Parallel processing (speed up 2-3x)
+2. ✅ GPU acceleration for analysis
+3. ✅ Progress indicators
+4. ✅ Comprehensive testing
+5. ✅ Documentation
+6. ✅ User interface (CLI or web)</p>
+<p><strong>Deliverables:</strong>
+- Fast processing (&lt;15 min)
+- Robust error handling
+- Easy to use
+- Well documented</p>
+<h2 id="technical-implementation-details">🔧 Technical Implementation Details<a class="headerlink" href="#technical-implementation-details" title="Permanent link">&para;</a></h2>
+<h3 id="architecture-decision-modular-vs-monolithic"><strong>Architecture Decision: Modular vs Monolithic</strong><a class="headerlink" href="#architecture-decision-modular-vs-monolithic" title="Permanent link">&para;</a></h3>
+<p><strong>Recommended: Modular Pipeline</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>yacg/
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── core/
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>│   ├── scene_detector.py      # PySceneDetect wrapper
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   ├── audio_analyzer.py      # librosa analysis
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── visual_analyzer.py     # OpenCV + motion
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   ├── semantic_analyzer.py   # Qwen2.5-VL integration
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│   └── virality_scorer.py     # Scoring algorithm
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├── extractors/
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│   ├── clip_extractor.py      # FFmpeg cutting
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>│   └── smart_cropper.py       # Vertical crop logic
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>├── utils/
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>│   ├── video_utils.py         # Common video ops
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>│   └── config.py              # Configuration
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>├── pipeline.py                # Main orchestrator
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>└── cli.py                     # Command-line interface
+</code></pre></div>
+<p><strong>Why Modular?</strong>
+- Easy to test components independently
+- Swap out algorithms (e.g., different scene detector)
+- Parallel processing (analyze multiple segments simultaneously)
+- Iterative improvement (refine one module at a time)</p>
+<h3 id="performance-optimization-strategies"><strong>Performance Optimization Strategies</strong><a class="headerlink" href="#performance-optimization-strategies" title="Permanent link">&para;</a></h3>
+<p><strong>1. Parallel Processing</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">analyze_segment_parallel</span><span class="p">(</span><span class="n">segments</span><span class="p">):</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">analyze_single_segment</span><span class="p">,</span> <span class="n">segments</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="k">return</span> <span class="n">results</span>
+</code></pre></div></p>
+<p><strong>2. Frame Sampling</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Don&#39;t analyze every frame</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Sample 1 frame per second for visual analysis</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">sample_rate</span> <span class="o">=</span> <span class="n">video_fps</span>  <span class="c1"># 1 fps</span>
+</code></pre></div></p>
+<p><strong>3. GPU Acceleration</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Use GPU for Qwen2.5-VL (automatic via Ollama)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># Use GPU for OpenCV operations</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">cv2</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">setDevice</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>4. Caching</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Cache scene detection results</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Don&#39;t re-analyze if video already processed</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_scenes</span><span class="p">(</span><span class="n">video_path</span><span class="p">):</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="k">return</span> <span class="n">detect</span><span class="p">(</span><span class="n">video_path</span><span class="p">,</span> <span class="n">AdaptiveDetector</span><span class="p">())</span>
+</code></pre></div></p>
+<h3 id="scoring-algorithm-the-heart-of-the-system"><strong>Scoring Algorithm: The Heart of the System</strong><a class="headerlink" href="#scoring-algorithm-the-heart-of-the-system" title="Permanent link">&para;</a></h3>
+<p><strong>Start Simple, Iterate Based on Data:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Version 1.0: Naive scoring (Phase 1)</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">score</span> <span class="o">=</span> <span class="p">(</span><span class="n">audio_peaks</span> <span class="o">*</span> <span class="mf">0.3</span> <span class="o">+</span> 
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>         <span class="n">motion</span> <span class="o">*</span> <span class="mf">0.3</span> <span class="o">+</span> 
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>         <span class="n">duration_optimal</span> <span class="o">*</span> <span class="mf">0.4</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="c1"># Version 1.5: Add semantic (Phase 2)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">score</span> <span class="o">=</span> <span class="p">(</span><span class="n">audio_peaks</span> <span class="o">*</span> <span class="mf">0.25</span> <span class="o">+</span> 
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>         <span class="n">motion</span> <span class="o">*</span> <span class="mf">0.2</span> <span class="o">+</span> 
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>         <span class="n">semantic_hook</span> <span class="o">*</span> <span class="mf">0.3</span> <span class="o">+</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>         <span class="n">asmr_triggers</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">)</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="c1"># Version 2.0: Data-driven weights (Phase 4)</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c1"># Learn from actual performance:</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="c1"># - Which clips got &gt;10k views?</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="c1"># - What were their feature values?</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="c1"># - Adjust weights accordingly</span>
+</code></pre></div>
+<p><strong>Learning Loop:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>1. Generate clips with current weights
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>2. Post to Instagram
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>3. Track performance (views, engagement)
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>4. Correlate features with performance
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>5. Update weights
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>6. Repeat
+</code></pre></div></p>
+<p><strong>After 50-100 clips, you'll have personalized model!</strong></p>
+<h2 id="cost-breakdown">💰 Cost Breakdown<a class="headerlink" href="#cost-breakdown" title="Permanent link">&para;</a></h2>
+<h3 id="development-costs"><strong>Development Costs</strong><a class="headerlink" href="#development-costs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Hours</th>
+<th>Cost (@$50/hr)</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 0 (Prototype)</td>
+<td>10</td>
+<td>$500</td>
+<td>Validate feasibility</td>
+</tr>
+<tr>
+<td>Phase 1 (MVP)</td>
+<td>22</td>
+<td>$1,100</td>
+<td>Working system</td>
+</tr>
+<tr>
+<td>Phase 2 (Advanced)</td>
+<td>18</td>
+<td>$900</td>
+<td>High accuracy</td>
+</tr>
+<tr>
+<td>Phase 3 (Integration)</td>
+<td>9</td>
+<td>$450</td>
+<td>Production-ready</td>
+</tr>
+<tr>
+<td>Phase 4 (Polish)</td>
+<td>12</td>
+<td>$600</td>
+<td>Professional grade</td>
+</tr>
+<tr>
+<td><strong>TOTAL</strong></td>
+<td><strong>71 hours</strong></td>
+<td><strong>$3,550</strong></td>
+<td><strong>Permanent asset</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="ongoing-costs"><strong>Ongoing Costs</strong><a class="headerlink" href="#ongoing-costs" title="Permanent link">&para;</a></h3>
+<p><strong>Commercial Tool:</strong>
+- Year 1: $348-1,188
+- Year 2: $348-1,188
+- Year 3: $348-1,188
+- 3-Year Total: $1,044-3,564</p>
+<p><strong>Custom System:</strong>
+- Year 1: $3,550 (development)
+- Year 2: $0 (maybe $100-200 maintenance)
+- Year 3: $0
+- 3-Year Total: $3,550-3,750</p>
+<p><strong>Break-even: ~3 years</strong></p>
+<p><strong>BUT consider:</strong>
+- Commercial limits: 20-50 videos/month
+- Custom: Unlimited
+- Custom: Full control, ASMR-optimized
+- Custom: No data sent externally
+- Custom: Learning experience</p>
+<h2 id="skills-required">🎓 Skills Required<a class="headerlink" href="#skills-required" title="Permanent link">&para;</a></h2>
+<h3 id="must-have"><strong>Must Have:</strong><a class="headerlink" href="#must-have" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Python programming (intermediate)</li>
+<li>✅ Command-line comfort</li>
+<li>✅ Basic video/audio concepts</li>
+<li>✅ Problem-solving mindset</li>
+</ul>
+<h3 id="nice-to-have"><strong>Nice to Have:</strong><a class="headerlink" href="#nice-to-have" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Computer vision knowledge</li>
+<li>Signal processing background</li>
+<li>Machine learning familiarity</li>
+<li>FFmpeg experience</li>
+</ul>
+<h3 id="will-learn"><strong>Will Learn:</strong><a class="headerlink" href="#will-learn" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Multi-modal AI systems</li>
+<li>Video processing pipelines</li>
+<li>Audio analysis techniques</li>
+<li>Performance optimization</li>
+<li>Production system design</li>
+</ul>
+<h2 id="getting-started-if-you-decide-to-build">🚀 Getting Started (If You Decide to Build)<a class="headerlink" href="#getting-started-if-you-decide-to-build" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-validate-approach-day-1"><strong>Step 1: Validate Approach (Day 1)</strong><a class="headerlink" href="#step-1-validate-approach-day-1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Install dependencies</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>pip<span class="w"> </span>install<span class="w"> </span>scenedetect<span class="w"> </span>librosa<span class="w"> </span>opencv-python<span class="w"> </span>--break-system-packages
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Test scene detection on sample video</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>scenedetect<span class="w"> </span>-i<span class="w"> </span>your_video.mp4<span class="w"> </span>detect-adaptive<span class="w"> </span>list-scenes
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># If it finds reasonable scene boundaries → Good sign!</span>
+</code></pre></div>
+<h3 id="step-2-prototype-weekend-project"><strong>Step 2: Prototype (Weekend Project)</strong><a class="headerlink" href="#step-2-prototype-weekend-project" title="Permanent link">&para;</a></h3>
+<p>Download the design doc and start with minimal version:
+1. Scene detection working
+2. Extract one clip
+3. Basic scoring (audio peak + duration)
+4. Verify output looks reasonable</p>
+<p><strong>Success Criteria:</strong>
+- Can extract 5 clips from test video
+- Clips have natural boundaries
+- At least 2 clips are genuinely interesting</p>
+<p>If this works → Full system will work!</p>
+<h3 id="step-3-build-mvp-week-1-2"><strong>Step 3: Build MVP (Week 1-2)</strong><a class="headerlink" href="#step-3-build-mvp-week-1-2" title="Permanent link">&para;</a></h3>
+<p>Follow Phase 1 implementation plan
+Focus on getting complete pipeline working
+Don't optimize yet - just functional</p>
+<h3 id="step-4-iterate-week-3-5"><strong>Step 4: Iterate (Week 3-5)</strong><a class="headerlink" href="#step-4-iterate-week-3-5" title="Permanent link">&para;</a></h3>
+<p>Add advanced features incrementally
+Test on your actual content
+Adjust weights based on results</p>
+<h2 id="expected-results">📊 Expected Results<a class="headerlink" href="#expected-results" title="Permanent link">&para;</a></h2>
+<h3 id="after-phase-1-mvp"><strong>After Phase 1 (MVP):</strong><a class="headerlink" href="#after-phase-1-mvp" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Processes videos automatically</li>
+<li>✅ Extracts 8-12 clips per video</li>
+<li>✅ 60-70% of clips are "good"</li>
+<li>⚠️ Some false positives</li>
+<li>⚠️ Misses some subtle moments</li>
+<li>Processing: 30-45 min</li>
+</ul>
+<h3 id="after-phase-2-advanced"><strong>After Phase 2 (Advanced):</strong><a class="headerlink" href="#after-phase-2-advanced" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ 70-80% clips are "good"</li>
+<li>✅ ASMR-specific detection</li>
+<li>✅ Smart vertical cropping</li>
+<li>✅ Better boundary detection</li>
+<li>Processing: 20-30 min</li>
+</ul>
+<h3 id="after-phase-3-integrated"><strong>After Phase 3 (Integrated):</strong><a class="headerlink" href="#after-phase-3-integrated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ One-command workflow</li>
+<li>✅ Clips + captions ready</li>
+<li>✅ CSV for staging tool</li>
+<li>✅ Production-ready</li>
+<li>Processing: 15-25 min</li>
+</ul>
+<h3 id="after-phase-4-optimized"><strong>After Phase 4 (Optimized):</strong><a class="headerlink" href="#after-phase-4-optimized" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ &lt;15 min processing</li>
+<li>✅ 80-85% accuracy</li>
+<li>✅ Learned from your data</li>
+<li>✅ Parallel processing</li>
+<li>✅ Professional quality</li>
+</ul>
+<h2 id="success-metrics">🎯 Success Metrics<a class="headerlink" href="#success-metrics" title="Permanent link">&para;</a></h2>
+<h3 id="system-performance"><strong>System Performance:</strong><a class="headerlink" href="#system-performance" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Processes 60-min video in &lt;20 min</li>
+<li>[ ] Extracts 10-15 clips per video</li>
+<li>[ ] 70%+ clips score above 70/100</li>
+<li>[ ] 50%+ clips get &gt;5k views (after tuning)</li>
+<li>[ ] 0% false negatives on manual review</li>
+</ul>
+<h3 id="business-impact"><strong>Business Impact:</strong><a class="headerlink" href="#business-impact" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 3x increase in Reels output</li>
+<li>[ ] 2 hours saved per video</li>
+<li>[ ] +30% engagement vs random selection</li>
+<li>[ ] Consistent posting schedule maintained</li>
+<li>[ ] ROI positive within 1 year</li>
+</ul>
+<h2 id="hybrid-approach-recommended">💡 Hybrid Approach (Recommended)<a class="headerlink" href="#hybrid-approach-recommended" title="Permanent link">&para;</a></h2>
+<p><strong>Best of Both Worlds:</strong></p>
+<ol>
+<li><strong>Start with OpusClip</strong> ($29/month)</li>
+<li>Immediate results</li>
+<li>Learn what works</li>
+<li>Build dataset of good clips</li>
+<li>
+<p>Month 1-2</p>
+</li>
+<li>
+<p><strong>Build Custom System</strong> (Parallel)</p>
+</li>
+<li>Develop while using OpusClip</li>
+<li>Train on OpusClip's good picks</li>
+<li>Compare AI vs AI</li>
+<li>
+<p>Month 1-3</p>
+</li>
+<li>
+<p><strong>Gradual Transition</strong></p>
+</li>
+<li>Use both systems</li>
+<li>A/B test outputs</li>
+<li>Keep OpusClip as backup</li>
+<li>
+<p>Month 3-6</p>
+</li>
+<li>
+<p><strong>Full Custom</strong> (Optional)</p>
+</li>
+<li>Cancel OpusClip</li>
+<li>Use custom system exclusively</li>
+<li>Continue improving</li>
+<li>Month 6+</li>
+</ol>
+<p><strong>This minimizes risk while maximizing learning!</strong></p>
+<h2 id="conclusion">🎉 Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<h3 id="tldr"><strong>TL;DR:</strong><a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h3>
+<p><strong>Complexity:</strong> 7/10 (doable but not trivial)
+<strong>Time Investment:</strong> 60-80 hours
+<strong>Expected Accuracy:</strong> 70-80% (comparable to commercial)
+<strong>Processing Speed:</strong> 15-30 min per 60-min video
+<strong>Cost:</strong> $0 ongoing (vs $348+/year)
+<strong>Value:</strong> High (if you do 2+ videos/week)</p>
+<h3 id="recommendation"><strong>Recommendation:</strong><a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h3>
+<p><strong>If you're serious about content leverage:</strong>
+1. Try OpusClip for 1 month ($29)
+2. Prototype custom system (10 hours)
+3. If prototype works well → Build Phase 1-2
+4. Compare results, keep best tool
+5. Consider hybrid approach</p>
+<p><strong>If you're time-constrained:</strong>
+- Use OpusClip or Captions.ai
+- Revisit custom system later
+- Still have caption generator!</p>
+<p><strong>If you love building systems:</strong>
+- Build it! 
+- Great learning project
+- Full control
+- Perfectly tuned for ASMR</p>
+<hr />
+<p><strong>The viral clip extractor is the natural evolution of your automation journey. The caption generator was step 1 (captions). This is step 2 (clip selection). Next could be step 3 (posting automation). Together, they create a complete content multiplication machine!</strong> 🚀</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

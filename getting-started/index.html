@@ -1,0 +1,1914 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Extract viral-potential clips from long-form videos using AI">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../cli-reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>Getting Started - YACG — Yet Another Clip Generator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#getting-started" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="YACG — Yet Another Clip Generator" class="md-header__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            YACG — Yet Another Clip Generator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="YACG — Yet Another Clip Generator" class="md-nav__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    YACG — Yet Another Clip Generator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-system-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install System Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-ollama" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Ollama
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-install-yacg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install YACG
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-verify-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-install-dnn-face-detection-model-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Install DNN Face Detection Model (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#process-a-local-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process a Local Video
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-a-youtube-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process a YouTube Video
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-a-directory-of-videos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process a Directory of Videos
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-a-default-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate a Default Config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-a-config-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use a Config File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Sections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#content-type-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Type Effects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Content Type Effects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-preset-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Preset Values
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring Weights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-scoring-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Scoring Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ollama-not-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama Not Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Not Found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffmpeg-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFmpeg Not Found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-clips-extracted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No Clips Extracted
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-speech-detected-language-detection-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No Speech Detected / Language Detection Failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slow-processing-unexpected-delays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slow Processing / Unexpected Delays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leftover-yacg_tmp-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leftover .yacg_tmp/ Directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#garbled-vlm-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Garbled VLM Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-install-failure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap Install Failure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partial-success-exit-code-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial Success (Exit Code 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-system-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install System Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-ollama" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Ollama
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-install-yacg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Install YACG
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-verify-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Verify Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-install-dnn-face-detection-model-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Install DNN Face Detection Model (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#process-a-local-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process a Local Video
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-a-youtube-video" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process a YouTube Video
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-a-directory-of-videos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process a Directory of Videos
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-a-default-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate a Default Config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-a-config-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use a Config File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Sections
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#content-type-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Type Effects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Content Type Effects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-preset-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Preset Values
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring Weights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-scoring-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Scoring Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ollama-not-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama Not Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Not Found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffmpeg-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FFmpeg Not Found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-clips-extracted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No Clips Extracted
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-speech-detected-language-detection-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No Speech Detected / Language Detection Failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slow-processing-unexpected-delays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slow Processing / Unexpected Delays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leftover-yacg_tmp-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leftover .yacg_tmp/ Directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#garbled-vlm-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Garbled VLM Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-install-failure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap Install Failure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partial-success-exit-code-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Partial Success (Exit Code 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
+<h2 id="system-requirements">System Requirements<a class="headerlink" href="#system-requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>OS:</strong> Linux, macOS, or WSL2 on Windows</li>
+<li><strong>Python:</strong> 3.10 or newer</li>
+<li><strong>RAM:</strong> 8GB minimum, 16GB recommended for the 7B model</li>
+<li><strong>Storage:</strong> ~10GB for default model weights (qwen2.5-vl:7b + qwen2.5:7b + Whisper small) + video storage</li>
+<li><strong>GPU:</strong> Optional but recommended for Ollama inference and Whisper transcription (<code>--whisper-device cuda</code>)</li>
+</ul>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<h3 id="1-install-system-dependencies">1. Install System Dependencies<a class="headerlink" href="#1-install-system-dependencies" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Ubuntu / Debian</label><label for="__tabbed_1_2">macOS</label><label for="__tabbed_1_3">Windows (WSL2)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ffmpeg<span class="w"> </span>python3<span class="w"> </span>python3-pip<span class="w"> </span>python3-venv
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>brew<span class="w"> </span>install<span class="w"> </span>ffmpeg<span class="w"> </span>python3
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Install WSL2 with Ubuntu first, then:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ffmpeg<span class="w"> </span>python3<span class="w"> </span>python3-pip<span class="w"> </span>python3-venv
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Verify FFmpeg is installed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ffmpeg<span class="w"> </span>-version
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>ffprobe<span class="w"> </span>-version
+</code></pre></div>
+<h3 id="2-install-ollama">2. Install Ollama<a class="headerlink" href="#2-install-ollama" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Linux / macOS</label><label for="__tabbed_2_2">Windows</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://ollama.com/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Download the installer from <a href="https://ollama.com/download">ollama.com/download</a>.</p>
+</div>
+</div>
+</div>
+<p>Start the Ollama service and pull the required models:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ollama<span class="w"> </span>serve<span class="w">          </span><span class="c1"># Start in a separate terminal</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>ollama<span class="w"> </span>pull<span class="w"> </span>qwen2.5-vl:7b<span class="w">   </span><span class="c1"># ~4.7GB — vision model for analysis + captions</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>ollama<span class="w"> </span>pull<span class="w"> </span>qwen2.5:7b<span class="w">      </span><span class="c1"># ~4.7GB — text model for transcript segmentation</span>
+</code></pre></div>
+<p><strong>Vision models</strong> (for semantic analysis and caption generation):</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Size</th>
+<th>Speed</th>
+<th>Quality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>qwen2.5-vl:3b</code></td>
+<td>~2GB</td>
+<td>Fast</td>
+<td>Good</td>
+</tr>
+<tr>
+<td><code>qwen2.5-vl:7b</code></td>
+<td>~4.7GB</td>
+<td>Moderate</td>
+<td>Best (default)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Segmentation model</strong> (for transcript analysis — text-only, no vision encoder needed):</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Size</th>
+<th>Speed</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>qwen2.5:7b</code></td>
+<td>~4.7GB</td>
+<td>Fast</td>
+<td>Default — text-only, efficient for JSON output</td>
+</tr>
+<tr>
+<td><code>qwen2.5-vl:7b</code></td>
+<td>~4.7GB</td>
+<td>Slower</td>
+<td>Works but wastes VRAM on unused vision encoder</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-install-yacg">3. Install YACG<a class="headerlink" href="#3-install-yacg" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Mzzkc/yacg.git
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">cd</span><span class="w"> </span>yacg
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div>
+<p>After installation, the <code>yacg</code> command is available in addition to <code>python -m yacg</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Auto-Install Behavior</p>
+<p>On first run, YACG checks for missing Python packages and attempts to install them via pip. In a virtualenv (recommended), this is safe. Outside a virtualenv, it may fall back to <code>pip install --user</code> or <code>pip install --user --break-system-packages</code> on PEP 668 systems. Using a virtualenv (as shown above) avoids this.</p>
+</div>
+<h3 id="4-verify-setup">4. Verify Setup<a class="headerlink" href="#4-verify-setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>python<span class="w"> </span>-m<span class="w"> </span>yacg<span class="w"> </span>check
+</code></pre></div>
+<p>This checks for FFmpeg, FFprobe, all Python packages, Ollama connectivity, model availability (including <code>qwen2.5:7b</code> segmentation model), Whisper model cache status, and DNN face detection model availability.</p>
+<h3 id="5-install-dnn-face-detection-model-optional">5. Install DNN Face Detection Model (Optional)<a class="headerlink" href="#5-install-dnn-face-detection-model-optional" title="Permanent link">&para;</a></h3>
+<p>YACG uses a DNN SSD face detector for high-quality face-aware cropping. Without the model files, it falls back to the less accurate Haar cascade detector (lower quality for side profiles and diverse skin tones).</p>
+<p>To enable the DNN detector, download two files and place them in <code>~/.yacg/models/</code> (YACG also checks <code>&lt;package_install_dir&gt;/models/</code> inside the installed package):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>~/.yacg/models
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Download from OpenCV&#39;s GitHub repository:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>~/.yacg/models/deploy.prototxt<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="s2">&quot;https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt&quot;</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>curl<span class="w"> </span>-L<span class="w"> </span>-o<span class="w"> </span>~/.yacg/models/res10_300x300_ssd_iter_140000.caffemodel<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="s2">&quot;https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel&quot;</span>
+</code></pre></div>
+<p>Run <code>yacg check</code> to verify the model is detected.</p>
+<div class="admonition note">
+<p class="admonition-title">First-Run Download</p>
+<p>The Whisper transcription model is downloaded from HuggingFace Hub on first use (~500MB for <code>small</code>, up to ~3GB for <code>large-v3</code>). This requires an internet connection. Run <code>yacg check</code> to see if the model is cached.</p>
+</div>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<h3 id="process-a-local-video">Process a Local Video<a class="headerlink" href="#process-a-local-video" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>python<span class="w"> </span>-m<span class="w"> </span>yacg<span class="w"> </span>process<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--video<span class="w"> </span>/path/to/video.mp4<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">&quot;My Video&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--output-dir<span class="w"> </span>./my_clips
+</code></pre></div>
+<blockquote>
+<p><strong>Tip:</strong> After <code>pip install -e .</code>, you can also use the shorter <code>yacg</code> command instead of <code>python -m yacg</code>.</p>
+</blockquote>
+<p>Output appears in <code>./my_clips/</code>:</p>
+<ul>
+<li><code>my_video_clip_01_score85.mp4</code>, <code>my_video_clip_02_score72.mp4</code>, ... — vertical clips with subtitles</li>
+<li><code>my_video_clip_01_score85_thumb.jpg</code>, ... — JPEG thumbnails for each clip</li>
+<li><code>clips_report.csv</code> — metadata for all clips (17 columns)</li>
+</ul>
+<h3 id="process-a-youtube-video">Process a YouTube Video<a class="headerlink" href="#process-a-youtube-video" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>python<span class="w"> </span>-m<span class="w"> </span>yacg<span class="w"> </span>youtube<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--url<span class="w"> </span><span class="s2">&quot;https://youtube.com/watch?v=XXXXX&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--top-n<span class="w"> </span><span class="m">5</span>
+</code></pre></div>
+<h3 id="process-a-directory-of-videos">Process a Directory of Videos<a class="headerlink" href="#process-a-directory-of-videos" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>python<span class="w"> </span>-m<span class="w"> </span>yacg<span class="w"> </span>batch<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--videos-dir<span class="w"> </span>/path/to/videos/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--min-score<span class="w"> </span><span class="m">60</span>
+</code></pre></div>
+<p>Each video gets its own subdirectory under <code>--output-dir</code>.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>YACG uses sensible defaults but supports INI-style configuration files for customization.</p>
+<h3 id="generate-a-default-config">Generate a Default Config<a class="headerlink" href="#generate-a-default-config" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-m<span class="w"> </span>yacg<span class="w"> </span>generate-config<span class="w"> </span>--output<span class="w"> </span>config.ini
+</code></pre></div>
+<p>This generates a fully-commented INI file with all available configuration keys and their defaults.</p>
+<h3 id="use-a-config-file">Use a Config File<a class="headerlink" href="#use-a-config-file" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>python<span class="w"> </span>-m<span class="w"> </span>yacg<span class="w"> </span>process<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--video<span class="w"> </span>video.mp4<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--config<span class="w"> </span>config.ini
+</code></pre></div>
+<p>CLI flags override config file values.</p>
+<h3 id="config-sections">Config Sections<a class="headerlink" href="#config-sections" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">[Model]</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="na">model_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">qwen2.5-vl:7b</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="na">ollama_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">http://localhost:11434</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="na">whisper_model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">small</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="na">segmentation_model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">qwen2.5:7b</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="na">whisper_device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">auto</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="na">whisper_compute_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">auto</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="na">num_frames</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">3</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="k">[SceneDetection]</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="c1">; NOTE: These settings configure the legacy PySceneDetect scene detector.</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="c1">; The current pipeline uses LLM-driven transcript segmentation instead.</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="c1">; These values have no effect on the default pipeline.</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="na">threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">3.0</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="na">min_scene_len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">7.0</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="na">max_scene_len</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">60.0</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="k">[Segmentation]</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="na">pause_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">0.3</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="na">min_segment_duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">15.0</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="na">max_segment_duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">45.0</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="na">vad_filter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">true</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a><span class="k">[ClipSelection]</span>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a><span class="c1">; WARNING: These fields are effectively unused. The CLI always passes --top-n (default: 20)</span>
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a><span class="c1">; and --min-score (default: 70) directly, bypassing these config values entirely.</span>
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a><span class="c1">; process_video() also defaults top_n=20 and min_score=70.0 via method parameters.</span>
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a><span class="c1">; Use CLI flags --top-n and --min-score instead.</span>
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a><span class="na">top_n_clips</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">10</span>
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a><span class="na">min_virality_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">70.0</span>
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a>
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a><span class="k">[ASMR Optimization]</span>
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a><span class="c1">; Legacy alias: [ASMR Optimization] is accepted for backward compatibility.</span>
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a><span class="c1">; The content_type key can also be set here. Prefer [ContentProfile] for new configs.</span>
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a><span class="na">asmr_mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">false</span>
+<a id="__codelineno-14-36" name="__codelineno-14-36" href="#__codelineno-14-36"></a><span class="c1">; Set to true for ASMR content (auto-enabled when content_type = asmr)</span>
+<a id="__codelineno-14-37" name="__codelineno-14-37" href="#__codelineno-14-37"></a>
+<a id="__codelineno-14-38" name="__codelineno-14-38" href="#__codelineno-14-38"></a><span class="k">[ContentProfile]</span>
+<a id="__codelineno-14-39" name="__codelineno-14-39" href="#__codelineno-14-39"></a><span class="na">content_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">general</span>
+<a id="__codelineno-14-40" name="__codelineno-14-40" href="#__codelineno-14-40"></a><span class="c1">; Options: general, gaming, cooking, asmr, educational, fitness, comedy, music, beauty, tech, vlog</span>
+<a id="__codelineno-14-41" name="__codelineno-14-41" href="#__codelineno-14-41"></a><span class="na">channel_description</span><span class="w"> </span><span class="o">=</span>
+<a id="__codelineno-14-42" name="__codelineno-14-42" href="#__codelineno-14-42"></a><span class="na">target_audience</span><span class="w"> </span><span class="o">=</span>
+<a id="__codelineno-14-43" name="__codelineno-14-43" href="#__codelineno-14-43"></a><span class="na">tone</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">engaging</span>
+<a id="__codelineno-14-44" name="__codelineno-14-44" href="#__codelineno-14-44"></a><span class="c1">; Options: energetic, calm, professional, casual, humorous, inspirational, dramatic, engaging</span>
+<a id="__codelineno-14-45" name="__codelineno-14-45" href="#__codelineno-14-45"></a><span class="na">platform</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">all</span>
+<a id="__codelineno-14-46" name="__codelineno-14-46" href="#__codelineno-14-46"></a><span class="c1">; Options: tiktok, reels, shorts, all</span>
+<a id="__codelineno-14-47" name="__codelineno-14-47" href="#__codelineno-14-47"></a><span class="na">caption_length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">medium</span>
+<a id="__codelineno-14-48" name="__codelineno-14-48" href="#__codelineno-14-48"></a><span class="c1">; Options: short, medium, long</span>
+<a id="__codelineno-14-49" name="__codelineno-14-49" href="#__codelineno-14-49"></a><span class="na">hashtag_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">5</span>
+<a id="__codelineno-14-50" name="__codelineno-14-50" href="#__codelineno-14-50"></a><span class="c1">; Range: 3-7</span>
+<a id="__codelineno-14-51" name="__codelineno-14-51" href="#__codelineno-14-51"></a><span class="na">custom_instructions</span><span class="w"> </span><span class="o">=</span>
+</code></pre></div>
+<h3 id="content-type-effects">Content Type Effects<a class="headerlink" href="#content-type-effects" title="Permanent link">&para;</a></h3>
+<p>The <code>--content-type</code> flag (or <code>content_type</code> in config) does more than set preset values — it changes LLM behavior in four pipeline stages:</p>
+<ol>
+<li><strong>Segmentation</strong> — the LLM receives genre-specific guidance on what makes a good segment (e.g., gaming looks for clutch moments and reactions, cooking looks for technique reveals)</li>
+<li><strong>Semantic analysis</strong> — the VLM evaluates emotional intensity, hooks, and sensory quality using content-type-specific criteria</li>
+<li><strong>Caption generation</strong> — the VLM adopts a content-type-specific persona and platform awareness</li>
+<li><strong>Audio analysis</strong> — trigger word detection uses content-specific keyword lists (ASMR keywords vs. general engagement keywords)</li>
+</ol>
+<p>Content types with specialized prompts: <code>gaming</code>, <code>cooking</code>, <code>educational</code>, <code>asmr</code>, <code>fitness</code>, <code>music</code>, <code>comedy</code>. Types using generic prompts: <code>beauty</code>, <code>tech</code>, <code>vlog</code>, <code>general</code>.</p>
+<h4 id="content-preset-values">Content Preset Values<a class="headerlink" href="#content-preset-values" title="Permanent link">&para;</a></h4>
+<p>Each content type preset sets these defaults (overridable individually via CLI flags or config):</p>
+<table>
+<thead>
+<tr>
+<th>Content Type</th>
+<th>Target Audience</th>
+<th>Tone</th>
+<th>Platform</th>
+<th>Caption Length</th>
+<th>Hashtags</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>general</code></td>
+<td>general social media viewers</td>
+<td>engaging</td>
+<td>all</td>
+<td>medium</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>gaming</code></td>
+<td>gamers and gaming enthusiasts</td>
+<td>energetic</td>
+<td>all</td>
+<td>short</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>cooking</code></td>
+<td>home cooks and food enthusiasts</td>
+<td>casual</td>
+<td>reels</td>
+<td>medium</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>asmr</code></td>
+<td>ASMR listeners seeking relaxation and tingles</td>
+<td>calm</td>
+<td>all</td>
+<td>short</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>educational</code></td>
+<td>learners and curious minds</td>
+<td>professional</td>
+<td>shorts</td>
+<td>long</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>fitness</code></td>
+<td>fitness enthusiasts and gym-goers</td>
+<td>energetic</td>
+<td>reels</td>
+<td>medium</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>comedy</code></td>
+<td>people looking for entertainment and laughs</td>
+<td>humorous</td>
+<td>tiktok</td>
+<td>short</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>music</code></td>
+<td>music lovers and artists</td>
+<td>engaging</td>
+<td>all</td>
+<td>short</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>beauty</code></td>
+<td>beauty and skincare enthusiasts</td>
+<td>casual</td>
+<td>reels</td>
+<td>medium</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>tech</code></td>
+<td>tech enthusiasts and early adopters</td>
+<td>professional</td>
+<td>shorts</td>
+<td>medium</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>vlog</code></td>
+<td>viewers interested in personal stories and daily life</td>
+<td>casual</td>
+<td>all</td>
+<td>medium</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">[Output]</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="na">output_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">./clip_output</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="na">dry_run</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">false</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">[Temporal]</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="na">context_padding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">2.0</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="k">[Subtitle]</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="na">font_name</span><span class="w"> </span><span class="o">=</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="na">font_size_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">0.055</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="na">primary_color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&amp;H00FFFFFF</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="na">outline_color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&amp;H00000000</span>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="na">outline_width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">3.0</span>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="na">shadow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">1.5</span>
+<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="na">margin_v_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">0.38</span>
+<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="na">margin_h_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">0.15</span>
+<a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>
+<a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="k">[Scoring]</span>
+<a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="na">weights</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">{&quot;hook&quot;: 0.20, &quot;emotional&quot;: 0.15, &quot;audio_peaks&quot;: 0.15,</span>
+<a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="w">           </span><span class="na">&quot;asmr&quot;</span><span class="o">:</span><span class="w"> </span><span class="s">0.12, &quot;motion&quot;: 0.12, &quot;narrative&quot;: 0.10,</span>
+<a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a><span class="w">           </span><span class="na">&quot;high_freq&quot;</span><span class="o">:</span><span class="w"> </span><span class="s">0.10, &quot;uniqueness&quot;: 0.08, &quot;composition&quot;: 0.05,</span>
+<a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a><span class="w">           </span><span class="na">&quot;visual&quot;</span><span class="o">:</span><span class="w"> </span><span class="s">0.02, &quot;duration&quot;: 0.05}</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Scoring Weights JSON Format</p>
+<p>If the <code>weights</code> JSON in your config file is malformed, YACG silently falls back to default weights with a warning — it does not raise an error. Use <code>--verbose</code> to confirm your custom weights were applied.</p>
+</div>
+<h3 id="scoring-weights">Scoring Weights<a class="headerlink" href="#scoring-weights" title="Permanent link">&para;</a></h3>
+<p>The virality scorer uses 11 weighted components. Adjust these for your content niche:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Default Weight</th>
+<th>Signal Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hook</code></td>
+<td>0.20</td>
+<td>Semantic: hook potential (0-10)</td>
+</tr>
+<tr>
+<td><code>emotional</code></td>
+<td>0.15</td>
+<td>Semantic: emotional intensity (0-10)</td>
+</tr>
+<tr>
+<td><code>audio_peaks</code></td>
+<td>0.15</td>
+<td>Audio: peak energy (0-2, normalized to 0-10)</td>
+</tr>
+<tr>
+<td><code>asmr</code></td>
+<td>0.12</td>
+<td>Semantic: ASMR quality (0-10)</td>
+</tr>
+<tr>
+<td><code>motion</code></td>
+<td>0.12</td>
+<td>Visual: optical flow (0-1, normalized to 0-10)</td>
+</tr>
+<tr>
+<td><code>narrative</code></td>
+<td>0.10</td>
+<td>Semantic: narrative interest (0-10)</td>
+</tr>
+<tr>
+<td><code>high_freq</code></td>
+<td>0.10</td>
+<td>Audio: high-frequency content (0-1, normalized to 0-10)</td>
+</tr>
+<tr>
+<td><code>uniqueness</code></td>
+<td>0.08</td>
+<td>Semantic: uniqueness (0-10)</td>
+</tr>
+<tr>
+<td><code>composition</code></td>
+<td>0.05</td>
+<td>Visual: rule-of-thirds (0-1, normalized to 0-10)</td>
+</tr>
+<tr>
+<td><code>visual</code></td>
+<td>0.02</td>
+<td>Visual: color interest (0-1, normalized to 0-10)</td>
+</tr>
+<tr>
+<td><code>duration</code></td>
+<td>0.05</td>
+<td>Clip length (optimal 7-30s)</td>
+</tr>
+</tbody>
+</table>
+<p>The default weights sum to 1.14. The scoring formula divides by total weight, so the sum itself has no effect on scores — only the relative proportions matter. The <code>asmr</code> component's weight of 0.12 gives ASMR signals meaningful influence in the composite score. Adjust weights as needed for your content niche. Pass them as a JSON dictionary in the <code>[Scoring]</code> section.</p>
+<h3 id="how-scoring-works">How Scoring Works<a class="headerlink" href="#how-scoring-works" title="Permanent link">&para;</a></h3>
+<p>Each component's raw value is normalized to a 0-10 scale, multiplied by its weight, and summed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>score = (weighted_sum / total_weight) × 10.0    (clamped to 0-100)
+</code></pre></div>
+<p><strong>Normalization ranges:</strong> <code>audio_peaks</code> 0-2, <code>high_freq</code> 0-1, <code>motion</code> 0-1, <code>visual</code> 0-1, <code>composition</code> 0-1 — all scaled to 0-10. Semantic dimensions (<code>hook</code>, <code>emotional</code>, etc.) are already 0-10 from the VLM.</p>
+<p><strong>Duration scoring:</strong> Uses a 5-zone piecewise curve tuned for short-form video: 0-5s ramps linearly (score = duration), 5-7s accelerates from 5 to 10, 7-30s is optimal (score 10), 30-60s decays linearly from 10 to 5, &gt;60s continues decaying from 5 at 0.1 points per second. Clips in the 7-30s sweet spot get the maximum duration score.</p>
+<p><strong>Without VLM:</strong> When Ollama is unavailable, semantic weights are redistributed proportionally to audio and visual components. Confidence drops from 1.0 to 0.5.</p>
+<p><strong>Interpreting scores:</strong> Below 50 rarely indicates viral potential. 60-70 is moderate, 70-85 is strong, 85+ is exceptional. Lower <code>--min-score</code> to produce more clips; raise it to be more selective.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="ollama-not-running">Ollama Not Running<a class="headerlink" href="#ollama-not-running" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>Error: Failed to connect to Ollama
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Check if running</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>ps<span class="w"> </span>aux<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ollama
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Start it</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>ollama<span class="w"> </span>serve
+</code></pre></div>
+<h3 id="model-not-found">Model Not Found<a class="headerlink" href="#model-not-found" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>Error: Model qwen2.5-vl:7b not found
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>ollama<span class="w"> </span>pull<span class="w"> </span>qwen2.5-vl:7b
+</code></pre></div>
+<h3 id="ffmpeg-not-found">FFmpeg Not Found<a class="headerlink" href="#ffmpeg-not-found" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>Error: ffprobe: command not found
+</code></pre></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Ubuntu / Debian</label><label for="__tabbed_3_2">macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>ffmpeg
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>brew<span class="w"> </span>install<span class="w"> </span>ffmpeg
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="out-of-memory">Out of Memory<a class="headerlink" href="#out-of-memory" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Use a smaller Ollama model: <code>--model qwen2.5-vl:3b</code></li>
+<li>Use a smaller Whisper model: <code>--whisper-model tiny</code> or <code>--whisper-model base</code> (default is <code>small</code>)</li>
+<li>Close other GPU-intensive applications</li>
+</ul>
+<h3 id="no-clips-extracted">No Clips Extracted<a class="headerlink" href="#no-clips-extracted" title="Permanent link">&para;</a></h3>
+<p>If YACG finds segments but extracts zero clips:</p>
+<ul>
+<li>Lower <code>--min-score</code> (e.g., <code>--min-score 40</code>)</li>
+<li>Increase <code>--top-n</code> (e.g., <code>--top-n 20</code>)</li>
+<li>Check that the video has audible speech (transcript segmentation requires it)</li>
+</ul>
+<h3 id="no-speech-detected-language-detection-failed">No Speech Detected / Language Detection Failed<a class="headerlink" href="#no-speech-detected-language-detection-failed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>RuntimeError: Language detection confidence too low
+</code></pre></div>
+<p>Whisper requires clear audible speech. Language detection confidence must exceed 0.5 (below = error) and 0.8 (below = warning). If your video is mostly music, ambient audio, or multi-language:</p>
+<ul>
+<li>Ensure the video has clear speech in a single primary language</li>
+<li>Try a larger Whisper model: <code>--whisper-model medium</code> or <code>--whisper-model large-v3</code></li>
+<li>Try disabling VAD: <code>--no-vad-filter</code></li>
+</ul>
+<h3 id="slow-processing-unexpected-delays">Slow Processing / Unexpected Delays<a class="headerlink" href="#slow-processing-unexpected-delays" title="Permanent link">&para;</a></h3>
+<p>Several things can cause unexpectedly long processing:</p>
+<ul>
+<li><strong>Codec transcoding:</strong> Compatible codecs (no transcoding needed): H.264, H.265/HEVC, MPEG-4, MPEG-2, MJPEG. All other codecs (AV1, VP9, ProRes, etc.) are automatically transcoded to H.264 before processing, which can take up to 1 hour for long videos. Pre-convert with <code>ffmpeg -i input.mkv -c:v libx264 -crf 23 output.mp4</code> to skip this step.</li>
+<li><strong>Long videos:</strong> Videos exceeding 1 hour trigger a processing time warning. Processing time scales with video length.</li>
+<li><strong>First-run model download:</strong> The Whisper model is downloaded on first use (~500MB-3GB depending on model size).</li>
+<li><strong>Disk space:</strong> YACG warns if less than 1 GB of free space is available in the output directory.</li>
+</ul>
+<h3 id="leftover-yacg_tmp-directory">Leftover <code>.yacg_tmp/</code> Directory<a class="headerlink" href="#leftover-yacg_tmp-directory" title="Permanent link">&para;</a></h3>
+<p>YACG uses a staging directory (<code>.yacg_tmp/</code> inside the output dir) during clip extraction. If the process is interrupted (killed, power loss, crash), this directory may remain. It can be safely deleted.</p>
+<h3 id="garbled-vlm-output">Garbled VLM Output<a class="headerlink" href="#garbled-vlm-output" title="Permanent link">&para;</a></h3>
+<p>If <strong>semantic analysis</strong> returns nonsensical results, your vision model may not handle multiple images well. Try <code>--num-frames 1</code> to send only one frame per segment. Note: <code>--num-frames</code> only affects semantic analysis — caption generation always uses 3 frames at 25%, 50%, and 75% positions regardless of this setting. If captions are garbled, try a different VLM model. Use <code>--verbose</code> to see suppressed warnings that may help diagnose the issue.</p>
+<h3 id="bootstrap-install-failure">Bootstrap Install Failure<a class="headerlink" href="#bootstrap-install-failure" title="Permanent link">&para;</a></h3>
+<p>If auto-install fails and the error message references <code>requirements-clip-extractor.txt</code>, ignore that stale message — the referenced file does not exist (legacy reference from old project name). Install manually with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="w">    </span><span class="c1"># development install</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="c1"># or</span>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>pip<span class="w"> </span>install<span class="w"> </span>.<span class="w">       </span><span class="c1"># user install</span>
+</code></pre></div>
+<h3 id="partial-success-exit-code-2">Partial Success (Exit Code 2)<a class="headerlink" href="#partial-success-exit-code-2" title="Permanent link">&para;</a></h3>
+<p>Exit code 2 means clips were produced but some errors occurred. Common causes:</p>
+<ul>
+<li>Individual subtitle or caption generation failed for specific clips (those clips are deleted)</li>
+<li>In batch mode, a video with ANY errors counts as "had errors" in the summary, even if it produced clips</li>
+</ul>
+<p>Check the <code>=== ERRORS (N) ===</code> block at the end of output for details.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

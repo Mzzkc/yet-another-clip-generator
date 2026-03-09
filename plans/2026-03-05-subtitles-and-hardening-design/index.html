@@ -1,0 +1,962 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Extract viral-potential clips from long-form videos using AI">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>Design: Transcript-First Pipeline + Subtitles + Hardening + Documentation - YACG — Yet Another Clip Generator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#design-transcript-first-pipeline-subtitles-hardening-documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="YACG — Yet Another Clip Generator" class="md-header__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            YACG — Yet Another Clip Generator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Design: Transcript-First Pipeline + Subtitles + Hardening + Documentation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../cli-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="YACG — Yet Another Clip Generator" class="md-nav__button md-logo" aria-label="YACG — Yet Another Clip Generator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    YACG — Yet Another Clip Generator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Mzzkc/yacg" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Mzzkc/yacg
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#product-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Product Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-transcript-first-segmentation-transcript_segmenterpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Transcript-First Segmentation (transcript_segmenter.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-new-burned-in-subtitles-subtitle_burnerpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. New: Burned-In Subtitles (subtitle_burner.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-remove-no-semantic-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Remove --no-semantic Flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-remove-no-captions-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Remove --no-captions Flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-remove-no-vertical-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Remove --no-vertical Flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-fix-smart-cropper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Fix Smart Cropper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-update-test-suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Update Test Suite
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-affected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Affected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-pipeline-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Pipeline Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="design-transcript-first-pipeline-subtitles-hardening-documentation">Design: Transcript-First Pipeline + Subtitles + Hardening + Documentation<a class="headerlink" href="#design-transcript-first-pipeline-subtitles-hardening-documentation" title="Permanent link">&para;</a></h1>
+<p><strong>Date</strong>: 2026-03-05
+<strong>Status</strong>: Active — being implemented via Mozart score</p>
+<h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
+<p>YACG produces clips without burned-in subtitles, making them unusable for TikTok/Reels/Shorts without manual post-processing. The tool also has <code>--no-semantic</code>, <code>--no-captions</code>, and <code>--no-vertical</code> flags that allow disabling core features, creating a false sense of reliability by silently degrading output quality instead of surfacing failures.</p>
+<p>Additionally, the current pipeline uses PySceneDetect (visual transitions) as the primary segmentation signal, which produces arbitrary clip boundaries that don't align with speech content. Viral clips are defined by what's being <em>said</em> — complete thoughts, hooks, narrative arcs — not by visual cuts. The pipeline needs to be inverted: transcript-first segmentation using LLM analysis of the full Whisper transcription.</p>
+<p>Finally, the project lacks documentation. It needs a GitHub Pages documentation site covering installation, usage, CLI reference, and architecture.</p>
+<h2 id="product-context">Product Context<a class="headerlink" href="#product-context" title="Permanent link">&para;</a></h2>
+<p>YACG replaces paid services like OpusClip. It takes long-form video and produces ready-to-post short-form clips with:
+- Semantic analysis for intelligent clip selection
+- Vertical 9:16 crop with face-aware framing
+- Speech-to-text subtitles (TikTok word-pop style)
+- AI-generated social media captions (hook, description, hashtags)
+- Virality scoring</p>
+<p>Every feature is core. If any fails, the clip fails.</p>
+<h2 id="changes">Changes<a class="headerlink" href="#changes" title="Permanent link">&para;</a></h2>
+<h3 id="1-transcript-first-segmentation-transcript_segmenterpy">1. Transcript-First Segmentation (<code>transcript_segmenter.py</code>)<a class="headerlink" href="#1-transcript-first-segmentation-transcript_segmenterpy" title="Permanent link">&para;</a></h3>
+<p><strong>Pipeline inversion</strong>: Replace PySceneDetect as the primary segmentation signal. The new flow:</p>
+<ol>
+<li>Run faster-whisper on the FULL source video (before any segmentation) to get word-level timestamps</li>
+<li>Format the transcript into timestamped text blocks</li>
+<li>Send the full transcript to Ollama (qwen2.5-vl) with a segmentation prompt asking it to identify viral-worthy segments — complete thoughts, hooks, narrative arcs, 15-45s target duration</li>
+<li>LLM responds with JSON array: <code>[{start_time, end_time, hook_summary, segment_type}, ...]</code></li>
+<li>Snap boundaries to the nearest speech pause (gap &gt;300ms between words) so clips don't cut mid-word</li>
+<li>Validate: no overlaps, within video bounds, min/max duration enforcement</li>
+</ol>
+<p><strong>New module</strong>: <code>transcript_segmenter.py</code> with class <code>TranscriptSegmenter</code>:
+- <code>full_transcribe(video_path, whisper_model) → list[WordTimestamp]</code> — runs faster-whisper with <code>word_timestamps=True</code>
+- <code>segment_by_content(words, title, ollama_host, model) → list[SegmentBoundary]</code> — sends transcript to Ollama, parses response
+- <code>refine_boundaries(segments, words) → list[SceneSegment]</code> — snaps to speech pauses, validates</p>
+<p><strong>Key design choice</strong>: The LLM gets the <em>text</em> of the transcript, not video frames. It segments by content. Visual/audio analysis happens later as scoring signals. The single Whisper transcription is reused for both segmentation and subtitle burning (no double transcription).</p>
+<p><strong>PySceneDetect demotion</strong>: <code>scene_detector.py</code> is not deleted but becomes secondary — available for optional boundary validation (avoid cutting mid-visual-transition) rather than primary segmentation.</p>
+<p><strong><code>transcript_bridge.py</code> removal</strong>: The yt-transcriber bridge is replaced by direct faster-whisper usage. Delete or deprecate.</p>
+<p><strong>Failure model</strong>: If Ollama fails to segment, the pipeline raises. No fallback to scene-based segmentation. If Whisper returns no words (silent video), raise.</p>
+<h3 id="2-new-burned-in-subtitles-subtitle_burnerpy">2. New: Burned-In Subtitles (<code>subtitle_burner.py</code>)<a class="headerlink" href="#2-new-burned-in-subtitles-subtitle_burnerpy" title="Permanent link">&para;</a></h3>
+<p><strong>Transcription</strong>: Receives pre-computed word-level timestamps from the full-video Whisper run (step 1 above). Does NOT re-transcribe each clip. Slices the relevant words for each clip's time range.</p>
+<p><strong>Subtitle format</strong>: ASS (Advanced SubStation Alpha) — supported natively by FFmpeg's libass filter. Chosen over SRT because ASS supports:
+- Per-word timing and animation
+- Font styling, outline, shadow
+- Precise positioning</p>
+<p><strong>Style</strong>: TikTok word-pop
+- 1-3 words at a time, appearing in sync with speech
+- Large bold sans-serif font (scaled to frame dimensions)
+- White fill, black outline (3px), drop shadow
+- Positioned in the platform-safe zone (see below)</p>
+<p><strong>Platform-safe positioning</strong> (9:16 frame, e.g. 1080x1920):
+- Vertical: text anchored at ~62% from top (~1190px). Clears:
+  - TikTok bottom chrome (username/caption, ~18% of height)
+  - Instagram Reels bottom chrome (~16%)
+  - YouTube Shorts bottom chrome (~15%)
+- Horizontal: centered, with 15% margin on each side (~162px). Clears:
+  - Right-side action buttons on all three platforms
+- Font size: ~5.5% of frame height (~106px on 1920h), adjusted proportionally for other resolutions</p>
+<p><strong>Pipeline integration</strong>: Post-processing step after clip extraction, before caption generation.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>clip.mp4 → faster-whisper (word timestamps) → generate .ass file → ffmpeg hardburn → replace clip.mp4
+</code></pre></div>
+<p><strong>Whisper config</strong>: Model defaults to <code>base</code> for speed. Configurable via <code>--whisper-model</code> CLI flag (tiny/base/small/medium/large-v3).</p>
+<p><strong>Failure model</strong>: If transcription returns no words (silent clip) or FFmpeg burn-in fails, the clip is an error. No un-subtitled clip is produced. There is no flag to disable subtitles.</p>
+<h3 id="3-remove-no-semantic-flag">3. Remove <code>--no-semantic</code> Flag<a class="headerlink" href="#3-remove-no-semantic-flag" title="Permanent link">&para;</a></h3>
+<p>Semantic analysis is mandatory. Remove:
+- CLI flag <code>--no-semantic</code> from argparse
+- <code>enable_semantic</code> from <code>PipelineConfig</code>
+- All conditional paths that skip semantic analysis
+- Tests that exercise <code>--no-semantic</code> combinations</p>
+<p>If Ollama/semantic analysis fails, the pipeline reports an error for that segment. No fallback to default scores.</p>
+<h3 id="4-remove-no-captions-flag">4. Remove <code>--no-captions</code> Flag<a class="headerlink" href="#4-remove-no-captions-flag" title="Permanent link">&para;</a></h3>
+<p>AI caption generation is mandatory. Remove:
+- CLI flag <code>--no-captions</code> from argparse
+- <code>enable_captions</code> from <code>PipelineConfig</code>
+- All conditional paths that skip caption generation</p>
+<p>If Ollama caption generation fails after retries, the clip is an error.</p>
+<h3 id="5-remove-no-vertical-flag">5. Remove <code>--no-vertical</code> Flag<a class="headerlink" href="#5-remove-no-vertical-flag" title="Permanent link">&para;</a></h3>
+<p>Vertical 9:16 crop is mandatory. Remove:
+- CLI flag <code>--no-vertical</code> from argparse
+- <code>vertical_crop</code> toggle from <code>PipelineConfig</code>
+- All conditional paths that skip vertical cropping</p>
+<h3 id="6-fix-smart-cropper">6. Fix Smart Cropper<a class="headerlink" href="#6-fix-smart-cropper" title="Permanent link">&para;</a></h3>
+<p><strong>Known bug</strong>: when <code>face_aware=False</code>, the SmartCropper produces off-center crops. The fallback should use motion/brightness center or visual focus detection, not dead-center the frame.</p>
+<h3 id="7-update-test-suite">7. Update Test Suite<a class="headerlink" href="#7-update-test-suite" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Remove all tests exercising removed flag combinations (the "8 combinations" matrix collapses to 1 path)</li>
+<li>Add subtitle integration tests:</li>
+<li>Clip with speech produces subtitled output</li>
+<li>Silent clip fails with clear error</li>
+<li>Subtitle timing matches speech</li>
+<li>ASS file is valid</li>
+<li>Platform positioning is correct for 9:16 frame</li>
+<li>Add semantic-failure-is-error tests</li>
+<li>Add caption-failure-is-error tests</li>
+</ul>
+<h2 id="files-affected">Files Affected<a class="headerlink" href="#files-affected" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yacg/transcript_segmenter.py</code></td>
+<td><strong>New</strong> — LLM-driven transcript segmentation</td>
+</tr>
+<tr>
+<td><code>yacg/subtitle_burner.py</code></td>
+<td><strong>New</strong> — ASS generation + FFmpeg burn-in (receives pre-computed words)</td>
+</tr>
+<tr>
+<td><code>yacg/pipeline.py</code></td>
+<td><strong>Major rewrite</strong> — transcript-first flow, subtitle step, no conditionals</td>
+</tr>
+<tr>
+<td><code>yacg/models.py</code></td>
+<td>Remove toggle fields, add <code>whisper_model</code>, transcript/subtitle fields</td>
+</tr>
+<tr>
+<td><code>yacg/cli.py</code></td>
+<td>Remove 3 flags, add <code>--whisper-model</code></td>
+</tr>
+<tr>
+<td><code>yacg/core/semantic_analyzer.py</code></td>
+<td>Delete <code>_default_features()</code>, raise on failure</td>
+</tr>
+<tr>
+<td><code>yacg/caption_generator.py</code></td>
+<td>Raise on failure, no <code>None</code> returns</td>
+</tr>
+<tr>
+<td><code>yacg/extractors/clip_extractor.py</code></td>
+<td>Remove <code>vertical</code> param (always crop)</td>
+</tr>
+<tr>
+<td><code>yacg/extractors/smart_cropper.py</code></td>
+<td>Fix fallback crop logic (visual-focus center)</td>
+</tr>
+<tr>
+<td><code>yacg/core/scene_detector.py</code></td>
+<td>Demoted to optional boundary refinement</td>
+</tr>
+<tr>
+<td><code>yacg/transcript_bridge.py</code></td>
+<td><strong>Removed/deprecated</strong> — replaced by direct faster-whisper</td>
+</tr>
+<tr>
+<td><code>yacg/bootstrap.py</code></td>
+<td><code>faster_whisper</code> → required dep</td>
+</tr>
+<tr>
+<td><code>yacg/utils/config.py</code></td>
+<td>Remove INI reads for removed fields</td>
+</tr>
+<tr>
+<td><code>tests/*.py</code></td>
+<td>Rewrite flag-combo tests, add segmentation/subtitle/failure tests</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td><strong>New</strong> — GitHub Pages documentation site</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<p>No new dependencies. faster-whisper and FFmpeg libass are already available.</p>
+<h2 id="new-pipeline-flow">New Pipeline Flow<a class="headerlink" href="#new-pipeline-flow" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>1. Validate video + extract metadata
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>2. Full-video Whisper transcription (word-level timestamps)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>3. LLM segmentation: send transcript to Ollama → clip boundaries
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>4. Snap boundaries to speech pauses (&gt;300ms gaps)
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>5. Analyze each segment (audio + visual + semantic scoring)
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>6. Score virality
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>7. Rank + filter + select top_n
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>8. Extract clips (always vertical 9:16, face-aware crop)
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>9. Burn subtitles (reuses Whisper data from step 2)
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>10. Generate captions (Ollama — hook, description, hashtags)
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>11. Write CSV report (filename → full_caption mapping is critical)
+</code></pre></div>
+<p>The CSV maps clip filenames to generated captions. An external tool reads this CSV to clipboard-copy captions and stage videos for scheduling on TikTok/Instagram.</p>
+<h2 id="design-notes">Design Notes<a class="headerlink" href="#design-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Vertical crop must always be face-aware or center-focused.</strong> The smart cropper should always anchor on the detected face, or fall back to the center of visual focus — never an arbitrary crop offset.</li>
+<li><strong>Single Whisper run.</strong> The full-video transcription is done once and reused for segmentation, subtitle burning, and trigger word detection. No double transcription.</li>
+<li><strong>LLM segments by content, not visuals.</strong> The Ollama segmentation prompt receives transcript text (what's being said), not video frames. Visual analysis happens later as a scoring signal.</li>
+</ul>
+<h2 id="out-of-scope">Out of Scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Subtitle font customization (hardcoded style for now)</li>
+<li>Subtitle language selection (English only, auto-detected by Whisper)</li>
+<li>Caption text burned into video (captions remain CSV-only metadata)</li>
+<li>Animated text effects beyond basic word-pop timing</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
