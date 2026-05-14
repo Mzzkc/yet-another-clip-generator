@@ -477,22 +477,39 @@ class TranscriptSegmenter:
     def _find_speech_pauses(
         self, words: list[WordTimestamp]
     ) -> list[tuple[float, float, bool]]:
-        """Find all speech pauses (gaps > 300ms) in the word list.
+        """Find all speech pauses (gaps > pause_threshold) in the word list.
 
         Returns:
             List of (pause_start, pause_end, is_sentence_end) tuples where
             pause_start is the end time of the word before the gap,
             pause_end is the start time of the word after the gap, and
-            is_sentence_end is True if the word before the pause ends with
-            sentence-ending punctuation (. ? !).
+            is_sentence_end is True under any of:
+              - the previous word ends with sentence punctuation (. ? !)
+              - the gap is long enough to imply a sentence break (>= 0.5s)
+              - the next word begins capitalized AND the gap is >= 0.35s
+
+        faster-whisper's word-level stream often omits trailing punctuation
+        on the individual word (punctuation lives at segment level), so a
+        pure punctuation check rarely fires and downstream snap-to-sentence
+        logic degenerates to "any small pause."
         """
         pauses: list[tuple[float, float, bool]] = []
         for i in range(len(words) - 1):
             gap = words[i + 1].start - words[i].end
             if gap > self.pause_threshold:
+                prev_word = words[i].word.strip()
+                next_word = words[i + 1].word.strip()
+                ends_in_punct = bool(prev_word) and prev_word[-1] in ".?!"
+                is_long_pause = gap >= 0.5
+                next_starts_cap = (
+                    bool(next_word)
+                    and next_word[0].isupper()
+                    and not next_word[0].isdigit()
+                )
                 is_sentence_end = (
-                    len(words[i].word) > 0
-                    and words[i].word[-1] in ".?!"
+                    ends_in_punct
+                    or is_long_pause
+                    or (next_starts_cap and gap >= 0.35)
                 )
                 pauses.append((words[i].end, words[i + 1].start, is_sentence_end))
         return pauses
