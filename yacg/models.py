@@ -365,6 +365,13 @@ class PipelineConfig:
     # False for ASMR/ambient content where non-speech audio is the primary
     # content and VAD would incorrectly discard relevant segments.
     vad_filter: bool = True
+    # Whether to run the VLM caption-generation step (Step 7) per clip.
+    # Default True preserves the original yacg pipeline behavior.  Set to
+    # False when yacg is used mid-pipeline by a caller that generates its
+    # own captions downstream — skipping the step is faster AND prevents
+    # caption-failure from deleting otherwise-good clips.  See
+    # `--no-captions` flag.
+    captions: bool = True
 
     # Scoring weights (ASMR-optimized defaults from design doc).
     # Weights intentionally sum > 1.0 (currently 1.14) to emphasize key

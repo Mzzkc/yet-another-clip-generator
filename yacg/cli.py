@@ -173,6 +173,18 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="Disable Voice Activity Detection filter (for ASMR/ambient content "
              "where non-speech audio is the primary content)",
     )
+    # Caption generation (Step 7).  Default on; pair --captions / --no-captions
+    # mirrors the vad-filter pattern.
+    parser.add_argument(
+        "--captions", action="store_true", default=None,
+        help="Enable VLM caption generation per clip (default: on)",
+    )
+    parser.add_argument(
+        "--no-captions", action="store_true", default=None,
+        help="Skip VLM caption generation. Use when yacg is mid-pipeline and "
+             "the caller generates captions downstream — also prevents "
+             "caption-failure from deleting otherwise-good clips.",
+    )
     # Subtitle styling
     parser.add_argument(
         "--subtitle-font", default=None,
@@ -323,6 +335,11 @@ def _build_config(args: argparse.Namespace):
         config.vad_filter = False
     elif getattr(args, "vad_filter", None):
         config.vad_filter = True
+
+    if getattr(args, "no_captions", False):
+        config.captions = False
+    elif getattr(args, "captions", None):
+        config.captions = True
 
     # Subtitle style overrides
     if getattr(args, "subtitle_font", None):

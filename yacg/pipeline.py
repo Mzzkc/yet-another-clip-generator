@@ -709,6 +709,10 @@ class ViralClipPipeline:
         self, selected: list[ClipData], title: str, errors: list[str],
     ) -> None:
         """Step 7: Generate captions for each clip."""
+        if not self.config.captions:
+            logger.info("Step 7/7: Caption generation disabled (--no-captions)")
+            self._emit_progress("captions", 7, 7)
+            return
         logger.info("Step 7/7: Generating captions...")
         self._emit_progress("captions", 7, 7)
         caption_analyzer = self._get_caption_analyzer()
