@@ -555,14 +555,43 @@ class ViralClipPipeline:
     def _rank_and_select(
         self, clip_data_list: list[ClipData], min_score: float, top_n: int,
     ) -> list[ClipData]:
-        """Step 4: Rank by score, filter, and select top N."""
+        """Step 4: Rank by score, filter, and select top N non-overlapping.
+
+        Greedy non-overlapping selection: iterate clips in score order and
+        admit each one only if its time range does not overlap any
+        already-selected clip. This prevents the failure mode where two
+        scored clips covering nearly the same source range both ship,
+        which is wasteful and produces duplicate-feeling output.
+        """
         logger.info("Step 4/7: Ranking and filtering clips...")
         clip_data_list.sort(key=lambda c: c.virality.total_score, reverse=True)
         filtered = [c for c in clip_data_list if c.virality.total_score >= min_score]
-        selected = filtered[:top_n]
+
+        selected: list[ClipData] = []
+        rejected_overlaps = 0
+        for clip in filtered:
+            if len(selected) >= top_n:
+                break
+            new_start = clip.scene.start_time
+            new_end = clip.scene.end_time
+            overlaps = any(
+                new_start < s.scene.end_time and new_end > s.scene.start_time
+                for s in selected
+            )
+            if overlaps:
+                rejected_overlaps += 1
+                logger.debug(
+                    "Skipping clip %.1f-%.1fs (score %.1f) — overlaps a higher-scored selection",
+                    new_start, new_end, clip.virality.total_score,
+                )
+                continue
+            selected.append(clip)
+
         logger.info(
-            "Selected %d clips (from %d scored, %d above threshold %.1f)",
+            "Selected %d clips (from %d scored, %d above threshold %.1f, "
+            "%d rejected as overlapping)",
             len(selected), len(clip_data_list), len(filtered), min_score,
+            rejected_overlaps,
         )
         if not filtered and clip_data_list:
             top_score = clip_data_list[0].virality.total_score
