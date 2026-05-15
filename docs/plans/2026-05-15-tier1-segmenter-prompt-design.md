@@ -221,6 +221,14 @@ When tier-0 clears, the actual rewrite path:
    - `_format_punctuated_transcript_with_pauses(sentences, words, threshold)`
      — produces the `[start-end] sentence text [pause:Xs]` formatted
      input
+   - **`_audio_rms_profile(video_path, t_start, t_end, bin_ms=20)`**
+     — extract PCM via ffmpeg, compute per-bin RMS in dBFS.  Returns
+     `[(time, dbfs), ...]`.  Used by the next helper.
+   - **`_snap_boundary_to_local_minimum(audio_rms, target_time, search_radius_s=0.5)`**
+     — within ±radius of target_time, find the local RMS minimum
+     (deepest dip).  Return that time.  Critical for ASMR cadence
+     where there's no absolute silence, only relative quiet between
+     sustained phrases.
 
 2. Replace `_create_segmentation_prompt` with the template above
    (Jinja or simple `.format`).
@@ -230,14 +238,49 @@ When tier-0 clears, the actual rewrite path:
    - Send the new prompt to Ollama
    - Parse JSON output (with rationale captured for logging)
 
-4. `refine_boundaries` — keep the existing snap logic as a SAFETY
-   NET, but the new boundaries should be already-sentence-aligned
-   from the LLM's selection. Snap becomes a no-op for clean output.
+4. **`refine_boundaries` becomes a TWO-STAGE snap:**
+   - Stage A (semantic): keep the existing pause-snap as a safety
+     net, but with the new pipeline the LLM has already selected
+     boundaries against the punctuated/sentence-tokenized input,
+     so the boundaries should already be sentence-aligned.
+   - Stage B (acoustic, NEW): for each LLM-selected boundary, run
+     `_snap_boundary_to_local_minimum` against the audio RMS
+     profile in a ±0.5s window.  Snap to the deepest local minimum.
+     This handles the sub-word-level mismatch between whisper's
+     word_start/end (loud-portion-only) and actual articulation
+     boundaries (which include leading aspirations and trailing
+     sustains).
+
+**Why stage B is necessary (tier-0 round-4 evidence):**
+
+- Whisper's word_start misses leading sibilants by 0.10-0.20s
+  ("S" of "Something" articulates at 18.96, whisper said 19.08).
+- Whisper's word_end misses trailing sustains by 0.10-0.20s
+  ("thinking" articulates to 67.50, whisper said 67.32).
+- Whisper hallucinates entire words in silent periods ("And" at
+  1203.76 doesn't exist in the audio; first real word is "we" at
+  1204.54 — whisper inserted "And" via linguistic prediction).
+- Whisper word-onset can be off by 0.5s for next-word starts when
+  whisper time-aligns to the prior word's end ("very" actual onset
+  660.74, whisper said 660.24).
+
+For ASMR specifically, there often is NO true acoustic silence —
+only LOCAL RMS minima between sustained phrases.  The acoustic snap
+must look for relative quiet (deepest 20ms-bin dip in a search
+window) rather than absolute silence below a threshold.
+
+Implementation: ffmpeg PCM extract per clip + numpy RMS computation
+is fast enough (~5-10s for the whole video on a single file pass,
+or ~50ms per boundary if windowed).  No model dependency, no
+network call, fully local.
 
 The CrisperWhisper swap is OPTIONAL for the first iteration —
 faster-whisper gives word-level timestamps that work with the
-restoration + reconstruction pipeline. If the bimodal histogram
+restoration + reconstruction pipeline.  If the bimodal histogram
 quality is poor on faster-whisper output, swap to CrisperWhisper.
+Note: even with CrisperWhisper, the acoustic snap (stage B) is
+still necessary — CrisperWhisper improves pause detection but
+doesn't eliminate the sub-word articulation timing problem.
 
 ---
 
