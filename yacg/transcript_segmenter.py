@@ -339,22 +339,47 @@ class TranscriptSegmenter:
             start = max(video_start, start)
             end = min(video_end, end)
 
-            # Ensure minimum duration
+            # Ensure minimum duration.  When the LLM picks a tight clip
+            # whose pause-snapped end falls short of min_segment_duration,
+            # we need to extend.  The OLD code added the deficit
+            # mechanically (`end + needed`), which puts the new end
+            # wherever it lands — frequently mid-clause or mid-word.  The
+            # NEW code snaps the extended end to the nearest sentence
+            # boundary at or after the target time, only falling back to
+            # mechanical extension when no usable pause exists.
             duration = end - start
             if duration < self.min_segment_duration:
-                # Try extending end to reach minimum
-                needed = self.min_segment_duration - duration
-                end = min(video_end, end + needed)
+                target_end = min(video_end, start + self.min_segment_duration)
+                snapped_end = self._snap_to_nearest_pause(
+                    target_end, pauses, prefer="after"
+                )
+                # Snap may overshoot max_segment_duration; cap to
+                # max+small slack so a sentence break can still land
+                # cleanly past max.  If snap returns the unchanged target
+                # (no pause found within the search window), fall back to
+                # mechanical extension at the target time.
+                slack_max = start + self.max_segment_duration
+                if snapped_end > target_end and snapped_end <= slack_max:
+                    end = snapped_end
+                elif snapped_end > slack_max:
+                    end = target_end
+                else:
+                    end = snapped_end
+                end = min(video_end, end)
                 duration = end - start
 
-            # Enforce maximum duration
+            # Enforce maximum duration.  Find a pause BEFORE the max
+            # duration mark to stay within bounds; the existing snap
+            # function already prefers sentence-ending pauses.
             if duration > self.max_segment_duration:
-                # Find a pause BEFORE the max duration mark to stay within bounds
                 target_end = start + self.max_segment_duration
                 end = self._snap_to_nearest_pause(
                     target_end, pauses, prefer="before"
                 )
-                # If snap pulled us below min, hard cap at max as last resort
+                # If snap pulled us below min, accept the snap (a clean
+                # sentence break shorter than max is still preferable to a
+                # mid-clause cut at exactly max).  Hard-cap only if the
+                # snap also dropped below min (no good pause within range).
                 if end - start < self.min_segment_duration:
                     end = start + self.max_segment_duration
                 end = min(video_end, end)
@@ -485,14 +510,39 @@ class TranscriptSegmenter:
             pause_end is the start time of the word after the gap, and
             is_sentence_end is True under any of:
               - the previous word ends with sentence punctuation (. ? !)
-              - the gap is long enough to imply a sentence break (>= 0.5s)
-              - the next word begins capitalized AND the gap is >= 0.35s
+              - the gap is long enough to imply a sentence break (threshold
+                varies by content type — see below)
+              - the next word begins capitalized AND the gap exceeds
+                ``cap_pause_threshold`` (also content-type-aware)
 
         faster-whisper's word-level stream often omits trailing punctuation
         on the individual word (punctuation lives at segment level), so a
         pure punctuation check rarely fires and downstream snap-to-sentence
         logic degenerates to "any small pause."
+
+        Content-type-aware thresholds:
+
+          * General/default: long_pause >= 0.5s, capitalized-next >= 0.35s.
+            Fits most narrative speech where pauses >0.5s are sentence
+            boundaries.
+          * ASMR (or any content_type containing "asmr"): long_pause >= 1.5s,
+            capitalized-next >= 1.0s. ASMR delivery is FULL of dramatic
+            mid-sentence pauses (0.5-1.4s) used for emphasis, breath, and
+            sleep induction. Treating those as sentence ends causes the
+            snap to commit to mid-clause boundaries.
+
+        The thresholds intentionally over-correct: better to miss a few
+        real sentence ends than to falsely mark dramatic pauses as
+        sentence ends and cut clips mid-thought.
         """
+        ct = (self.content_type or "").lower()
+        if "asmr" in ct:
+            long_pause_threshold = 1.5
+            cap_pause_threshold = 1.0
+        else:
+            long_pause_threshold = 0.5
+            cap_pause_threshold = 0.35
+
         pauses: list[tuple[float, float, bool]] = []
         for i in range(len(words) - 1):
             gap = words[i + 1].start - words[i].end
@@ -500,7 +550,7 @@ class TranscriptSegmenter:
                 prev_word = words[i].word.strip()
                 next_word = words[i + 1].word.strip()
                 ends_in_punct = bool(prev_word) and prev_word[-1] in ".?!"
-                is_long_pause = gap >= 0.5
+                is_long_pause = gap >= long_pause_threshold
                 next_starts_cap = (
                     bool(next_word)
                     and next_word[0].isupper()
@@ -509,7 +559,7 @@ class TranscriptSegmenter:
                 is_sentence_end = (
                     ends_in_punct
                     or is_long_pause
-                    or (next_starts_cap and gap >= 0.35)
+                    or (next_starts_cap and gap >= cap_pause_threshold)
                 )
                 pauses.append((words[i].end, words[i + 1].start, is_sentence_end))
         return pauses
