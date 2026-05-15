@@ -31,15 +31,41 @@ class ClipExtractor:
             if supplied).
     """
 
+    # Maximum context padding (seconds) for ASMR/whispered-cadence content.
+    # The pause-snap selected boundaries are what compose was meant to play;
+    # extra padding adds un-snapped audio that lands mid-clause/mid-word and
+    # defeats the snap.  ASMR speakers have continuous slow speech where 2s
+    # of pre-roll catches several extra phrases.  Cap ensures the snap is
+    # respected by default while still allowing some breathing room.
+    _ASMR_MAX_PADDING = 0.3
+
     def __init__(
         self,
         context_padding: float = 2.0,
         config: Optional[PipelineConfig] = None,
     ) -> None:
         self.config = config or PipelineConfig()
-        self.context_padding = (
+        raw_padding = (
             context_padding if config is None else config.context_padding
         )
+        # Content-type-aware cap: ASMR caps at 0.3s regardless of configured
+        # value.  This intentionally overrides higher user-specified values —
+        # ASMR cadence makes >0.3s padding always wrong.  Set 0.0 explicitly
+        # to disable padding entirely (e.g. for tier-0 isolation tests).
+        content_type = (
+            self.config.content_profile.content_type.lower()
+            if self.config.content_profile and self.config.content_profile.content_type
+            else ""
+        )
+        if "asmr" in content_type and raw_padding > self._ASMR_MAX_PADDING:
+            logger.info(
+                "Capping context_padding %.2fs → %.2fs for ASMR content "
+                "(set explicitly to override)",
+                raw_padding, self._ASMR_MAX_PADDING,
+            )
+            self.context_padding = self._ASMR_MAX_PADDING
+        else:
+            self.context_padding = raw_padding
         self._cropper = None  # cached SmartCropper instance
 
     def extract_clip(
