@@ -110,21 +110,33 @@ class SubtitleBurner:
     MAX_GROUP_DURATION = 2.0
 
     def _group_words(
-        self, words: list[WordTimestamp],
-    ) -> list[tuple[float, float, str]]:
-        """Group words into 1-3 word subtitle phrases.
+        self,
+        words: list[WordTimestamp],
+        max_words_per_group: int = 3,
+    ) -> list[tuple[float, float, list[WordTimestamp]]]:
+        """Group words into short-phrase subtitle units.
 
-        Returns list of (start_time, end_time, text) tuples.
+        Returns list of (start_time, end_time, group_words) tuples.
         Times should already be clip-relative (shifted by clip_start).
+        Returning the WORD list (not concatenated text) lets the caller
+        emit per-word karaoke timing tags when needed.
+
+        Args:
+            words: Word timestamps for this clip (clip-relative times).
+            max_words_per_group: Soft cap on words per group.  Default 3
+                preserves original behavior; SubtitleStyle.max_words_per_group
+                (default 2) tightens this for narrow vertical crops with
+                long words.
         """
-        groups: list[tuple[float, float, str]] = []
+        groups: list[tuple[float, float, list[WordTimestamp]]] = []
         i = 0
         while i < len(words):
             group_words = [words[i]]
             group_start = words[i].start
 
-            # Try to add up to 2 more words
-            for j in range(1, 3):
+            # Try to add up to (max_words_per_group - 1) more words
+            extra = max(0, max_words_per_group - 1)
+            for j in range(1, extra + 1):
                 next_idx = i + j
                 if next_idx >= len(words):
                     break
@@ -135,7 +147,6 @@ class SubtitleBurner:
                 group_words.append(words[next_idx])
 
             group_end = group_words[-1].end
-            text = " ".join(w.word.strip() for w in group_words)
 
             # Enforce minimum display time
             if group_end - group_start < self.SENTENCE_BREAK_GAP:
@@ -145,7 +156,7 @@ class SubtitleBurner:
             if group_end - group_start > self.MAX_GROUP_DURATION:
                 group_end = group_start + self.MAX_GROUP_DURATION
 
-            groups.append((group_start, group_end, text))
+            groups.append((group_start, group_end, group_words))
             i += len(group_words)
 
         return groups
@@ -225,39 +236,74 @@ class SubtitleBurner:
         margin_r = int(frame_width * style.margin_h_pct)
         margin_v = int(frame_height * style.margin_v_pct)
 
-        primary_color = style.primary_color
         outline_color = style.outline_color
         outline_width = style.outline_width
         shadow = style.shadow
+        border_style = style.border_style if style.border_style in (1, 3) else 1
 
-        # Group words into 1-3 word phrases
-        groups = self._group_words(words)
+        # ASS karaoke color semantics (V4+ libass):
+        #   * Text not yet sung displays in SecondaryColour.
+        #   * As \k<duration> fires per word, that word switches to PrimaryColour.
+        # For "active word green / resting violet" we map:
+        #   PrimaryColour   = karaoke_active_color (active / already-sung)
+        #   SecondaryColour = primary_color       (resting / not-yet-sung)
+        # When karaoke is OFF, the existing PrimaryColour-only behavior is
+        # preserved by setting both to primary_color (no transition fires).
+        if style.karaoke:
+            ass_primary = style.karaoke_active_color
+            ass_secondary = style.primary_color
+        else:
+            ass_primary = style.primary_color
+            ass_secondary = style.primary_color
 
-        # Build dialogue lines
+        # Group words.  Returns (start, end, [WordTimestamp...]) tuples so
+        # we can emit per-word karaoke tags when style.karaoke is on.
+        groups = self._group_words(
+            words, max_words_per_group=style.max_words_per_group,
+        )
+
         dialogue_lines: list[str] = []
-        for start, end, text in groups:
+        for start, end, group_words in groups:
             start_time = _format_ass_time(start)
             end_time = _format_ass_time(end)
+            if style.karaoke:
+                # Per-word karaoke timing.  ASS \k expects centiseconds.
+                # Use a minimum of 1cs so even very short words register.
+                parts: list[str] = []
+                for w in group_words:
+                    cs = max(1, int(round((w.end - w.start) * 100)))
+                    parts.append(f"{{\\k{cs}}}{w.word.strip()}")
+                text = " ".join(parts)
+            else:
+                text = " ".join(w.word.strip() for w in group_words)
             dialogue_lines.append(
                 f"Dialogue: 0,{start_time},{end_time},WordPop,,0,0,0,,{text}"
             )
 
+        # WrapStyle: 2 (none) is preferred over 0 (smart wrap) for short-
+        # form vertical clips.  Smart-wrap silently breaks dialogue into
+        # 2 lines when text exceeds the available width — common with long
+        # ASMR words ("andragor") on 1080-1215 px wide crops at >5% font.
+        # Style 2 lets text overflow horizontally, which composers can
+        # control via font_size_pct + margin_h_pct + max_words_per_group
+        # rather than discovering wrap surprises in production output.
         ass_content = (
             f"[Script Info]\n"
             f"; Generated by YACG\n"
             f"ScriptType: v4.00+\n"
             f"PlayResX: {frame_width}\n"
             f"PlayResY: {frame_height}\n"
-            f"WrapStyle: 0\n"
+            f"WrapStyle: 2\n"
             f"\n"
             f"[V4+ Styles]\n"
             f"Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour,"
             f" OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut,"
             f" ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow,"
             f" Alignment, MarginL, MarginR, MarginV, Encoding\n"
-            f"Style: WordPop,{font_name},{font_size},{primary_color},"
-            f"&H000000FF,{outline_color},&H80000000,-1,0,0,0,100,100,0,0,1,"
-            f"{outline_width},{shadow},2,{margin_l},{margin_r},{margin_v},1\n"
+            f"Style: WordPop,{font_name},{font_size},{ass_primary},"
+            f"{ass_secondary},{outline_color},&H80000000,-1,0,0,0,100,100,0,0,"
+            f"{border_style},{outline_width},{shadow},2,"
+            f"{margin_l},{margin_r},{margin_v},1\n"
             f"\n"
             f"[Events]\n"
             f"Format: Layer, Start, End, Style, Name, MarginL, MarginR,"

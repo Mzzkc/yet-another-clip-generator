@@ -241,6 +241,45 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
              "(default: 0.15)",
     )
     parser.add_argument(
+        "--subtitle-border-style", type=int, default=None,
+        choices=[1, 3],
+        help="ASS BorderStyle for the subtitle. 1 = outline + shadow "
+             "(default), 3 = opaque box behind the text. Use 3 for "
+             "max readability against busy backgrounds (VRChat, "
+             "anime/cartoon, particle effects).",
+    )
+    parser.add_argument(
+        "--subtitle-max-words-per-group", type=int, default=None,
+        choices=[1, 2, 3, 4],
+        help="Cap on words per on-screen subtitle group (default: 2). "
+             "Lower = single-word-pop style (1); higher = longer "
+             "groups (3-4) for normal-rate content with shorter words.",
+    )
+    parser.add_argument(
+        "--subtitle-karaoke", action="store_true", default=None,
+        help="Enable per-word karaoke highlighting. Words progressively "
+             "transition from subtitle-color (resting) to "
+             "subtitle-active-color (active/spoken) via ASS \\k tags.",
+    )
+    parser.add_argument(
+        "--no-subtitle-karaoke", action="store_true", default=None,
+        help="Disable karaoke per-word highlighting (default behavior).",
+    )
+    parser.add_argument(
+        "--subtitle-active-color", default=None,
+        help="Karaoke active-word color in ASS &HAABBGGRR hex format "
+             "(default: &H006BE022 = Ahamkara green #22E06B). Has no "
+             "effect unless --subtitle-karaoke is enabled.",
+    )
+    parser.add_argument(
+        "--subtitle-min-word-probability", type=float, default=None,
+        help="Minimum faster-whisper word confidence (0.0-1.0) for "
+             "inclusion in burned subtitles. Default 0.0 keeps all "
+             "words. Set to 0.5+ for ASMR/whispered content to filter "
+             "whisper hallucinations in silent regions (which would "
+             "otherwise render as subtitles for words not actually said).",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true",
         help="Enable debug logging",
     )
@@ -378,6 +417,18 @@ def _build_config(args: argparse.Namespace):
         config.subtitle_style.margin_v_pct = args.subtitle_margin_v
     if getattr(args, "subtitle_margin_h", None) is not None:
         config.subtitle_style.margin_h_pct = args.subtitle_margin_h
+    if getattr(args, "subtitle_border_style", None) is not None:
+        config.subtitle_style.border_style = args.subtitle_border_style
+    if getattr(args, "subtitle_max_words_per_group", None) is not None:
+        config.subtitle_style.max_words_per_group = args.subtitle_max_words_per_group
+    if getattr(args, "no_subtitle_karaoke", False):
+        config.subtitle_style.karaoke = False
+    elif getattr(args, "subtitle_karaoke", None):
+        config.subtitle_style.karaoke = True
+    if getattr(args, "subtitle_active_color", None):
+        config.subtitle_style.karaoke_active_color = args.subtitle_active_color
+    if getattr(args, "subtitle_min_word_probability", None) is not None:
+        config.subtitle_min_word_probability = args.subtitle_min_word_probability
 
     return config
 

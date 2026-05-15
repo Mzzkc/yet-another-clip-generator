@@ -676,6 +676,17 @@ class ViralClipPipeline:
                     padded_end = min(padded_end, all_words[-1].end)
 
                 _BOUNDARY_TOLERANCE = 0.05
+                # Filter out whisper hallucinations: words whose acoustic
+                # confidence falls below threshold are dropped from the
+                # subtitle slice.  faster-whisper hallucinates word-loops
+                # in long silent regions (common in ASMR pre-roll/post-roll)
+                # which would render as "things not said" subtitles burned
+                # over silent footage.  Threshold 0.0 (default) preserves
+                # original behavior; 0.5 is a reasonable hallucination
+                # filter for ASMR/whispered content.
+                _MIN_WORD_PROBABILITY = float(
+                    getattr(self.config, "subtitle_min_word_probability", 0.0)
+                )
                 clip_words = [
                     WordTimestamp(
                         word=w.word,
@@ -685,7 +696,9 @@ class ViralClipPipeline:
                     )
                     for w in all_words
                     if (w.start >= padded_start - _BOUNDARY_TOLERANCE
-                        and w.end <= padded_end + _BOUNDARY_TOLERANCE)
+                        and w.end <= padded_end + _BOUNDARY_TOLERANCE
+                        and (w.probability is None
+                             or w.probability >= _MIN_WORD_PROBABILITY))
                 ]
 
                 if not clip_words:

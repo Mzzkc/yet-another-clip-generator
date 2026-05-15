@@ -87,6 +87,14 @@ def load_config(path: Optional[str] = None) -> PipelineConfig:
         shadow=_getfloat("Subtitle", "shadow", default_style.shadow),
         margin_v_pct=_getfloat("Subtitle", "margin_v_pct", default_style.margin_v_pct),
         margin_h_pct=_getfloat("Subtitle", "margin_h_pct", default_style.margin_h_pct),
+        border_style=_getint("Subtitle", "border_style", default_style.border_style),
+        karaoke=_getbool("Subtitle", "karaoke", default_style.karaoke),
+        karaoke_active_color=_get(
+            "Subtitle", "karaoke_active_color", default_style.karaoke_active_color,
+        ),
+        max_words_per_group=_getint(
+            "Subtitle", "max_words_per_group", default_style.max_words_per_group,
+        ),
     )
 
     # Parse ContentProfile — prefer [ContentProfile] section, fall back to
@@ -162,6 +170,9 @@ def load_config(path: Optional[str] = None) -> PipelineConfig:
         vad_filter=_getbool("Segmentation", "vad_filter", defaults.vad_filter),
         captions=_getbool("Output", "captions", defaults.captions),
         vlm_crop=_getbool("Output", "vlm_crop", defaults.vlm_crop),
+        subtitle_min_word_probability=_getfloat(
+            "Subtitle", "min_word_probability", defaults.subtitle_min_word_probability,
+        ),
         scoring_weights=scoring_weights,
     )
 

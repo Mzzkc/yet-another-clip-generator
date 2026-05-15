@@ -141,7 +141,7 @@ class SubtitleStyle:
 
     font_name: str = ""  # empty = auto-detect via _find_system_font()
     font_size_pct: float = 0.055  # fraction of frame height
-    primary_color: str = "&H00FFFFFF"  # white
+    primary_color: str = "&H00FFFFFF"  # white — text color when karaoke off, OR resting color when karaoke on
     outline_color: str = "&H00000000"  # black
     outline_width: float = 3.0
     shadow: float = 1.5
@@ -151,6 +151,33 @@ class SubtitleStyle:
     # spans roughly 10%-85% of frame height; 62% sits safely inside.
     margin_v_pct: float = 0.38
     margin_h_pct: float = 0.15  # horizontal margin as fraction of frame width
+
+    # ASS BorderStyle.  1 = outline + shadow (current behavior, default).
+    # 3 = opaque box behind the text — much more readable against busy
+    # backgrounds (VRChat scenes, particle effects, anime/cartoon
+    # textures), at the cost of partial visual occlusion.  Composers
+    # whose content has high visual chaos should prefer 3.
+    border_style: int = 1
+
+    # Karaoke per-word highlight.  When True, generate_ass emits ASS
+    # ``\k<centiseconds>`` tags per word so the subtitle progressively
+    # transitions from `primary_color` (resting) to `karaoke_active_color`
+    # (active/spoken) as the dialogue plays.  Common short-form pattern
+    # for ASMR / hypnosis brand content where the active word draws the
+    # eye to the trigger / suggestion word being delivered.
+    karaoke: bool = False
+    # Color of the actively-spoken word when karaoke is enabled.  Default
+    # is Ahamkara green (#22E06B in #RRGGBB) → ASS &HAABBGGRR =
+    # &H006BE022.  Has no effect when karaoke=False.
+    karaoke_active_color: str = "&H006BE022"
+
+    # Maximum words per subtitle group.  Caps how many words the burner
+    # may bundle into a single on-screen group.  Default 2 favors
+    # single-line layouts on narrow vertical crops (1080-1215 px wide)
+    # and avoids wrap when individual words are long (e.g. ASMR speakers
+    # using made-up names like "andragor").  Bump to 3 for normal-rate
+    # content with shorter words; lower to 1 for single-word-pop style.
+    max_words_per_group: int = 2
 
 
 VALID_CONTENT_TYPES: frozenset[str] = frozenset({
@@ -383,6 +410,16 @@ class PipelineConfig:
     # to face detection (and then center crop) if the VLM call fails or
     # returns an unparseable response.
     vlm_crop: bool = False
+
+    # Minimum word-confidence (faster-whisper `probability`) for inclusion
+    # in the burned subtitle stream.  Default 0.0 = include all words
+    # (preserves existing yacg behavior).  Set to e.g. 0.5 to filter out
+    # whisper hallucinations in long silent regions — common in
+    # ASMR pre-roll/post-roll where whisper invents word-loops that would
+    # otherwise burn into subtitles as "things not said."  Words with
+    # ``probability is None`` are always kept (some whisper backends omit
+    # the field).
+    subtitle_min_word_probability: float = 0.0
 
     # Scoring weights (ASMR-optimized defaults from design doc).
     # Weights intentionally sum > 1.0 (currently 1.14) to emphasize key
