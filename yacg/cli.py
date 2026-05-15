@@ -185,6 +185,21 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
              "the caller generates captions downstream — also prevents "
              "caption-failure from deleting otherwise-good clips.",
     )
+    # VLM-based subject localization for vertical cropping.  Default off
+    # preserves OpenCV face-detection behavior.  Enable for content where
+    # face detection misfires (furry/anthro/cartoon avatars, abstract
+    # subjects, heavy stylization).
+    parser.add_argument(
+        "--vlm-crop", action="store_true", default=None,
+        help="Use the VLM (--model) to localize the subject for vertical "
+             "cropping instead of OpenCV face detection. Recommended for "
+             "non-human subjects (furry/anthro/cartoon avatars). Falls back "
+             "to face detection on VLM failure.",
+    )
+    parser.add_argument(
+        "--no-vlm-crop", action="store_true", default=None,
+        help="Disable VLM subject localization (use OpenCV face detection).",
+    )
     # Subtitle styling
     parser.add_argument(
         "--subtitle-font", default=None,
@@ -340,6 +355,11 @@ def _build_config(args: argparse.Namespace):
         config.captions = False
     elif getattr(args, "captions", None):
         config.captions = True
+
+    if getattr(args, "no_vlm_crop", False):
+        config.vlm_crop = False
+    elif getattr(args, "vlm_crop", None):
+        config.vlm_crop = True
 
     # Subtitle style overrides
     if getattr(args, "subtitle_font", None):

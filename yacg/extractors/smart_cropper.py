@@ -4,10 +4,33 @@ Smart cropping module for vertical video reformatting.
 Performs intelligent cropping to 9:16 (or custom) aspect ratio with
 face-aware positioning, keeping subjects centered in the output frame.
 Handles already-vertical and square videos gracefully.
+
+Two localization strategies:
+
+  * **Face detection** (default): OpenCV Haar cascade or DNN SSD face
+    detector finds faces in sampled frames; median face center is used
+    as the crop horizontal anchor.  Works well for human subjects in
+    photographic content.  Misfires on non-human characters (furry/
+    anthro/cartoon avatars, abstract subjects) where face features are
+    absent or stylized — the detector either returns no faces (falling
+    back to center crop) or false positives in textures and props
+    (pulling the crop window off the actual subject).
+
+  * **VLM grounding** (opt-in via ``PipelineConfig.vlm_crop=True``):
+    Sends a single sampled frame to the VLM (configured via
+    ``model_name``) and asks for the horizontal subject position as a
+    fraction (0.0=left edge, 1.0=right edge).  Works on any content the
+    VLM can recognize as a subject — humans, anime, furry, abstract.
+    Falls back to face detection (and then center crop) on any failure.
 """
 
+import base64
+import json
 import logging
+import re
 from typing import Optional
+
+import requests
 
 from yacg.core.visual_analyzer import (
     _detect_faces_in_gray,
@@ -18,6 +41,11 @@ from yacg.models import PipelineConfig
 from yacg.utils.video_utils import get_cv2 as _shared_get_cv2
 
 logger = logging.getLogger(__name__)
+
+# Single-frame VLM grounding call must be quick — if the model takes longer
+# than this the crop falls back to face detection / center crop.  Set
+# generously to accommodate first-call model load on Ollama.
+_VLM_CROP_REQUEST_TIMEOUT = 60
 
 # Module-level cv2 reference (allows test patching via ``sc_mod._cv2 = mock``)
 _cv2 = None
@@ -153,11 +181,31 @@ class SmartCropper:
         # Ensure crop width doesn't exceed source
         crop_w = min(crop_w, src_w)
 
+        # VLM grounding takes precedence over face detection when enabled.
+        # We try it first because it works on content where face detection
+        # misfires (furry/anthro/cartoon/abstract subjects).  On failure we
+        # fall through to face detection, then center crop.
+        crop_x: Optional[int] = None
+        anchor_strategy = "center"
+        if self.config.vlm_crop:
+            mid_time = sample_times[len(sample_times) // 2]
+            vlm_x_pct = self._get_vlm_subject_x_pct(video_path, mid_time)
+            if vlm_x_pct is not None:
+                vlm_center_x = int(vlm_x_pct * src_w)
+                crop_x = int(vlm_center_x - crop_w / 2)
+                crop_x = max(0, min(crop_x, src_w - crop_w))
+                anchor_strategy = "vlm"
+                logger.info(
+                    "VLM subject localization for %s: x_pct=%.3f → "
+                    "center_x=%d → crop_x=%d",
+                    video_path, vlm_x_pct, vlm_center_x, crop_x,
+                )
+
         face_aware = False
         # Apply spatial consistency check before using face centers
-        if face_centers:
+        if crop_x is None and face_centers:
             face_centers = validate_spatial_consistency(face_centers, src_w)
-        if face_centers:
+        if crop_x is None and face_centers:
             # Use median of detected face centers (robust to outliers)
             sorted_centers = sorted(face_centers)
             median_idx = len(sorted_centers) // 2
@@ -165,20 +213,22 @@ class SmartCropper:
             crop_x = int(face_center_x - crop_w / 2)
             crop_x = max(0, min(crop_x, src_w - crop_w))
             face_aware = True
-        else:
-            # No faces detected in any sample — center crop
+            anchor_strategy = "face"
+        if crop_x is None:
+            # No VLM result and no faces detected — center crop
             crop_x = (src_w - crop_w) // 2
 
         crop_y = 0  # Always start from top for vertical crops
 
         logger.info(
             "Crop params for %s: x=%d y=%d w=%d h=%d "
-            "(face_aware=%s, detected=%d, validated=%d, samples=%d/%d)",
+            "(anchor=%s, face_aware=%s, detected=%d, validated=%d, samples=%d/%d)",
             video_path,
             crop_x,
             crop_y,
             crop_w,
             crop_h,
+            anchor_strategy,
             face_aware,
             total_raw_detections,
             total_validated,
@@ -364,6 +414,148 @@ class SmartCropper:
             return None
 
         return self._brightness_center_x_from_frame(frame)
+
+    def _get_vlm_subject_x_pct(
+        self, video_path: str, time_seconds: float
+    ) -> Optional[float]:
+        """Ask the configured VLM where the main subject is horizontally.
+
+        Reads one frame from the video at ``time_seconds``, encodes it as
+        base64 JPEG, sends it to Ollama with a tight grounding prompt, and
+        parses a single x-percentage (0.0=left, 1.0=right) from the
+        response.
+
+        Returns None on any failure (cannot read frame, Ollama error,
+        unparseable response, value out of range).  Caller is responsible
+        for falling back to face detection or center crop.
+
+        Args:
+            video_path: Path to source video.
+            time_seconds: Timestamp to sample.
+
+        Returns:
+            Subject horizontal position as a float in [0.0, 1.0], or None.
+        """
+        cv2 = _get_cv2()
+
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            logger.warning("VLM crop: could not open %s for frame read", video_path)
+            return None
+
+        try:
+            cap.set(cv2.CAP_PROP_POS_MSEC, time_seconds * 1000.0)
+            ret, frame = cap.read()
+        except Exception as exc:
+            logger.warning("VLM crop: frame read failed at %.2fs: %s", time_seconds, exc)
+            return None
+        finally:
+            cap.release()
+
+        if not ret or frame is None:
+            logger.warning("VLM crop: no frame at %.2fs in %s", time_seconds, video_path)
+            return None
+
+        # Encode as JPEG (quality 85 — quality matters less than fidelity to
+        # composition; the VLM doesn't need pixel-perfect detail to localize).
+        ok, jpeg_buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not ok:
+            logger.warning("VLM crop: jpeg encode failed for frame at %.2fs", time_seconds)
+            return None
+        b64 = base64.b64encode(jpeg_buf.tobytes()).decode("ascii")
+
+        # Reasoning prompt over a tight prompt is load-bearing here.  Smaller
+        # VLMs (qwen3-vl:8b, qwen2.5-vl:7b) given a tight "output only a
+        # number" prompt default to 0.5 across every frame because they
+        # play it safe under output constraint.  Asking them to describe
+        # the subject + reason about its position FIRST produces honest
+        # coordinates even on stylized content (furry/anthro/cartoon).
+        # The final line is parsed by the regex below.
+        prompt = (
+            "Look at this video frame. Identify the main subject — the "
+            "character, person, or focal object.\n\n"
+            "Step 1: Briefly say what the main subject is.\n"
+            "Step 2: Where does it sit horizontally — left of center, "
+            "near center, or right of center? Be specific about how far "
+            "off-center.\n"
+            "Step 3: On the FINAL line, output ONLY a single decimal "
+            "number 0.0-1.0 for the subject's horizontal position. "
+            "0.0=left edge, 0.5=exact center, 1.0=right edge."
+        )
+        payload = {
+            "model": self.config.model_name,
+            "prompt": prompt,
+            "images": [b64],
+            "stream": False,
+            "options": {
+                "temperature": 0.1,  # near-deterministic; coordinate output
+                "num_predict": 256,   # room for description + reasoning + number
+            },
+        }
+
+        url = f"{self.config.ollama_host}/api/generate"
+        try:
+            resp = requests.post(url, json=payload, timeout=_VLM_CROP_REQUEST_TIMEOUT)
+        except requests.RequestException as exc:
+            logger.warning("VLM crop: request failed for %s: %s", video_path, exc)
+            return None
+
+        if resp.status_code != 200:
+            logger.warning(
+                "VLM crop: Ollama returned status %d for %s",
+                resp.status_code, video_path,
+            )
+            return None
+
+        try:
+            text = resp.json().get("response", "").strip()
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.warning("VLM crop: bad JSON in Ollama response: %s", exc)
+            return None
+
+        # The reasoning prompt produces multi-line output ending with the
+        # coordinate on the final line.  Parse from the LAST line, then
+        # the last numeric in the full response, then any numeric.  This
+        # avoids false-matching "Step 1:" or similar enumerations earlier
+        # in the response as the coordinate.
+        x_pct: Optional[float] = None
+        coord_pattern = r"(?<![\w.])(0?\.\d+|[01](?:\.\d+)?)(?![\w.])"
+        last_line = text.rstrip().splitlines()[-1] if text.strip() else ""
+        last_line_matches = re.findall(coord_pattern, last_line)
+        all_matches = re.findall(coord_pattern, text)
+        candidates: list[str] = []
+        if last_line_matches:
+            candidates.append(last_line_matches[-1])
+        if all_matches:
+            candidates.append(all_matches[-1])
+        # Prefer values containing a decimal point (more likely to be a
+        # real coordinate than enumerations like "Step 1").
+        for raw in candidates:
+            try:
+                v = float(raw)
+            except ValueError:
+                continue
+            if 0.0 <= v <= 1.0 and "." in raw:
+                x_pct = v
+                break
+        if x_pct is None:
+            # Fall back to first plausible candidate even without a decimal.
+            for raw in candidates:
+                try:
+                    v = float(raw)
+                except ValueError:
+                    continue
+                if 0.0 <= v <= 1.0:
+                    x_pct = v
+                    break
+        if x_pct is None:
+            logger.warning(
+                "VLM crop: no parseable x_pct in response %r for %s",
+                text[:200], video_path,
+            )
+            return None
+
+        return x_pct
 
     def _detect_face_center_x_from_frame(self, frame) -> Optional[int]:
         """Detect the horizontal centre of the primary face in a pre-read frame.

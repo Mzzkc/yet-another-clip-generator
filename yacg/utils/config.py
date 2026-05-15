@@ -161,6 +161,7 @@ def load_config(path: Optional[str] = None) -> PipelineConfig:
         max_segment_duration=_getfloat("Segmentation", "max_segment_duration", defaults.max_segment_duration),
         vad_filter=_getbool("Segmentation", "vad_filter", defaults.vad_filter),
         captions=_getbool("Output", "captions", defaults.captions),
+        vlm_crop=_getbool("Output", "vlm_crop", defaults.vlm_crop),
         scoring_weights=scoring_weights,
     )
 
@@ -219,6 +220,7 @@ def save_default_config(path: str) -> None:
         "output_dir": defaults.output_dir,
         "dry_run": str(defaults.dry_run).lower(),
         "captions": str(defaults.captions).lower(),
+        "vlm_crop": str(defaults.vlm_crop).lower(),
     }
 
     parser["Temporal"] = {

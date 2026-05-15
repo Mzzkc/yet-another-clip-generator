@@ -372,6 +372,17 @@ class PipelineConfig:
     # caption-failure from deleting otherwise-good clips.  See
     # `--no-captions` flag.
     captions: bool = True
+    # Whether to use the VLM (configured via model_name) to localize the
+    # main subject horizontally for vertical cropping, instead of relying
+    # on OpenCV face detection.  Default False preserves the existing
+    # SmartCropper face-detection behavior.  Set to True for content where
+    # face detection misfires — non-human characters (furry/anthro/cartoon
+    # avatars), heavy stylization, abstract subjects, masked subjects.
+    # The VLM is asked once per crop call to return a horizontal subject
+    # position as a fraction (0.0=left edge, 1.0=right edge).  Falls back
+    # to face detection (and then center crop) if the VLM call fails or
+    # returns an unparseable response.
+    vlm_crop: bool = False
 
     # Scoring weights (ASMR-optimized defaults from design doc).
     # Weights intentionally sum > 1.0 (currently 1.14) to emphasize key
