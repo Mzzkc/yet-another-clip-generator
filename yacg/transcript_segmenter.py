@@ -4,13 +4,21 @@ LLM-driven transcript segmentation engine.
 Replaces PySceneDetect as the primary source of clip boundaries.
 Runs faster-whisper on the full source video to get word-level timestamps,
 sends the formatted transcript to Ollama for content-based segment
-identification, then refines boundaries by snapping to speech pauses.
+identification, then refines boundaries by snapping to speech pauses
+(stage A) and to local-minima in the audio RMS profile (stage B —
+sub-word precision for ASMR/whispered cadence content).
 """
 
 import json
 import logging
+import math
 import re
+import struct
+import subprocess
+import tempfile
 import time
+import wave
+from pathlib import Path
 
 import requests
 
@@ -27,6 +35,200 @@ _REQUEST_TIMEOUT = 180
 _SPEECH_PAUSE_THRESHOLD = 0.3  # seconds — gap defining a speech pause
 _MIN_SEGMENT_DURATION = 15.0  # seconds
 _MAX_SEGMENT_DURATION = 45.0  # seconds
+
+
+# ----------------------------------------------------------------------------
+# Acoustic RMS analysis — stage B of refine_boundaries.
+#
+# The motivation: whisper's word_start/end timestamps mark the LOUD voiced
+# portion of each word, missing leading sibilants (~0.10-0.20s) and trailing
+# sustains (~0.10-0.20s).  For ASMR/whispered cadence content where the
+# speaker draws words out softly, a "clean" cut at the whisper word
+# boundary lands inside the leading aspiration of the next word OR
+# truncates the trailing aspiration of the current word.
+#
+# Stage B snaps each LLM-selected boundary to the nearest LOCAL MINIMUM in
+# the audio RMS profile (20ms-bin resolution) within a small search window.
+# Critical for ASMR where there is often NO true acoustic silence — only
+# relative quiet between sustained phrases.
+#
+# Round-4 tier-0 work validated this approach against composer ear-checks:
+# RMS-snapped boundaries produced 3/3 clean cuts where whisper-word-snapped
+# boundaries produced 0/3.
+# ----------------------------------------------------------------------------
+
+
+def _audio_rms_profile(
+    video_path: str,
+    t_start: float,
+    t_end: float,
+    bin_ms: int = 20,
+    sample_rate: int = 16000,
+) -> list[tuple[float, float]]:
+    """Extract a window of audio via ffmpeg and compute per-bin RMS in dBFS.
+
+    Args:
+        video_path: Source video / audio file path.
+        t_start: Window start time (seconds, video time-base).
+        t_end: Window end time (seconds).
+        bin_ms: RMS bin size in milliseconds (default 20 — fine enough to
+            resolve syllable-level transitions in slow ASMR cadence).
+        sample_rate: Mono PCM resample rate (default 16000 — sufficient for
+            envelope/RMS analysis, ~10x faster than full 48k).
+
+    Returns:
+        List of ``(time_seconds, dbfs)`` tuples covering the window.
+        ``time_seconds`` is in video time-base.  ``dbfs`` is in [-100, 0],
+        with -100 representing pure digital silence.
+
+    Raises:
+        RuntimeError: If ffmpeg fails to extract audio.
+    """
+    if t_end <= t_start:
+        return []
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+        wav_path = tf.name
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-ss", str(t_start), "-i", str(video_path),
+            "-t", str(t_end - t_start),
+            "-ac", "1", "-ar", str(sample_rate),
+            "-c:a", "pcm_s16le", wav_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"ffmpeg failed during RMS audio extract: {result.stderr[:200]}"
+            )
+
+        with wave.open(wav_path, "rb") as w:
+            sr = w.getframerate()
+            n_frames = w.getnframes()
+            data = w.readframes(n_frames)
+        if not data:
+            return []
+
+        samples = struct.unpack(f"<{len(data) // 2}h", data)
+        bin_samples = max(1, int(sr * bin_ms / 1000))
+
+        out: list[tuple[float, float]] = []
+        for i in range(0, len(samples), bin_samples):
+            chunk = samples[i:i + bin_samples]
+            if not chunk:
+                break
+            sq = sum(s * s for s in chunk) / len(chunk)
+            if sq > 0:
+                rms = sq ** 0.5
+                dbfs = 20 * math.log10(rms / 32768)
+            else:
+                dbfs = -100.0
+            out.append((t_start + (i / sr), dbfs))
+        return out
+    finally:
+        try:
+            Path(wav_path).unlink()
+        except OSError:
+            pass
+
+
+def _snap_boundary_to_local_minimum(
+    video_path: str,
+    target_time: float,
+    search_radius_s: float = 0.5,
+    prefer: str = "after",
+    smoothing_bins: int = 3,
+) -> float:
+    """Snap a boundary to the NEAREST local minimum in the audio RMS profile.
+
+    For ASMR content there is often no true acoustic silence — only LOCAL
+    MINIMA in the RMS envelope between sustained phrases.  This function
+    extracts a ±``search_radius_s`` audio window around ``target_time`` and
+    finds the FIRST local minimum in the chosen direction — the dip
+    attached to the boundary word's articulation tail (for END) or leading
+    aspiration (for START), NOT the deepest silence further away (which
+    would land in next/prior-word territory).
+
+    Round-4 lesson: snapping to the GLOBAL window minimum overshoots into
+    inter-word silences (e.g. CLIP 2 END at "control." snapped from 706.66
+    to 707.06 — into the silence before "3." — adding 400ms of extra
+    silence the composer didn't want).  Local-minimum-first matches the
+    hand-tuned v7 picks within ~50ms.
+
+    Args:
+        video_path: Source video file.
+        target_time: Boundary time (seconds) to snap.
+        search_radius_s: Half-width of the search window (default 0.5s).
+        prefer: "after" (push the cut later — clip ENDS, scan forward from
+            target) or "before" (push the cut earlier — clip STARTS, scan
+            backward from target).
+        smoothing_bins: Apply a centered moving-average over this many bins
+            before searching for minima.  3 = light smoothing (60ms window
+            at 20ms bins) — kills spurious single-bin dips while preserving
+            real articulation gaps.
+
+    Returns:
+        The snapped boundary time (seconds).  Falls back to ``target_time``
+        if the audio extract fails or no local minimum is found in window.
+    """
+    t_low = max(0.0, target_time - search_radius_s)
+    t_high = target_time + search_radius_s
+    try:
+        profile = _audio_rms_profile(video_path, t_low, t_high)
+    except (RuntimeError, OSError) as exc:
+        logger.warning(
+            "Acoustic snap: RMS extract failed at %.2fs: %s — using target unchanged",
+            target_time, exc,
+        )
+        return target_time
+    if len(profile) < 3:
+        return target_time
+
+    # Apply centered moving-average smoothing to suppress single-bin spikes.
+    half = max(1, smoothing_bins // 2)
+    smoothed: list[tuple[float, float]] = []
+    for i, (t, _) in enumerate(profile):
+        lo = max(0, i - half)
+        hi = min(len(profile), i + half + 1)
+        avg_db = sum(d for _, d in profile[lo:hi]) / (hi - lo)
+        smoothed.append((t, avg_db))
+
+    # Find target's index in the profile.
+    target_idx = min(
+        range(len(smoothed)),
+        key=lambda i: abs(smoothed[i][0] - target_time),
+    )
+
+    # Walk in the chosen direction looking for the FIRST local minimum.
+    # Local minimum = bin strictly lower than both neighbors.
+    if prefer == "after":
+        # Scan target_idx forward.  Return the first bin that's lower than
+        # both its neighbors.
+        for i in range(target_idx, len(smoothed) - 1):
+            prev_db = smoothed[i - 1][1] if i > 0 else smoothed[i][1] + 1
+            cur_db = smoothed[i][1]
+            next_db = smoothed[i + 1][1]
+            if cur_db <= prev_db and cur_db <= next_db:
+                return smoothed[i][0]
+        # No local minimum found forward — fall back to the deepest bin
+        # in the forward range.
+        forward = smoothed[target_idx:]
+        if forward:
+            return min(forward, key=lambda x: x[1])[0]
+    else:  # "before"
+        # Scan target_idx backward.
+        for i in range(target_idx, 0, -1):
+            prev_db = smoothed[i - 1][1]
+            cur_db = smoothed[i][1]
+            next_db = smoothed[i + 1][1] if i + 1 < len(smoothed) else smoothed[i][1] + 1
+            if cur_db <= prev_db and cur_db <= next_db:
+                return smoothed[i][0]
+        backward = smoothed[: target_idx + 1]
+        if backward:
+            return min(backward, key=lambda x: x[1])[0]
+
+    return target_time
 
 
 class TranscriptSegmenter:
@@ -304,17 +506,34 @@ class TranscriptSegmenter:
         self,
         segments: list[SegmentBoundary],
         words: list[WordTimestamp],
+        video_path: str | None = None,
+        acoustic_snap_radius_s: float = 0.5,
     ) -> list[SceneSegment]:
         """Snap segment boundaries to nearest speech pauses.
 
-        Adjusts LLM-suggested boundaries to fall on speech pauses (gaps >300ms
-        between words) so clips don't cut mid-word. Validates no overlaps,
-        enforces min/max duration, and returns SceneSegment objects for
-        pipeline compatibility.
+        Two-stage refinement:
+
+          * **Stage A (semantic)**: Adjusts LLM-suggested boundaries to fall on
+            speech pauses (gaps > pause_threshold between words) so clips don't
+            cut mid-word.  Validates no overlaps, enforces min/max duration.
+          * **Stage B (acoustic, OPT-IN)**: When ``video_path`` is supplied,
+            snaps each refined boundary to the nearest LOCAL MINIMUM in the
+            audio RMS profile within ±``acoustic_snap_radius_s``.  Necessary
+            for ASMR/whispered cadence content where whisper word_start/end
+            timestamps mark only the LOUD voiced portion of each word and miss
+            leading sibilants + trailing sustains.  See the module-level
+            docstring on `_audio_rms_profile` for the round-4 tier-0
+            validation that motivates this stage.
 
         Args:
             segments: LLM-identified segment boundaries.
             words: Full transcript word timestamps.
+            video_path: Optional path to the source video.  When provided,
+                stage B (acoustic RMS snap) runs.  When None, only stage A
+                runs (preserves pre-round-4 behavior).
+            acoustic_snap_radius_s: Half-width of the stage-B search window
+                (default 0.5s).  Larger windows risk snapping to a different
+                gap; smaller windows risk missing the local minimum.
 
         Returns:
             List of SceneSegment objects with refined boundaries.
@@ -424,6 +643,56 @@ class TranscriptSegmenter:
                     continue
             non_overlapping.append((start, end))
 
+        # ---- Stage B: acoustic RMS local-minimum snap (opt-in) ----
+        # When the caller supplies a video_path, each stage-A boundary is
+        # snapped to the nearest local minimum in the audio RMS profile
+        # within ±acoustic_snap_radius_s.  Critical for ASMR/whispered
+        # cadence content where whisper word_start/end timestamps miss
+        # leading sibilants and trailing sustains.  Skipped when no video
+        # path supplied — preserves pre-round-4 behavior.
+        if video_path is not None and non_overlapping:
+            acoustic_snapped: list[tuple[float, float]] = []
+            for stage_a_start, stage_a_end in non_overlapping:
+                snapped_start = _snap_boundary_to_local_minimum(
+                    video_path,
+                    stage_a_start,
+                    search_radius_s=acoustic_snap_radius_s,
+                    prefer="before",
+                )
+                snapped_end = _snap_boundary_to_local_minimum(
+                    video_path,
+                    stage_a_end,
+                    search_radius_s=acoustic_snap_radius_s,
+                    prefer="after",
+                )
+                # Clamp to video bounds, preserve min duration
+                snapped_start = max(video_start, snapped_start)
+                snapped_end = min(video_end, snapped_end)
+                if snapped_end - snapped_start < self.min_segment_duration:
+                    # Acoustic snap pulled below min — fall back to stage-A
+                    # boundaries for this segment.
+                    logger.debug(
+                        "Acoustic snap dropped %.2f-%.2f below min duration "
+                        "(%.2fs); reverting to stage-A (%.2f-%.2f)",
+                        snapped_start, snapped_end,
+                        snapped_end - snapped_start,
+                        stage_a_start, stage_a_end,
+                    )
+                    acoustic_snapped.append((stage_a_start, stage_a_end))
+                else:
+                    if (abs(snapped_start - stage_a_start) > 0.01
+                            or abs(snapped_end - stage_a_end) > 0.01):
+                        logger.info(
+                            "Acoustic snap: %.2f→%.2f  %.2f→%.2f "
+                            "(deltas %+.3fs / %+.3fs)",
+                            stage_a_start, snapped_start,
+                            stage_a_end, snapped_end,
+                            snapped_start - stage_a_start,
+                            snapped_end - stage_a_end,
+                        )
+                    acoustic_snapped.append((snapped_start, snapped_end))
+            non_overlapping = acoustic_snapped
+
         # Convert to SceneSegment objects
         result: list[SceneSegment] = []
         for idx, (start, end) in enumerate(non_overlapping):
@@ -457,7 +726,11 @@ class TranscriptSegmenter:
         """
         words = self.full_transcribe(video_path)
         boundaries = self.segment_by_content(words, title)
-        scenes = self.refine_boundaries(boundaries, words)
+        # Pass video_path through so refine_boundaries can run stage B
+        # (acoustic RMS local-minimum snap).  Round-4 tier-0 work proved
+        # this is necessary to land cuts on actual articulation
+        # boundaries vs whisper's loud-portion-only word_start/end.
+        scenes = self.refine_boundaries(boundaries, words, video_path=video_path)
         return scenes, words
 
     def _format_transcript(
@@ -634,13 +907,39 @@ class TranscriptSegmenter:
         self, transcript_text: str, title: str,
         target_count: int = 20,
     ) -> str:
-        """Build the LLM segmentation prompt with the transcript."""
+        """Build the LLM segmentation prompt with the transcript.
+
+        Cross-domain prompt design (round-4 approach): the LLM is asked to
+        SELECT clips using domain-specific reasoning about content
+        structure, virality, and editing rhythm — not just "find viral
+        segments" with a vague target.  The prompt explicitly invokes:
+
+          * Content-structure knowledge (hypnosis induction shape, gaming
+            highlight pattern, cooking technique arc, etc — per content_type)
+          * Virality patterns (hook-first, complete payoff, clean end beat)
+          * Editing principles (cut on completion, hold on resolution)
+          * Brand context (channel description, target audience, custom
+            instructions, optional creator notes)
+
+        Mandatory rationale field per clip — when the LLM cannot articulate
+        why a boundary is right, the boundary is probably wrong; the
+        rationale lets composers debug bad picks.
+
+        Round-4 evidence: round-1-to-3 prompts asked for "viral segments"
+        and the LLM picked arbitrary 25-second windows because nothing in
+        the prompt told it what coherence looks like for the target
+        content type.
+        """
         title_line = f' titled "{title}"' if title else ""
+        ct = (self.content_type or "general").lower()
 
-        # Content-type-aware guidance for what makes a "good clip"
+        # Content-type-aware guidance for what makes a "good clip" — also
+        # invokes content-specific structural patterns the model should
+        # recognize and respect when picking boundaries.
         content_guidance = self._get_content_type_guidance()
+        structural_guidance = self._get_structural_guidance(ct)
 
-        # Build optional context sections
+        # Brand context sections
         context_parts: list[str] = []
         if self.channel_description:
             context_parts.append(
@@ -654,7 +953,6 @@ class TranscriptSegmenter:
         if context_parts:
             context_block = "\n".join(context_parts) + "\n\n"
 
-        # Custom instructions override section
         custom_block = ""
         if self.custom_instructions:
             custom_block = (
@@ -663,39 +961,128 @@ class TranscriptSegmenter:
             )
 
         return (
-            f"You are analyzing the transcript of a video{title_line} to "
-            f"identify viral-worthy clip segments for TikTok, Instagram "
-            f"Reels, and YouTube Shorts.\n"
+            f"You are SELECTING clips from a long-form video{title_line} "
+            f"for posting to TikTok, Instagram Reels, and YouTube Shorts. "
+            f"Each clip must be a complete, self-contained piece of work "
+            f"that lands as intended on the brand's audience.\n"
+            f"\n"
+            f"# Brand context\n"
             f"\n"
             f"{context_block}"
             f"{custom_block}"
-            f"TRANSCRIPT (with timestamps):\n"
+            f"# What you're picking from\n"
+            f"\n"
+            f"The transcript below is timestamped, with each line "
+            f"representing a span of speech and its time range:\n"
+            f"\n"
             f"{transcript_text}\n"
             f"\n"
-            f"Identify segments that would make compelling short-form clips. "
-            f"Look for:\n"
-            f"{content_guidance}"
+            f"# Your task\n"
             f"\n"
-            f"Rules:\n"
-            f"- Each segment MUST be 15-45 seconds long\n"
-            f"- Each segment MUST contain a complete thought (no mid-sentence "
-            f"cuts)\n"
-            f"- Segments MUST NOT overlap\n"
-            f"- Use the timestamps from the transcript to set boundaries\n"
-            f"- You MUST identify at least {target_count} segments. "
-            f"Scan the entire transcript thoroughly — do not stop early. "
-            f"Every 15-45 second stretch with a coherent thought is a "
-            f"valid segment\n"
+            f"SELECT 5-10 clips from this transcript.  Each clip must:\n"
+            f"\n"
+            f"- Be {self.min_segment_duration:.0f}-"
+            f"{self.max_segment_duration:.0f} seconds long\n"
+            f"- Be a COMPLETE coherent unit (not a fragment, not a teaser, "
+            f"not a mid-thought cut)\n"
+            f"- NOT overlap with other selected clips\n"
+            f"- Use timestamps from the transcript above for start_time / "
+            f"end_time\n"
+            f"\n"
+            f"# What makes a good clip for this content\n"
+            f"\n"
+            f"{content_guidance}\n"
+            f"\n"
+            f"# Structural patterns to recognize and respect\n"
+            f"\n"
+            f"{structural_guidance}\n"
+            f"\n"
+            f"# Universal short-form viral principles\n"
+            f"\n"
+            f"- HOOK in first 2-3 seconds — opening line creates curiosity "
+            f"or sensory reaction\n"
+            f"- PATTERN INTERRUPT or unexpected shift somewhere in the "
+            f"middle — makes the viewer commit to watching to the end\n"
+            f"- COMPLETE PAYOFF — the suggestion lands, the trigger fires, "
+            f"the punchline delivers; the viewer feels they got something\n"
+            f"- CLEAN END BEAT — not cut mid-breath, not on a cliffhanger "
+            f"that forces follow-up; lands on a resolution moment\n"
+            f"\n"
+            f"# Editing rhythm\n"
+            f"\n"
+            f"- CUT ON COMPLETION of a thought, not in the middle\n"
+            f"- HOLD on resolution beats — don't truncate the last word of "
+            f"a key moment\n"
+            f"- NEVER cut in the middle of a key delivery (suggestion, "
+            f"punchline, reveal)\n"
+            f"\n"
+            f"# Output format\n"
             f"\n"
             f"Output ONLY a valid JSON array with NO additional text.\n"
             f"segment_type must be one of: hook, narrative_arc, "
             f"complete_thought, emotional_peak\n"
+            f"The hook_summary field is mandatory — one sentence "
+            f"describing what makes this clip land.  If you cannot "
+            f"articulate why a boundary is right, the boundary is "
+            f"probably wrong.\n"
             f"\n"
             f"Example:\n"
-            f'[{{"start_time": 0.0, "end_time": 30.0, '
-            f'"hook_summary": "brief description", '
+            f'[{{"start_time": 12.4, "end_time": 47.8, '
+            f'"hook_summary": "what makes this clip land", '
             f'"segment_type": "hook"}}]\n'
         )
+
+    def _get_structural_guidance(self, content_type: str) -> str:
+        """Return content-type-specific structural patterns for the LLM.
+
+        Names the recognizable structures for each content type so the
+        LLM doesn't cut across them.  For ASMR/hypnosis specifically:
+        induction shape, fractionation cycles, trigger implantation,
+        nested loops — well-defined patterns the LLM should respect when
+        choosing boundaries.
+        """
+        ct = (content_type or "general").lower()
+        if "asmr" in ct or "hypno" in ct:
+            return (
+                "Hypnosis ASMR has identifiable structural shapes:\n"
+                "- INDUCTION ARC: setup → induction → deepener → suggestion → trigger → close. "
+                "Cutting mid-induction loses the setup that primes the listener; cutting "
+                "before the suggestion lands wastes the induction work.\n"
+                "- FRACTIONATION CYCLES: deepen → return-toward-surface → deepen further. "
+                "Each cycle is a unit; mid-cycle cuts leave the listener stuck mid-transition.\n"
+                "- TRIGGER IMPLANTATION: setup ('when I say X, you'll Y') → implantation → "
+                "test. Cut the test out and the trigger doesn't anchor.\n"
+                "- NESTED LOOPS: opening multiple suggestion frames before closing them. "
+                "Nesting INSIDE a clip is fine; opening a loop without closing it is broken.\n"
+                "- COMFORT / SAFETY language at clip endings matters — listeners use this "
+                "for sleep and trance. Ending on an open hook with no comfort beat is jarring.\n"
+            )
+        elif "gaming" in ct:
+            return (
+                "Gaming highlights have identifiable structural shapes:\n"
+                "- BUILDUP: positioning → engagement → climax → resolution\n"
+                "- REACTION arcs: surprise/triumph beats need full setup + reaction tail\n"
+                "- COMMENTARY peaks: complete thoughts; cutting mid-joke kills the bit\n"
+            )
+        elif "cooking" in ct:
+            return (
+                "Cooking content has identifiable structural shapes:\n"
+                "- TECHNIQUE arc: setup → execution → reveal\n"
+                "- HOOK + payoff: surprising ingredient → satisfying result\n"
+            )
+        elif "educational" in ct:
+            return (
+                "Educational content has identifiable structural shapes:\n"
+                "- INSIGHT arc: question/setup → explanation → aha-moment\n"
+                "- HOOK + reveal: counterintuitive claim → evidence → conclusion\n"
+            )
+        else:
+            return (
+                "Find complete narrative units:\n"
+                "- HOOK + DEVELOPMENT + RESOLUTION arcs\n"
+                "- COMPLETE THOUGHTS that stand alone without surrounding context\n"
+                "- EMOTIONAL PEAKS with full setup and reaction\n"
+            )
 
     def _get_content_type_guidance(self) -> str:
         """Return content-type-specific guidance for segment identification."""
