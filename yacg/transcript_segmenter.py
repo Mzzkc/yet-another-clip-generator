@@ -31,7 +31,13 @@ from yacg.models import (
 logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 3
-_REQUEST_TIMEOUT = 180
+# Default Ollama request timeout (seconds).  The Tier-1 cross-domain prompt
+# is significantly larger than the round-1-3 prompt (~3500 chars vs ~1000)
+# AND the segmenter model is typically larger (qwen3:30b vs qwen3:14b),
+# so inference can take 5-15 minutes on a long single ASMR transcript when
+# using the larger model.  1200s default accommodates that with headroom;
+# can be lowered for short content via constructor arg if added later.
+_REQUEST_TIMEOUT = 1200
 _SPEECH_PAUSE_THRESHOLD = 0.3  # seconds — gap defining a speech pause
 _MIN_SEGMENT_DURATION = 15.0  # seconds
 _MAX_SEGMENT_DURATION = 45.0  # seconds
@@ -734,13 +740,90 @@ class TranscriptSegmenter:
         return scenes, words
 
     def _format_transcript(
-        self, words: list[WordTimestamp], block_seconds: float = 10.0
+        self, words: list[WordTimestamp], block_seconds: float = 10.0,
+        section_count: int = 3,
     ) -> str:
         """Format words into timestamped text blocks for the LLM prompt.
 
         Groups words into blocks of approximately block_seconds duration,
         producing lines like: [00:18.08 - 00:28.00] We're no strangers to love ...
+
+        When ``section_count > 1``, the transcript is also pre-split into
+        equal-duration SECTIONS (default 3 thirds: early/middle/late) with
+        explicit headers between them.  This counters the LLM
+        lost-in-the-middle bias where models pick all clips from the early
+        portion of long transcripts; explicit section markers force the
+        model to consider each section as a distinct selection scope.
+        Round-4 evidence: with no section markers, qwen3:14b and qwen3:30b
+        both clustered all picks in the first 17% of a 23-min source.
         """
+        if not words:
+            return ""
+
+        # Build all blocks first (single pass over words).
+        blocks: list[tuple[float, float, str]] = []
+        block_start = words[0].start
+        block_words: list[str] = []
+
+        for idx, w in enumerate(words):
+            if w.start - block_start >= block_seconds and block_words:
+                block_end = words[idx - 1].end if idx > 0 else w.start
+                blocks.append((block_start, block_end, " ".join(block_words)))
+                block_words = []
+                block_start = w.start
+            block_words.append(w.word)
+
+        if block_words:
+            block_end = words[-1].end
+            blocks.append((block_start, block_end, " ".join(block_words)))
+
+        # IMPORTANT: timestamps formatted as raw SECONDS (decimal floats)
+        # not MM:SS — round-4 evidence showed qwen3:14b copies the input
+        # timestamp format into its JSON output; MM:SS strings break JSON
+        # parsing because `03:44.78` isn't a valid JSON number (the colon
+        # is interpreted as a key/value separator).  Raw seconds in the
+        # input + explicit "use seconds" prompt instruction = LLM outputs
+        # parseable JSON with second-precision timestamps.
+        if section_count <= 1:
+            return "\n".join(
+                f"[{s:.2f} - {e:.2f}] {t}"
+                for s, e, t in blocks
+            )
+
+        # Compute section boundaries by total source duration.
+        source_start = words[0].start
+        source_end = words[-1].end
+        section_dur = (source_end - source_start) / section_count
+        section_labels = (
+            ["EARLY", "MIDDLE", "LATE"] if section_count == 3
+            else [f"SECTION {i + 1} of {section_count}" for i in range(section_count)]
+        )
+
+        lines: list[str] = []
+        current_section = -1
+        for s, e, t in blocks:
+            block_section = min(
+                section_count - 1,
+                int((s - source_start) // section_dur),
+            )
+            if block_section != current_section:
+                current_section = block_section
+                label = section_labels[block_section]
+                section_start = source_start + block_section * section_dur
+                section_end = source_start + (block_section + 1) * section_dur
+                lines.append("")
+                lines.append(
+                    f"=== {label} THIRD "
+                    f"({section_start:.2f}s - {section_end:.2f}s) "
+                    f"===  ← pick AT LEAST ONE clip from this section"
+                )
+            lines.append(f"[{s:.2f} - {e:.2f}] {t}")
+        return "\n".join(lines).strip()
+
+    def _format_transcript_legacy(
+        self, words: list[WordTimestamp], block_seconds: float = 10.0
+    ) -> str:
+        """LEGACY no-sections formatter — kept for backward-compat callers."""
         if not words:
             return ""
 
@@ -979,15 +1062,33 @@ class TranscriptSegmenter:
             f"\n"
             f"# Your task\n"
             f"\n"
-            f"SELECT 5-10 clips from this transcript.  Each clip must:\n"
+            f"SELECT 5-10 of the BEST clips from this transcript — the most "
+            f"compelling moments scattered ACROSS THE WHOLE VIDEO, not "
+            f"contiguous coverage of one section.  Each clip must:\n"
             f"\n"
             f"- Be {self.min_segment_duration:.0f}-"
             f"{self.max_segment_duration:.0f} seconds long\n"
             f"- Be a COMPLETE coherent unit (not a fragment, not a teaser, "
             f"not a mid-thought cut)\n"
             f"- NOT overlap with other selected clips\n"
+            f"- NOT be adjacent to other selected clips (leave gaps between "
+            f"clips — adjacent picks usually mean the LLM is chopping one "
+            f"long passage into pieces; instead pick the SINGLE BEST passage "
+            f"and move on to find the next best moment elsewhere)\n"
             f"- Use timestamps from the transcript above for start_time / "
             f"end_time\n"
+            f"\n"
+            f"You are picking 5-10 STANDOUT MOMENTS, not summarizing or "
+            f"covering the video.  Most of the video should NOT be in any "
+            f"clip.\n"
+            f"\n"
+            f"DISTRIBUTION: The transcript above is split into "
+            f"=== EARLY / MIDDLE / LATE THIRD === sections.  You MUST pick "
+            f"AT LEAST ONE clip from EACH section.  Even if the early third "
+            f"has the best opening hook, the middle and late thirds contain "
+            f"the development and payoff of the script — the most "
+            f"emotionally resonant moments are typically NOT in the first "
+            f"third.  Read each section to its end before deciding.\n"
             f"\n"
             f"# What makes a good clip for this content\n"
             f"\n"
@@ -1019,6 +1120,13 @@ class TranscriptSegmenter:
             f"# Output format\n"
             f"\n"
             f"Output ONLY a valid JSON array with NO additional text.\n"
+            f"\n"
+            f"start_time and end_time MUST be decimal SECONDS (e.g. 12.4, "
+            f"not 00:12.40 or 0:12).  The timestamps in the transcript "
+            f"above are also in seconds — copy them as plain decimal "
+            f"numbers into your JSON.  MM:SS format will break JSON "
+            f"parsing.\n"
+            f"\n"
             f"segment_type must be one of: hook, narrative_arc, "
             f"complete_thought, emotional_peak\n"
             f"The hook_summary field is mandatory — one sentence "
@@ -1243,8 +1351,48 @@ class TranscriptSegmenter:
         try:
             items = json.loads(json_str)
         except json.JSONDecodeError as exc:
-            logger.warning("Failed to parse JSON from LLM response: %s", exc)
-            return []
+            # Defensive fallback: some LLMs (qwen3:14b observed in round 4)
+            # output timestamps as MM:SS strings (e.g. `03:44.78`) instead
+            # of decimal seconds.  These break JSON because the colon is
+            # interpreted as a key/value separator.  Convert MM:SS or H:MM:SS
+            # patterns inside numeric value positions to decimal seconds and
+            # retry parsing.
+            mmss_pattern = re.compile(
+                r'("(?:start_time|end_time)":\s*)(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?'
+            )
+            def _to_seconds(m: re.Match[str]) -> str:
+                key_part = m.group(1)
+                mm = int(m.group(2))
+                ss = int(m.group(3))
+                ms_str = m.group(4) or ""
+                ms = int(ms_str) / (10 ** len(ms_str)) if ms_str else 0.0
+                return f"{key_part}{mm * 60 + ss + ms:.2f}"
+            json_str_fixed = mmss_pattern.sub(_to_seconds, json_str)
+            if json_str_fixed != json_str:
+                try:
+                    items = json.loads(json_str_fixed)
+                    logger.info(
+                        "JSON parse: recovered from MM:SS-format timestamps via "
+                        "regex fallback (%d substitutions)",
+                        len(mmss_pattern.findall(json_str)),
+                    )
+                except json.JSONDecodeError as exc2:
+                    logger.warning(
+                        "Failed to parse JSON even after MM:SS fixup: %s", exc2,
+                    )
+                    logger.warning(
+                        "Raw LLM response (first 500 chars): %r", text[:500]
+                    )
+                    return []
+            else:
+                logger.warning("Failed to parse JSON from LLM response: %s", exc)
+                logger.warning(
+                    "Raw LLM response (first 500 chars): %r", text[:500]
+                )
+                logger.warning(
+                    "Extracted json_str (first 500 chars): %r", json_str[:500]
+                )
+                return []
 
         if not isinstance(items, list):
             logger.warning("LLM response is not a JSON array")

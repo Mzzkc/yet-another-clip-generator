@@ -311,7 +311,11 @@ def main() -> int:
     logger.info("LLM returned %d candidate segments", len(boundaries))
 
     logger.info("Step 3: refining boundaries with pause-snap")
-    refined = seg.refine_boundaries(boundaries, words)
+    # Pass video_path through so refine_boundaries runs stage B
+    # (acoustic RMS local-minimum snap).  See transcript_segmenter.py
+    # for details — required for sub-word precision on ASMR/whispered
+    # cadence content.
+    refined = seg.refine_boundaries(boundaries, words, video_path=str(source))
     logger.info("Refined to %d segments", len(refined))
 
     # Pause histogram
