@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from yacg.models import WordTimestamp
+from yacg.models import SubtitleStyle, WordTimestamp
 from yacg.subtitle_burner import SubtitleBurner, _format_ass_time
 
 
@@ -79,16 +79,23 @@ class TestGenerateAss:
         margin = int(720 * 0.15)
         assert f",{margin},{margin}," in ass
 
-    def test_ass_word_grouping(self, burner, sample_words):
-        """Words are grouped into 1-3 word phrases."""
+    def test_ass_word_grouping_defaults_to_two_words(self, burner, sample_words):
+        """The vertical-video default caps subtitle groups at two words."""
         ass = burner.generate_ass(sample_words, 1080, 1920)
 
-        # Should have "Never gonna give" as one group (gaps < 200ms)
-        assert "Never gonna give" in ass
-        # "you" should be separate (gap to "up" is >200ms)
-        # "up" should be separate
+        assert "Never gonna" in ass
+        assert "give you" in ass
         dialogue_lines = [l for l in ass.split("\n") if l.startswith("Dialogue:")]
-        assert len(dialogue_lines) == 3  # 3 groups
+        assert len(dialogue_lines) == 3
+
+    def test_ass_word_grouping_allows_three_words(self, burner, sample_words):
+        """Callers can retain the original three-word grouping explicitly."""
+        style = SubtitleStyle(max_words_per_group=3)
+        ass = burner.generate_ass(sample_words, 1080, 1920, style=style)
+
+        assert "Never gonna give" in ass
+        dialogue_lines = [l for l in ass.split("\n") if l.startswith("Dialogue:")]
+        assert len(dialogue_lines) == 3
 
     def test_subtitle_burner_raises_on_empty_words(self, burner):
         """generate_ass raises RuntimeError on empty word list."""
