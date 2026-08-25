@@ -219,6 +219,43 @@ class TestCLIContentProfileArgs:
         assert args.platform == "tiktok"
 
 
+class TestSubtitleGroupingArguments:
+    """The command line exposes a complete, constrained grouping range."""
+
+    def test_subtitle_group_bounds_parse_and_override_style(self):
+        from yacg.cli import _build_config, build_parser
+
+        parser = build_parser()
+        args = parser.parse_args([
+            "process", "--video", "test.mp4",
+            "--subtitle-min-words-per-group", "3",
+            "--subtitle-max-words-per-group", "5",
+        ])
+        config = _build_config(args)
+
+        assert config.subtitle_style.min_words_per_group == 3
+        assert config.subtitle_style.max_words_per_group == 5
+
+    @pytest.mark.parametrize(
+        "flag, value",
+        [
+            ("--subtitle-min-words-per-group", "0"),
+            ("--subtitle-max-words-per-group", "6"),
+        ],
+    )
+    def test_subtitle_group_bounds_reject_values_outside_one_to_five(self, flag, value):
+        from yacg.cli import build_parser
+
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(["process", "--video", "test.mp4", flag, value])
+
+    def test_subtitle_style_rejects_minimum_above_maximum(self):
+        from yacg.models import SubtitleStyle
+
+        with pytest.raises(ValueError, match="min_words_per_group"):
+            SubtitleStyle(min_words_per_group=4, max_words_per_group=3)
+
+
 # ---------------------------------------------------------------------------
 # _build_config: all ContentProfile field overrides
 # ---------------------------------------------------------------------------

@@ -91,6 +91,10 @@ class SubtitleStyle:
     shadow: float = 1.5
     margin_v_pct: float = 0.38     # fraction of video height
     margin_h_pct: float = 0.15     # fraction of video width
+    karaoke: bool = False
+    karaoke_active_color: str = "&H006BE022"
+    min_words_per_group: int = 1   # validated range: 1-5
+    max_words_per_group: int = 2   # validated range: 1-5, at least minimum
 ```
 
 Colors use the ASS `&HAABBGGRR` hex format (note: blue-green-red order, not RGB).
@@ -746,7 +750,14 @@ output = burner.burn_subtitles(
 )
 ```
 
-Word grouping constants (not configurable): `WORD_GROUP_GAP = 0.2s` (pause triggers new group), `SENTENCE_BREAK_GAP = 0.3s` (minimum display time), `MAX_GROUP_DURATION = 2.0s` (maximum display time). Words appear 1-3 at a time in TikTok-style "word-pop" groups.
+Adaptive grouping targets `SubtitleStyle.min_words_per_group` through
+`max_words_per_group` (both 1-5). It breaks earlier after terminal punctuation,
+a pause over `WORD_GROUP_GAP = 0.2s`, `MAX_GROUP_DURATION = 2.0s`, or when the
+single-line text exceeds the final font's available width after horizontal
+margins. Continuous short tails are rebalanced where that does not cross one of
+those boundaries. With karaoke enabled, ASS `\\k` durations run from each word
+onset to the next onset, while the final word ends at its own timestamp; dialogue
+events retain the phrase's actual first-word start and last-word end.
 
 ### SceneDetector (Legacy)
 

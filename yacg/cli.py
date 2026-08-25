@@ -249,11 +249,17 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
              "anime/cartoon, particle effects).",
     )
     parser.add_argument(
+        "--subtitle-min-words-per-group", type=int, default=None,
+        choices=[1, 2, 3, 4, 5],
+        help="Target at least this many words per subtitle phrase when no "
+             "natural boundary requires an earlier break (default: 1).",
+    )
+    parser.add_argument(
         "--subtitle-max-words-per-group", type=int, default=None,
-        choices=[1, 2, 3, 4],
+        choices=[1, 2, 3, 4, 5],
         help="Cap on words per on-screen subtitle group (default: 2). "
-             "Lower = single-word-pop style (1); higher = longer "
-             "groups (3-4) for normal-rate content with shorter words.",
+        "Lower = single-word-pop style (1); higher = longer "
+             "groups (3-5) for normal-rate content with shorter words.",
     )
     parser.add_argument(
         "--subtitle-karaoke", action="store_true", default=None,
@@ -419,8 +425,27 @@ def _build_config(args: argparse.Namespace):
         config.subtitle_style.margin_h_pct = args.subtitle_margin_h
     if getattr(args, "subtitle_border_style", None) is not None:
         config.subtitle_style.border_style = args.subtitle_border_style
-    if getattr(args, "subtitle_max_words_per_group", None) is not None:
-        config.subtitle_style.max_words_per_group = args.subtitle_max_words_per_group
+    subtitle_min_words = getattr(args, "subtitle_min_words_per_group", None)
+    subtitle_max_words = getattr(args, "subtitle_max_words_per_group", None)
+    effective_min_words = (
+        subtitle_min_words
+        if subtitle_min_words is not None
+        else config.subtitle_style.min_words_per_group
+    )
+    effective_max_words = (
+        subtitle_max_words
+        if subtitle_max_words is not None
+        else config.subtitle_style.max_words_per_group
+    )
+    if effective_min_words > effective_max_words:
+        raise ValueError(
+            "--subtitle-min-words-per-group must not exceed "
+            "--subtitle-max-words-per-group"
+        )
+    if subtitle_min_words is not None:
+        config.subtitle_style.min_words_per_group = subtitle_min_words
+    if subtitle_max_words is not None:
+        config.subtitle_style.max_words_per_group = subtitle_max_words
     if getattr(args, "no_subtitle_karaoke", False):
         config.subtitle_style.karaoke = False
     elif getattr(args, "subtitle_karaoke", None):

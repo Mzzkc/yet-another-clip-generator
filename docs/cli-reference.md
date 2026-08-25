@@ -279,6 +279,10 @@ These flags are shared across `process`, `youtube`, and `batch`:
 | `--subtitle-shadow` | `1.5` | Shadow depth in pixels |
 | `--subtitle-margin-v` | `0.38` | Vertical margin as fraction of video height (default: 38%) |
 | `--subtitle-margin-h` | `0.15` | Horizontal margin as fraction of video width (default: 15%) |
+| `--subtitle-min-words-per-group` | `1` | Target at least this many words per phrase unless punctuation, a speech gap over 0.2 seconds, the 2.0-second phrase limit, or available rendered width requires an earlier break. Valid values: 1-5. Use `3` with a maximum of `5` for adaptive phrase captions |
+| `--subtitle-max-words-per-group` | `2` | Hard cap on words in a phrase. Valid values: 1-5. Explicit 1- or 2-word styles remain supported |
+| `--subtitle-karaoke` / `--no-subtitle-karaoke` | off | Enable/disable per-word ASS karaoke highlighting. Each word progresses until the next word onset; the final word ends at its own end timestamp |
+| `--subtitle-active-color` | `&H006BE022` | ASS `&HAABBGGRR` color for spoken karaoke words |
 
 ## Exit Codes
 

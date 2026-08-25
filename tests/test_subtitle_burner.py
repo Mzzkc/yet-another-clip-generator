@@ -91,7 +91,7 @@ class TestGenerateAss:
     def test_ass_word_grouping_allows_three_words(self, burner, sample_words):
         """Callers can retain the original three-word grouping explicitly."""
         style = SubtitleStyle(max_words_per_group=3)
-        ass = burner.generate_ass(sample_words, 1080, 1920, style=style)
+        ass = burner.generate_ass(sample_words, 1920, 1080, style=style)
 
         assert "Never gonna give" in ass
         dialogue_lines = [l for l in ass.split("\n") if l.startswith("Dialogue:")]
@@ -101,6 +101,135 @@ class TestGenerateAss:
         """generate_ass raises RuntimeError on empty word list."""
         with pytest.raises(RuntimeError, match="No words provided"):
             burner.generate_ass([], 1080, 1920)
+
+
+class TestAdaptiveCaptionGrouping:
+    """Adaptive phrase grouping is visible in the rendered ASS dialogue."""
+
+    @staticmethod
+    def _words(*entries: tuple[str, float, float]) -> list[WordTimestamp]:
+        return [WordTimestamp(word=word, start=start, end=end) for word, start, end in entries]
+
+    @staticmethod
+    def _dialogue_texts(ass: str) -> list[str]:
+        return [line.rsplit(",", 1)[1] for line in ass.splitlines() if line.startswith("Dialogue:")]
+
+    def test_adaptive_groups_rebalance_a_continuous_tail_to_three_words(self, burner):
+        """Seven continuous words use 4+3 rather than leaving a two-word tail."""
+        words = self._words(
+            ("one", 0.00, 0.10), ("two", 0.12, 0.22), ("three", 0.24, 0.34),
+            ("four", 0.36, 0.46), ("five", 0.48, 0.58), ("six", 0.60, 0.70),
+            ("seven", 0.72, 0.82),
+        )
+
+        ass = burner.generate_ass(
+            words, 1920, 1080,
+            style=SubtitleStyle(min_words_per_group=3, max_words_per_group=5),
+        )
+
+        assert self._dialogue_texts(ass) == ["one two three four", "five six seven"]
+
+    def test_adaptive_groups_break_early_after_attached_terminal_punctuation(self, burner):
+        """A terminal token ends a phrase even when it has fewer than three words."""
+        words = self._words(
+            ("Wait!", 0.00, 0.15), ("Now", 0.17, 0.29), ("listen", 0.31, 0.43),
+            ("very", 0.45, 0.57), ("closely", 0.59, 0.71),
+        )
+
+        ass = burner.generate_ass(
+            words, 1920, 1080,
+            style=SubtitleStyle(min_words_per_group=3, max_words_per_group=5),
+        )
+
+        assert self._dialogue_texts(ass) == ["Wait!", "Now listen very closely"]
+
+    def test_adaptive_groups_break_early_for_a_real_pause(self, burner):
+        """A pause over 0.2 seconds permits a short phrase at its boundary."""
+        words = self._words(
+            ("Please", 0.00, 0.10), ("wait", 0.12, 0.22),
+            ("for", 0.50, 0.60), ("a", 0.62, 0.72), ("moment", 0.74, 0.84),
+        )
+
+        ass = burner.generate_ass(
+            words, 1920, 1080,
+            style=SubtitleStyle(min_words_per_group=3, max_words_per_group=5),
+        )
+
+        assert self._dialogue_texts(ass) == ["Please wait", "for a moment"]
+
+    def test_adaptive_groups_break_early_for_duration_and_rendered_width(self, burner):
+        """Duration and final font/margins prevent unreadable overlong phrases."""
+        duration_words = self._words(
+            ("one", 0.00, 0.20), ("two", 0.25, 0.45), ("three", 0.50, 0.70),
+            ("four", 2.01, 2.20), ("five", 2.25, 2.45), ("six", 2.50, 2.70),
+        )
+        duration_ass = burner.generate_ass(
+            duration_words, 1920, 1080,
+            style=SubtitleStyle(min_words_per_group=3, max_words_per_group=5),
+        )
+        assert self._dialogue_texts(duration_ass) == ["one two three", "four five six"]
+
+        width_words = self._words(
+            ("I", 0.00, 0.10), ("am", 0.12, 0.22),
+            ("hyperdimensional", 0.24, 0.34), ("today", 0.36, 0.46),
+            ("with", 0.48, 0.58), ("you", 0.60, 0.70),
+        )
+        width_ass = burner.generate_ass(
+            width_words, 820, 1000,
+            style=SubtitleStyle(
+                font_name="Liberation Sans", font_size_pct=0.10, margin_h_pct=0.10,
+                min_words_per_group=3, max_words_per_group=5,
+            ),
+        )
+        assert self._dialogue_texts(width_ass) == ["I am", "hyperdimensional", "today with you"]
+
+    def test_explicit_one_and_two_word_styles_remain_compatible(self, burner, sample_words):
+        """Existing explicitly configured compact caption styles are unchanged."""
+        one_word = burner.generate_ass(
+            sample_words, 1080, 1920,
+            style=SubtitleStyle(min_words_per_group=1, max_words_per_group=1),
+        )
+        two_words = burner.generate_ass(
+            sample_words, 1080, 1920,
+            style=SubtitleStyle(min_words_per_group=1, max_words_per_group=2),
+        )
+
+        assert self._dialogue_texts(one_word) == ["Never", "gonna", "give", "you", "up"]
+        assert self._dialogue_texts(two_words) == ["Never gonna", "give you", "up"]
+
+
+class TestKaraokeTiming:
+    """Karaoke durations follow word onsets while dialogue bounds remain exact."""
+
+    def test_karaoke_uses_next_word_onset_and_true_phrase_bounds(self, burner):
+        words = [
+            WordTimestamp(word="one", start=0.00, end=0.10),
+            WordTimestamp(word="two", start=0.25, end=0.35),
+            WordTimestamp(word="three", start=0.36, end=0.45),
+        ]
+
+        ass = burner.generate_ass(
+            words, 1080, 1920,
+            style=SubtitleStyle(karaoke=True, min_words_per_group=3, max_words_per_group=3),
+        )
+        dialogue = next(line for line in ass.splitlines() if line.startswith("Dialogue:"))
+
+        assert dialogue.startswith("Dialogue: 0,0:00:00.00,0:00:00.45,")
+        assert dialogue.endswith(r"{\k25}one {\k11}two {\k9}three")
+
+    def test_karaoke_rounding_never_emits_zero_centiseconds(self, burner):
+        words = [
+            WordTimestamp(word="one", start=0.000, end=0.001),
+            WordTimestamp(word="two", start=0.001, end=0.002),
+            WordTimestamp(word="three", start=0.002, end=0.003),
+        ]
+
+        ass = burner.generate_ass(
+            words, 1080, 1920,
+            style=SubtitleStyle(karaoke=True, min_words_per_group=3, max_words_per_group=3),
+        )
+
+        assert r"{\k1}one {\k1}two {\k1}three" in ass
 
 
 # ---------------------------------------------------------------------------

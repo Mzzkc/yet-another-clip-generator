@@ -182,6 +182,21 @@ class SubtitleStyle:
     # using made-up names like "andragor").  Bump to 3 for normal-rate
     # content with shorter words; lower to 1 for single-word-pop style.
     max_words_per_group: int = 2
+    # Minimum words to target for adaptive groups.  One preserves the
+    # existing one- and two-word caption styles; callers that want readable
+    # phrase captions can explicitly choose 3 together with a 3-5 maximum.
+    min_words_per_group: int = 1
+
+    def __post_init__(self) -> None:
+        """Keep subtitle grouping bounds explicit and internally coherent."""
+        if not 1 <= self.min_words_per_group <= 5:
+            raise ValueError("min_words_per_group must be between 1 and 5")
+        if not 1 <= self.max_words_per_group <= 5:
+            raise ValueError("max_words_per_group must be between 1 and 5")
+        if self.min_words_per_group > self.max_words_per_group:
+            raise ValueError(
+                "min_words_per_group must not exceed max_words_per_group"
+            )
 
 
 VALID_CONTENT_TYPES: frozenset[str] = frozenset({

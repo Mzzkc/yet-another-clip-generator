@@ -9,9 +9,11 @@ Receives words from the full-video Whisper run — does NOT re-transcribe.
 import logging
 import os
 import platform
+import struct
 import subprocess
 import tempfile
 import threading
+from functools import lru_cache
 
 from yacg.models import SubtitleStyle, WordTimestamp
 from yacg.utils.video_utils import translate_ffmpeg_error
@@ -84,6 +86,107 @@ def _find_system_font() -> str:
         return _cached_font
 
 
+@lru_cache(maxsize=32)
+def _font_metrics(font_name: str) -> tuple[int, tuple[int, ...], bytes, int] | None:
+    """Load enough TrueType metrics to measure the font libass will select.
+
+    Fontconfig resolves the same family substitution used by libass on Linux
+    and macOS.  The standard library has no text-metric API, so reading the
+    advance widths directly keeps grouping independent of an optional imaging
+    dependency.  Fonts or platforms that cannot expose a TrueType file fall
+    back to a conservative estimate below.
+    """
+    try:
+        result = subprocess.run(
+            ["fc-match", "--format=%{file}", font_name],
+            capture_output=True, text=True, timeout=5,
+        )
+        font_path = result.stdout.strip()
+        if result.returncode != 0 or not font_path:
+            return None
+        with open(font_path, "rb") as font_file:
+            data = font_file.read()
+
+        num_tables = struct.unpack_from(">H", data, 4)[0]
+        tables: dict[bytes, tuple[int, int]] = {}
+        for index in range(num_tables):
+            offset = 12 + index * 16
+            tag, _, table_offset, length = struct.unpack_from(">4sIII", data, offset)
+            tables[tag] = (table_offset, length)
+        head_offset = tables[b"head"][0]
+        hhea_offset = tables[b"hhea"][0]
+        hmtx_offset = tables[b"hmtx"][0]
+        cmap_offset = tables[b"cmap"][0]
+        units_per_em = struct.unpack_from(">H", data, head_offset + 18)[0]
+        number_of_metrics = struct.unpack_from(">H", data, hhea_offset + 34)[0]
+        advances = tuple(
+            struct.unpack_from(">H", data, hmtx_offset + index * 4)[0]
+            for index in range(number_of_metrics)
+        )
+
+        cmap_tables = struct.unpack_from(">H", data, cmap_offset + 2)[0]
+        cmap_subtable_offset = None
+        for index in range(cmap_tables):
+            record_offset = cmap_offset + 4 + index * 8
+            platform_id, encoding_id, relative_offset = struct.unpack_from(
+                ">HHI", data, record_offset,
+            )
+            candidate_offset = cmap_offset + relative_offset
+            format_id = struct.unpack_from(">H", data, candidate_offset)[0]
+            if format_id == 4 and (platform_id, encoding_id) in {(3, 1), (0, 3), (0, 4)}:
+                cmap_subtable_offset = candidate_offset
+                break
+        if cmap_subtable_offset is None:
+            return None
+        return units_per_em, advances, data, cmap_subtable_offset
+    except (FileNotFoundError, KeyError, OSError, struct.error, subprocess.TimeoutExpired):
+        return None
+
+
+def _glyph_id_for_codepoint(font_data: bytes, cmap_offset: int, codepoint: int) -> int:
+    """Return a glyph id from a TrueType format-4 Unicode cmap."""
+    seg_count = struct.unpack_from(">H", font_data, cmap_offset + 6)[0] // 2
+    end_codes_offset = cmap_offset + 14
+    start_codes_offset = end_codes_offset + seg_count * 2 + 2
+    id_delta_offset = start_codes_offset + seg_count * 2
+    id_range_offset = id_delta_offset + seg_count * 2
+    for index in range(seg_count):
+        end_code = struct.unpack_from(">H", font_data, end_codes_offset + index * 2)[0]
+        if codepoint > end_code:
+            continue
+        start_code = struct.unpack_from(">H", font_data, start_codes_offset + index * 2)[0]
+        if codepoint < start_code:
+            return 0
+        delta = struct.unpack_from(">h", font_data, id_delta_offset + index * 2)[0]
+        range_offset_position = id_range_offset + index * 2
+        range_offset = struct.unpack_from(">H", font_data, range_offset_position)[0]
+        if range_offset == 0:
+            return (codepoint + delta) & 0xFFFF
+        glyph_position = range_offset_position + range_offset + 2 * (codepoint - start_code)
+        glyph_id = struct.unpack_from(">H", font_data, glyph_position)[0]
+        return (glyph_id + delta) & 0xFFFF if glyph_id else 0
+    return 0
+
+
+def _rendered_text_width(text: str, font_name: str, font_size: int, outline_width: float) -> float:
+    """Estimate single-line ASS width from the selected font's glyph advances."""
+    metrics = _font_metrics(font_name)
+    if metrics is not None:
+        units_per_em, advances, font_data, cmap_offset = metrics
+        advance_units = 0
+        for character in text:
+            glyph_id = _glyph_id_for_codepoint(font_data, cmap_offset, ord(character))
+            advance_units += advances[min(glyph_id, len(advances) - 1)]
+        return advance_units * font_size / units_per_em + 2 * outline_width
+
+    # Fontconfig is unavailable on Windows and minimal containers.  Preserve
+    # a conservative bound there rather than allowing a phrase to overflow.
+    narrow = set("ilIjtfr.,'!|:;` ")
+    wide = set("MW@#%&")
+    em_width = sum(0.32 if char in narrow else 0.92 if char in wide else 0.58 for char in text)
+    return em_width * font_size + 2 * outline_width
+
+
 def _format_ass_time(seconds: float) -> str:
     """Convert seconds to ASS time format h:mm:ss.cc (centiseconds)."""
     if seconds < 0:
@@ -104,60 +207,93 @@ class SubtitleBurner:
     # Word grouping constants — named for clarity and tuning.
     # WORD_GROUP_GAP: Pause (seconds) that triggers a new subtitle group.
     WORD_GROUP_GAP = 0.2
-    # SENTENCE_BREAK_GAP: Minimum display time for a subtitle group.
-    SENTENCE_BREAK_GAP = 0.3
     # MAX_GROUP_DURATION: Maximum display time before forcing a new group.
     MAX_GROUP_DURATION = 2.0
 
     def _group_words(
         self,
         words: list[WordTimestamp],
-        max_words_per_group: int = 3,
+        min_words_per_group: int,
+        max_words_per_group: int,
+        available_width: int,
+        font_name: str,
+        font_size: int,
+        outline_width: float,
     ) -> list[tuple[float, float, list[WordTimestamp]]]:
-        """Group words into short-phrase subtitle units.
+        """Group words into readable subtitle phrases.
 
         Returns list of (start_time, end_time, group_words) tuples.
         Times should already be clip-relative (shifted by clip_start).
         Returning the WORD list (not concatenated text) lets the caller
         emit per-word karaoke timing tags when needed.
-
-        Args:
-            words: Word timestamps for this clip (clip-relative times).
-            max_words_per_group: Soft cap on words per group.  Default 3
-                preserves original behavior; SubtitleStyle.max_words_per_group
-                (default 2) tightens this for narrow vertical crops with
-                long words.
         """
         groups: list[tuple[float, float, list[WordTimestamp]]] = []
+        # The reason after each group determines whether its short tail may
+        # borrow words from the preceding group.  Only a soft max-word split
+        # is movable; punctuation, pauses, duration, and width are real
+        # spoken/rendered boundaries.
+        split_reasons: list[str] = []
         i = 0
         while i < len(words):
             group_words = [words[i]]
             group_start = words[i].start
-
-            # Try to add up to (max_words_per_group - 1) more words
-            extra = max(0, max_words_per_group - 1)
-            for j in range(1, extra + 1):
-                next_idx = i + j
-                if next_idx >= len(words):
+            split_reason = "end"
+            while i + len(group_words) < len(words):
+                candidate = words[i + len(group_words)]
+                previous = group_words[-1]
+                if previous.word.strip().endswith((".", "!", "?", "…")):
+                    split_reason = "punctuation"
                     break
-                # Check for natural pause before this word
-                gap = words[next_idx].start - words[next_idx - 1].end
-                if gap > self.WORD_GROUP_GAP:
+                if candidate.start - previous.end > self.WORD_GROUP_GAP:
+                    split_reason = "gap"
                     break
-                group_words.append(words[next_idx])
+                if candidate.end - group_start > self.MAX_GROUP_DURATION:
+                    split_reason = "duration"
+                    break
+                candidate_words = [*group_words, candidate]
+                candidate_text = " ".join(word.word.strip() for word in candidate_words)
+                if _rendered_text_width(
+                    candidate_text, font_name, font_size, outline_width,
+                ) > available_width:
+                    split_reason = "width"
+                    break
+                if len(candidate_words) > max_words_per_group:
+                    split_reason = "max_words"
+                    break
+                group_words = candidate_words
 
-            group_end = group_words[-1].end
-
-            # Enforce minimum display time
-            if group_end - group_start < self.SENTENCE_BREAK_GAP:
-                group_end = group_start + self.SENTENCE_BREAK_GAP
-
-            # Cap maximum display time
-            if group_end - group_start > self.MAX_GROUP_DURATION:
-                group_end = group_start + self.MAX_GROUP_DURATION
-
-            groups.append((group_start, group_end, group_words))
+            groups.append((group_words[0].start, group_words[-1].end, group_words))
+            split_reasons.append(split_reason)
             i += len(group_words)
+
+        # Greedy groups naturally end at the maximum.  Shift words into a
+        # final short group where the split was arbitrary, keeping target
+        # 3-5 phrases for continuous speech without crossing a hard boundary.
+        for index in range(len(groups) - 1, 0, -1):
+            start, end, group_words = groups[index]
+            previous_start, previous_end, previous_words = groups[index - 1]
+            if len(group_words) >= min_words_per_group or split_reasons[index - 1] != "max_words":
+                continue
+            needed = min_words_per_group - len(group_words)
+            if len(previous_words) - needed < min_words_per_group:
+                continue
+            moved_words = previous_words[-needed:]
+            rebalanced_words = [*moved_words, *group_words]
+            rebalanced_text = " ".join(word.word.strip() for word in rebalanced_words)
+            if (
+                rebalanced_words[-1].end - rebalanced_words[0].start > self.MAX_GROUP_DURATION
+                or _rendered_text_width(
+                    rebalanced_text, font_name, font_size, outline_width,
+                ) > available_width
+            ):
+                continue
+            remaining_words = previous_words[:-needed]
+            groups[index - 1] = (
+                remaining_words[0].start, remaining_words[-1].end, remaining_words,
+            )
+            groups[index] = (
+                rebalanced_words[0].start, rebalanced_words[-1].end, rebalanced_words,
+            )
 
         return groups
 
@@ -256,10 +392,17 @@ class SubtitleBurner:
             ass_primary = style.primary_color
             ass_secondary = style.primary_color
 
-        # Group words.  Returns (start, end, [WordTimestamp...]) tuples so
-        # we can emit per-word karaoke tags when style.karaoke is on.
+        # Group words using the final font size and margins.  This prevents a
+        # phrase that was valid before style resolution from overflowing the
+        # actual single-line libass rendering area.
         groups = self._group_words(
-            words, max_words_per_group=style.max_words_per_group,
+            words,
+            min_words_per_group=style.min_words_per_group,
+            max_words_per_group=style.max_words_per_group,
+            available_width=frame_width - margin_l - margin_r,
+            font_name=font_name,
+            font_size=font_size,
+            outline_width=outline_width,
         )
 
         dialogue_lines: list[str] = []
@@ -270,8 +413,13 @@ class SubtitleBurner:
                 # Per-word karaoke timing.  ASS \k expects centiseconds.
                 # Use a minimum of 1cs so even very short words register.
                 parts: list[str] = []
-                for w in group_words:
-                    cs = max(1, int(round((w.end - w.start) * 100)))
+                for index, w in enumerate(group_words):
+                    next_onset = (
+                        group_words[index + 1].start
+                        if index + 1 < len(group_words)
+                        else w.end
+                    )
+                    cs = max(1, int(round((next_onset - w.start) * 100)))
                     parts.append(f"{{\\k{cs}}}{w.word.strip()}")
                 text = " ".join(parts)
             else:
