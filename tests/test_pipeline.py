@@ -634,6 +634,67 @@ class TestPipelineSubtitleRebasing:
         assert extraction_ends == pytest.approx([20.3])
         assert subtitle_ends == pytest.approx([20.3])
 
+    def test_legacy_extractor_subclass_keeps_four_argument_call_path(
+        self, tmp_path,
+    ):
+        """Inherited capability markers cannot opt an old override into kwargs."""
+        from yacg.extractors.clip_extractor import ClipExtractor
+        from yacg.pipeline import ViralClipPipeline
+
+        class LegacyExtractor(ClipExtractor):
+            def __init__(self, config):
+                super().__init__(config=config)
+                self.calls: list[tuple[str, float, float, str]] = []
+
+            def _get_video_duration(self, video_path: str) -> float:
+                return 30.0
+
+            def extract_clip(
+                self,
+                video_path: str,
+                start_time: float,
+                end_time: float,
+                output_path: str,
+            ) -> bool:
+                self.calls.append((video_path, start_time, end_time, output_path))
+                Path(output_path).write_bytes(b"legacy clip")
+                return True
+
+        config = PipelineConfig(output_dir=str(tmp_path))
+        clip = ClipData(
+            scene=SceneSegment(start_time=10.0, end_time=20.0, scene_index=0),
+            audio=AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+            ),
+            visual=VisualFeatures(
+                motion_score=0.0,
+                face_presence=0.0,
+                visual_interest=0.0,
+                composition_score=0.0,
+            ),
+            semantic=SemanticFeatures(
+                emotional_intensity=0.0,
+                narrative_interest=0.0,
+                hook_potential=0.0,
+                asmr_quality=0.0,
+                visual_appeal=0.0,
+                uniqueness=0.0,
+            ),
+        )
+        extractor = LegacyExtractor(config)
+        pipeline = ViralClipPipeline(config=config, clip_extractor=extractor)
+        errors: list[str] = []
+
+        pipeline._extract_clips("source.mp4", [clip], str(tmp_path), "", errors)
+
+        assert len(extractor.calls) == 1
+        assert clip.output_path is not None
+        assert clip.source_duration is None
+        assert errors == []
+
 
 # ------------------------------------------------------------------
 # Test Pipeline with ContentProfile

@@ -613,12 +613,19 @@ class ViralClipPipeline:
         self._emit_progress("extract", 5, 7)
         extractor = self._get_clip_extractor()
         title_slug = self._slugify(title) if title else ""
+        # Opt-in must be declared on the concrete class, not inherited.  A
+        # legacy ClipExtractor subclass can override extract_clip with the
+        # original four-argument signature and must not receive this keyword.
         supports_source_duration = bool(
-            getattr(type(extractor), "supports_source_duration", False)
+            type(extractor).__dict__.get("supports_source_duration", False)
         )
         source_duration: Optional[float] = None
         if supports_source_duration:
-            source_duration = extractor._get_video_duration(video_path)
+            duration_probe = getattr(extractor, "probe_source_duration", None)
+            if callable(duration_probe):
+                source_duration = duration_probe(video_path)
+            else:
+                supports_source_duration = False
 
         extraction_tasks: list[tuple[int, ClipData, str]] = []
         for i, clip in enumerate(selected):

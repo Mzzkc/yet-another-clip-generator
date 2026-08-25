@@ -33,8 +33,8 @@ class ClipExtractor:
     """
 
     # Pipeline callers may supply one pre-probed source duration for all
-    # parallel extraction tasks.  External extractors retain the original
-    # four-argument protocol unless they explicitly advertise this capability.
+    # parallel extraction tasks.  The pipeline requires a class-local opt-in,
+    # so legacy subclasses that override extract_clip keep their old signature.
     supports_source_duration = True
 
     def __init__(
@@ -176,6 +176,15 @@ class ClipExtractor:
             padded_start, padded_end, output_path, file_size // 1024,
         )
         return True
+
+    def probe_source_duration(self, video_path: str) -> float:
+        """Return source duration for a pipeline extraction batch.
+
+        This public capability lets an explicitly opting-in extractor provide
+        one authoritative duration to every parallel extraction task without
+        requiring integrations to call its private implementation details.
+        """
+        return self._get_video_duration(video_path)
 
     def batch_extract(
         self,
