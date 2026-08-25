@@ -114,6 +114,10 @@ class ClipData:
     caption: Optional[CaptionData] = None
     words: list[WordTimestamp] = field(default_factory=list)
     thumbnail_path: Optional[str] = None
+    # Authoritative source duration captured before parallel extraction.  This
+    # lets subtitle rebasing use the same source-time bounds as FFmpeg rather
+    # than treating the final spoken word as the end of the media.
+    source_duration: Optional[float] = None
 
     def __repr__(self) -> str:
         path = os.path.basename(self.output_path) if self.output_path else "N/A"

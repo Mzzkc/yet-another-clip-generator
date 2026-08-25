@@ -613,9 +613,17 @@ class ViralClipPipeline:
         self._emit_progress("extract", 5, 7)
         extractor = self._get_clip_extractor()
         title_slug = self._slugify(title) if title else ""
+        supports_source_duration = bool(
+            getattr(type(extractor), "supports_source_duration", False)
+        )
+        source_duration: Optional[float] = None
+        if supports_source_duration:
+            source_duration = extractor._get_video_duration(video_path)
 
         extraction_tasks: list[tuple[int, ClipData, str]] = []
         for i, clip in enumerate(selected):
+            if source_duration is not None:
+                clip.source_duration = source_duration
             score_int = int(clip.virality.total_score)
             if title_slug:
                 filename = f"{title_slug}_clip_{i + 1:02d}_score{score_int}.mp4"
@@ -629,10 +637,17 @@ class ViralClipPipeline:
         def _extract_one(task: tuple[int, ClipData, str]) -> tuple[int, bool, str]:
             idx, clip_data, out_path = task
             try:
-                ok = extractor.extract_clip(
-                    video_path, clip_data.scene.start_time,
-                    clip_data.scene.end_time, out_path,
-                )
+                if source_duration is None:
+                    ok = extractor.extract_clip(
+                        video_path, clip_data.scene.start_time,
+                        clip_data.scene.end_time, out_path,
+                    )
+                else:
+                    ok = extractor.extract_clip(
+                        video_path, clip_data.scene.start_time,
+                        clip_data.scene.end_time, out_path,
+                        source_duration=source_duration,
+                    )
                 return (idx, ok, out_path)
             except Exception as exc:
                 logger.error("Clip %d extraction failed: %s", idx + 1, exc)
@@ -674,7 +689,11 @@ class ViralClipPipeline:
                 boundaries = effective_clip_boundaries(
                     clip.scene.start_time,
                     clip.scene.end_time,
-                    all_words[-1].end,
+                    (
+                        clip.source_duration
+                        if clip.source_duration is not None
+                        else all_words[-1].end
+                    ),
                     context_padding=self.config.context_padding,
                     content_type=self.config.content_profile.content_type,
                 )

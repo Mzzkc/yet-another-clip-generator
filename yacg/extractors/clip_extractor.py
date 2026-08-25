@@ -32,6 +32,11 @@ class ClipExtractor:
             if supplied).
     """
 
+    # Pipeline callers may supply one pre-probed source duration for all
+    # parallel extraction tasks.  External extractors retain the original
+    # four-argument protocol unless they explicitly advertise this capability.
+    supports_source_duration = True
+
     def __init__(
         self,
         context_padding: float = 2.0,
@@ -49,6 +54,8 @@ class ClipExtractor:
         start_time: float,
         end_time: float,
         output_path: str,
+        *,
+        source_duration: Optional[float] = None,
     ) -> bool:
         """Extract a single clip with context padding and vertical crop.
 
@@ -66,8 +73,12 @@ class ClipExtractor:
         Returns:
             ``True`` if the clip was created and validated, ``False`` otherwise.
         """
-        # Determine video duration for clamping
-        video_duration = self._get_video_duration(video_path)
+        # Determine video duration for clamping unless the pipeline has already
+        # probed one authoritative duration for this extraction batch.
+        video_duration = (
+            self._get_video_duration(video_path)
+            if source_duration is None else source_duration
+        )
 
         boundaries = effective_clip_boundaries(
             start_time,

@@ -539,6 +539,101 @@ class TestPipelineSubtitleRebasing:
         rebased_words = burner.process_clip.call_args.args[1]
         assert rebased_words[0].start == pytest.approx(0.3)
 
+    def test_subtitle_rebase_uses_extraction_duration_after_trailing_silence(
+        self, tmp_path,
+    ):
+        """Extraction and subtitles use the same source duration, not word end."""
+        from yacg.clip_boundaries import effective_clip_boundaries
+        from yacg.extractors.clip_extractor import ClipExtractor
+        from yacg.pipeline import ViralClipPipeline
+
+        burner = MagicMock()
+        burner.get_video_dimensions.return_value = (1080, 1920)
+        config = PipelineConfig(
+            output_dir=str(tmp_path),
+            content_profile=ContentProfile(content_type="asmr"),
+            context_padding=2.0,
+        )
+        clip = ClipData(
+            scene=SceneSegment(start_time=10.0, end_time=20.0, scene_index=0),
+            audio=AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+            ),
+            visual=VisualFeatures(
+                motion_score=0.0,
+                face_presence=0.0,
+                visual_interest=0.0,
+                composition_score=0.0,
+            ),
+            semantic=SemanticFeatures(
+                emotional_intensity=0.0,
+                narrative_interest=0.0,
+                hook_potential=0.0,
+                asmr_quality=0.0,
+                visual_appeal=0.0,
+                uniqueness=0.0,
+            ),
+        )
+        extractor = ClipExtractor(config=config)
+        pipeline = ViralClipPipeline(
+            config=config,
+            clip_extractor=extractor,
+            subtitle_burner=burner,
+        )
+
+        def write_extracted_clip(cmd, **kwargs):
+            Path(cmd[-1]).write_bytes(b"\x00" * 20000)
+            return MagicMock(returncode=0, stderr="")
+
+        extraction_ends: list[float] = []
+        subtitle_ends: list[float] = []
+
+        def record_extraction_boundaries(*args, **kwargs):
+            boundaries = effective_clip_boundaries(*args, **kwargs)
+            extraction_ends.append(boundaries.end_time)
+            return boundaries
+
+        def record_subtitle_boundaries(*args, **kwargs):
+            boundaries = effective_clip_boundaries(*args, **kwargs)
+            subtitle_ends.append(boundaries.end_time)
+            return boundaries
+
+        with (
+            patch.object(
+                extractor, "_get_video_duration", return_value=30.0,
+            ) as duration_probe,
+            patch.object(
+                extractor, "_get_vertical_filter", return_value="crop=608:1080:236:0",
+            ),
+            patch(
+                "yacg.extractors.clip_extractor.subprocess.run",
+                side_effect=write_extracted_clip,
+            ),
+            patch(
+                "yacg.extractors.clip_extractor.effective_clip_boundaries",
+                side_effect=record_extraction_boundaries,
+            ) as extraction_boundaries,
+            patch(
+                "yacg.pipeline.effective_clip_boundaries",
+                side_effect=record_subtitle_boundaries,
+            ) as subtitle_boundaries,
+        ):
+            pipeline._extract_clips("source.mp4", [clip], str(tmp_path), "", [])
+            pipeline._burn_subtitles(
+                [clip],
+                [WordTimestamp(word="last", start=19.8, end=20.0)],
+                [],
+            )
+
+        duration_probe.assert_called_once_with("source.mp4")
+        assert extraction_boundaries.call_args.args[2] == pytest.approx(30.0)
+        assert subtitle_boundaries.call_args.args[2] == pytest.approx(30.0)
+        assert extraction_ends == pytest.approx([20.3])
+        assert subtitle_ends == pytest.approx([20.3])
+
 
 # ------------------------------------------------------------------
 # Test Pipeline with ContentProfile
