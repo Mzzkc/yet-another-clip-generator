@@ -487,6 +487,59 @@ class TestPipelineOrchestration:
         assert len(result.clips) == 1
 
 
+class TestPipelineSubtitleRebasing:
+    """The subtitle clock must share extraction's effective clip start."""
+
+    def test_subtitle_rebase_uses_asmr_effective_context(self, tmp_path):
+        from yacg.pipeline import ViralClipPipeline
+
+        output = tmp_path / "clip.mp4"
+        output.write_bytes(b"clip")
+        burner = MagicMock()
+        burner.get_video_dimensions.return_value = (1080, 1920)
+        config = PipelineConfig(
+            content_profile=ContentProfile(content_type="asmr"),
+            context_padding=2.0,
+        )
+        clip = ClipData(
+            scene=SceneSegment(start_time=10.0, end_time=15.0, scene_index=0),
+            audio=AudioFeatures(
+                audio_peak_score=0.0,
+                high_freq_score=0.0,
+                dynamic_range=0.0,
+                zcr_score=0.0,
+            ),
+            visual=VisualFeatures(
+                motion_score=0.0,
+                face_presence=0.0,
+                visual_interest=0.0,
+                composition_score=0.0,
+            ),
+            semantic=SemanticFeatures(
+                emotional_intensity=0.0,
+                narrative_interest=0.0,
+                hook_potential=0.0,
+                asmr_quality=0.0,
+                visual_appeal=0.0,
+                uniqueness=0.0,
+            ),
+            output_path=str(output),
+        )
+        pipeline = ViralClipPipeline(config=config, subtitle_burner=burner)
+
+        pipeline._burn_subtitles(
+            [clip],
+            [
+                WordTimestamp(word="first", start=10.0, end=10.2),
+                WordTimestamp(word="last", start=14.8, end=15.0),
+            ],
+            [],
+        )
+
+        rebased_words = burner.process_clip.call_args.args[1]
+        assert rebased_words[0].start == pytest.approx(0.3)
+
+
 # ------------------------------------------------------------------
 # Test Pipeline with ContentProfile
 # ------------------------------------------------------------------

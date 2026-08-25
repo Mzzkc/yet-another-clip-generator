@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, runtime_checkable
 
+from yacg.clip_boundaries import effective_clip_boundaries
 from yacg.models import (
     AudioFeatures,
     CaptionData,
@@ -670,10 +671,15 @@ class ViralClipPipeline:
         ) -> tuple[int, Optional[str], Optional[list[WordTimestamp]]]:
             idx, clip = task
             try:
-                padded_start = max(0.0, clip.scene.start_time - self.config.context_padding)
-                padded_end = clip.scene.end_time + self.config.context_padding
-                if all_words:
-                    padded_end = min(padded_end, all_words[-1].end)
+                boundaries = effective_clip_boundaries(
+                    clip.scene.start_time,
+                    clip.scene.end_time,
+                    all_words[-1].end,
+                    context_padding=self.config.context_padding,
+                    content_type=self.config.content_profile.content_type,
+                )
+                padded_start = boundaries.start_time
+                padded_end = boundaries.end_time
 
                 _BOUNDARY_TOLERANCE = 0.05
                 # Filter out whisper hallucinations: words whose acoustic

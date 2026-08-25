@@ -14,6 +14,7 @@ import pytest
 from yacg.models import (
     AudioFeatures,
     ClipData,
+    ContentProfile,
     PipelineConfig,
     SceneSegment,
     SemanticFeatures,
@@ -449,6 +450,62 @@ class TestClipExtractorExtractClip:
         # Padded start clamped to 0, padded end clamped to 12
         assert float(call_args[ss_idx + 1]) == pytest.approx(0.0)
         assert float(call_args[t_idx + 1]) == pytest.approx(12.0)
+
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
+    @patch(
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        return_value=120.0,
+    )
+    def test_effective_context_keeps_configured_padding_for_general_content(
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
+    ) -> None:
+        output = tmp_path / "out.mp4"
+
+        def side_effect(*args, **kwargs):
+            output.write_bytes(b"\x00" * 20000)
+            return MagicMock(returncode=0, stderr="")
+
+        mock_run.side_effect = side_effect
+        config = PipelineConfig(
+            content_profile=ContentProfile(content_type="general"),
+            context_padding=2.0,
+        )
+
+        ClipExtractor(config=config).extract_clip(
+            "/fake/video.mp4", 10.0, 20.0, str(output),
+        )
+
+        call_args = mock_run.call_args[0][0]
+        assert float(call_args[call_args.index("-ss") + 1]) == pytest.approx(8.0)
+
+    @patch("yacg.extractors.clip_extractor.subprocess.run")
+    @patch(
+        "yacg.extractors.clip_extractor.ClipExtractor._get_video_duration",
+        return_value=120.0,
+    )
+    def test_effective_context_clamps_start_of_file_once(
+        self, mock_dur: MagicMock, mock_run: MagicMock,
+        mock_vf: MagicMock, tmp_path: Path,
+    ) -> None:
+        output = tmp_path / "out.mp4"
+
+        def side_effect(*args, **kwargs):
+            output.write_bytes(b"\x00" * 20000)
+            return MagicMock(returncode=0, stderr="")
+
+        mock_run.side_effect = side_effect
+        config = PipelineConfig(
+            content_profile=ContentProfile(content_type="asmr"),
+            context_padding=2.0,
+        )
+
+        ClipExtractor(config=config).extract_clip(
+            "/fake/video.mp4", 0.1, 20.0, str(output),
+        )
+
+        call_args = mock_run.call_args[0][0]
+        assert float(call_args[call_args.index("-ss") + 1]) == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------
