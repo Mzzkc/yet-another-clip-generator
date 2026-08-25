@@ -157,11 +157,11 @@ class TestAdaptiveCaptionGrouping:
 
         assert self._dialogue_texts(ass) == ["Please wait", "for a moment"]
 
-    def test_adaptive_groups_break_early_for_duration_and_rendered_width(self, burner):
-        """Duration and final font/margins prevent unreadable overlong phrases."""
+    def test_adaptive_groups_rebalance_a_continuous_duration_tail(self, burner):
+        """A duration split may move one word when the resulting 3+3 groups fit."""
         duration_words = self._words(
-            ("one", 0.00, 0.20), ("two", 0.25, 0.45), ("three", 0.50, 0.70),
-            ("four", 2.01, 2.20), ("five", 2.25, 2.45), ("six", 2.50, 2.70),
+            ("one", 0.00, 0.35), ("two", 0.40, 0.75), ("three", 0.80, 1.15),
+            ("four", 1.20, 1.55), ("five", 1.60, 2.05), ("six", 2.10, 2.45),
         )
         duration_ass = burner.generate_ass(
             duration_words, 1920, 1080,
@@ -169,19 +169,50 @@ class TestAdaptiveCaptionGrouping:
         )
         assert self._dialogue_texts(duration_ass) == ["one two three", "four five six"]
 
+    def test_adaptive_groups_rebalance_a_continuous_width_tail(self, burner):
+        """A width split may move one word when the resulting 3+3 groups fit."""
         width_words = self._words(
-            ("I", 0.00, 0.10), ("am", 0.12, 0.22),
-            ("hyperdimensional", 0.24, 0.34), ("today", 0.36, 0.46),
-            ("with", 0.48, 0.58), ("you", 0.60, 0.70),
+            ("one", 0.00, 0.10), ("two", 0.12, 0.22), ("three", 0.24, 0.34),
+            ("four", 0.36, 0.46), ("five", 0.48, 0.58), ("six", 0.60, 0.70),
         )
         width_ass = burner.generate_ass(
-            width_words, 820, 1000,
+            width_words, 1062, 1000,
             style=SubtitleStyle(
                 font_name="Liberation Sans", font_size_pct=0.10, margin_h_pct=0.10,
                 min_words_per_group=3, max_words_per_group=5,
             ),
         )
-        assert self._dialogue_texts(width_ass) == ["I am", "hyperdimensional", "today with you"]
+        assert self._dialogue_texts(width_ass) == ["one two three", "four five six"]
+
+    @pytest.mark.parametrize(
+        ("words", "expected"),
+        [
+            (
+                (
+                    ("one", 0.00, 0.10), ("two", 0.12, 0.22), ("three", 0.24, 0.34),
+                    ("four.", 0.36, 0.46), ("five", 0.48, 0.58), ("six", 0.60, 0.70),
+                ),
+                ["one two three four.", "five six"],
+            ),
+            (
+                (
+                    ("one", 0.00, 0.10), ("two", 0.12, 0.22), ("three", 0.24, 0.34),
+                    ("four", 0.36, 0.46), ("five", 0.80, 0.90), ("six", 0.92, 1.02),
+                ),
+                ["one two three four", "five six"],
+            ),
+        ],
+    )
+    def test_adaptive_groups_never_rebalance_across_punctuation_or_a_pause(
+        self, burner, words, expected,
+    ):
+        """Speech boundaries outrank the target phrase-size range."""
+        ass = burner.generate_ass(
+            self._words(*words), 1920, 1080,
+            style=SubtitleStyle(min_words_per_group=3, max_words_per_group=5),
+        )
+
+        assert self._dialogue_texts(ass) == expected
 
     def test_explicit_one_and_two_word_styles_remain_compatible(self, burner, sample_words):
         """Existing explicitly configured compact caption styles are unchanged."""

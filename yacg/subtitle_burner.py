@@ -229,9 +229,9 @@ class SubtitleBurner:
         """
         groups: list[tuple[float, float, list[WordTimestamp]]] = []
         # The reason after each group determines whether its short tail may
-        # borrow words from the preceding group.  Only a soft max-word split
-        # is movable; punctuation, pauses, duration, and width are real
-        # spoken/rendered boundaries.
+        # borrow words from the preceding group. Punctuation and pauses are
+        # immutable spoken boundaries. A max-word, duration, or width split
+        # may move when both resulting phrases remain independently valid.
         split_reasons: list[str] = []
         i = 0
         while i < len(words):
@@ -272,22 +272,33 @@ class SubtitleBurner:
         for index in range(len(groups) - 1, 0, -1):
             start, end, group_words = groups[index]
             previous_start, previous_end, previous_words = groups[index - 1]
-            if len(group_words) >= min_words_per_group or split_reasons[index - 1] != "max_words":
+            if (
+                len(group_words) >= min_words_per_group
+                or split_reasons[index - 1] not in {"max_words", "duration", "width"}
+            ):
                 continue
             needed = min_words_per_group - len(group_words)
             if len(previous_words) - needed < min_words_per_group:
                 continue
             moved_words = previous_words[-needed:]
+            remaining_words = previous_words[:-needed]
             rebalanced_words = [*moved_words, *group_words]
+            remaining_text = " ".join(word.word.strip() for word in remaining_words)
             rebalanced_text = " ".join(word.word.strip() for word in rebalanced_words)
-            if (
+            remaining_invalid = (
+                remaining_words[-1].end - remaining_words[0].start > self.MAX_GROUP_DURATION
+                or _rendered_text_width(
+                    remaining_text, font_name, font_size, outline_width,
+                ) > available_width
+            )
+            rebalanced_invalid = (
                 rebalanced_words[-1].end - rebalanced_words[0].start > self.MAX_GROUP_DURATION
                 or _rendered_text_width(
                     rebalanced_text, font_name, font_size, outline_width,
                 ) > available_width
-            ):
+            )
+            if remaining_invalid or rebalanced_invalid:
                 continue
-            remaining_words = previous_words[:-needed]
             groups[index - 1] = (
                 remaining_words[0].start, remaining_words[-1].end, remaining_words,
             )
