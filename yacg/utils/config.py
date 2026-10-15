@@ -157,6 +157,8 @@ def load_config(path: Optional[str] = None) -> PipelineConfig:
         segmentation_model=_get("Model", "segmentation_model", defaults.segmentation_model),
         whisper_device=_get("Model", "whisper_device", defaults.whisper_device),
         whisper_compute_type=_get("Model", "whisper_compute_type", defaults.whisper_compute_type),
+        whisper_backend=_get("Model", "whisper_backend", defaults.whisper_backend),
+        whisper_url=_get("Model", "whisper_url", defaults.whisper_url),
         num_frames=_getint("Model", "num_frames", defaults.num_frames),
         asmr_mode=_getbool("ASMR Optimization", "asmr_mode", defaults.asmr_mode),
         content_profile=content_profile,
@@ -197,6 +199,8 @@ def save_default_config(path: str) -> None:
         "segmentation_model": defaults.segmentation_model,
         "whisper_device": defaults.whisper_device,
         "whisper_compute_type": defaults.whisper_compute_type,
+        "whisper_backend": defaults.whisper_backend,
+        "whisper_url": defaults.whisper_url,
         "num_frames": str(defaults.num_frames),
     }
 

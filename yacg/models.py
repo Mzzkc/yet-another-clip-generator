@@ -371,6 +371,14 @@ class PipelineConfig:
     whisper_device: str = "auto"
     whisper_compute_type: str = "auto"
 
+    # Where Whisper runs: "local" (faster-whisper in this process) or
+    # "remote" (a Whisper server with the standard
+    # POST /v1/audio/transcriptions endpoint, e.g. faster-whisper on another
+    # machine's GPU).  whisper_url is the server's base URL; empty falls
+    # back to $WHISPER_API_URL.
+    whisper_backend: str = "local"
+    whisper_url: str = ""
+
     # Scene detection
     scene_threshold: float = 3.0
     min_scene_len: float = 7.0
@@ -463,6 +471,10 @@ class PipelineConfig:
             raise ValueError(
                 f"Invalid scoring weight key(s): {sorted(invalid_keys)}. "
                 f"Valid keys: {sorted(VALID_SCORING_KEYS)}"
+            )
+        if self.whisper_backend not in ("local", "remote"):
+            raise ValueError(
+                f"Invalid whisper_backend {self.whisper_backend!r}: use 'local' or 'remote'"
             )
         # Auto-sync asmr_mode from content profile
         if self.content_profile.content_type == "asmr":

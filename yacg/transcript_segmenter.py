@@ -266,8 +266,14 @@ class TranscriptSegmenter:
         channel_description: str = "",
         target_audience: str = "",
         custom_instructions: str = "",
+        whisper_backend: str = "local",
+        whisper_url: str = "",
     ) -> None:
         self.whisper_model = whisper_model
+        # "local" runs faster-whisper in-process; "remote" sends audio to a
+        # Whisper server (see yacg.remote_whisper).
+        self.whisper_backend = whisper_backend
+        self.whisper_url = whisper_url
         self.ollama_host = ollama_host.rstrip("/")
         self.model_name = model_name
         self.whisper_device = whisper_device
@@ -305,6 +311,9 @@ class TranscriptSegmenter:
             RuntimeError: If Whisper returns no words (silent video or failure).
             RuntimeError: If transcription crashes.
         """
+        if self.whisper_backend == "remote":
+            return self._remote_transcribe(video_path)
+
         try:
             from faster_whisper import WhisperModel
         except ImportError:
@@ -359,21 +368,7 @@ class TranscriptSegmenter:
                 info.language_probability,
             )
 
-            # Language detection gating
-            if info.language_probability < 0.5:
-                raise RuntimeError(
-                    f"Language detection confidence too low: "
-                    f"detected '{info.language}' with probability "
-                    f"{info.language_probability:.2f} (threshold: 0.50). "
-                    f"The audio may not contain intelligible speech."
-                )
-            if info.language_probability < 0.8:
-                logger.warning(
-                    "Low language detection confidence: %s (%.2f). "
-                    "Transcription quality may be degraded.",
-                    info.language,
-                    info.language_probability,
-                )
+            self._check_language_confidence(info.language, info.language_probability)
 
             words: list[WordTimestamp] = []
             segment_count = 0
@@ -422,6 +417,50 @@ class TranscriptSegmenter:
             raise RuntimeError(
                 f"Whisper transcription failed: {exc}"
             ) from exc
+
+    def _remote_transcribe(self, video_path: str) -> list[WordTimestamp]:
+        """Transcribe on a remote Whisper server; same contract as the local path."""
+        from yacg import remote_whisper
+
+        result = remote_whisper.transcribe(
+            video_path,
+            url=self.whisper_url,
+            model=self.whisper_model,
+            vad_filter=self.vad_filter,
+            session=self._session,
+        )
+        logger.info(
+            "Transcribed %s remotely (language: %s, prob: %s)",
+            video_path,
+            result.language,
+            "n/a" if result.language_probability is None
+            else f"{result.language_probability:.2f}",
+        )
+        # Some servers don't report a language probability; gate only when present.
+        if result.language_probability is not None:
+            self._check_language_confidence(result.language, result.language_probability)
+        if not result.words:
+            raise RuntimeError(f"No speech detected in video: {video_path}")
+        logger.info("Transcription complete: %d words", len(result.words))
+        return result.words
+
+    @staticmethod
+    def _check_language_confidence(language: str, probability: float) -> None:
+        """Language detection gating shared by the local and remote paths."""
+        if probability < 0.5:
+            raise RuntimeError(
+                f"Language detection confidence too low: "
+                f"detected '{language}' with probability "
+                f"{probability:.2f} (threshold: 0.50). "
+                f"The audio may not contain intelligible speech."
+            )
+        if probability < 0.8:
+            logger.warning(
+                "Low language detection confidence: %s (%.2f). "
+                "Transcription quality may be degraded.",
+                language,
+                probability,
+            )
 
     def segment_by_content(
         self, words: list[WordTimestamp], title: str,

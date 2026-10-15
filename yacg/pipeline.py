@@ -262,6 +262,8 @@ class ViralClipPipeline:
                 channel_description=cp.channel_description,
                 target_audience=cp.target_audience,
                 custom_instructions=cp.custom_instructions,
+                whisper_backend=self.config.whisper_backend,
+                whisper_url=self.config.whisper_url,
             )
         return self._transcript_segmenter
 
