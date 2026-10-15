@@ -79,6 +79,19 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
              "(default: auto)",
     )
     parser.add_argument(
+        "--whisper-backend", default=None,
+        choices=["local", "remote"],
+        help="Where Whisper runs: local=faster-whisper on this machine, "
+             "remote=a Whisper server (e.g. faster-whisper on another "
+             "machine's GPU) at --whisper-url or $WHISPER_API_URL "
+             "(default: local)",
+    )
+    parser.add_argument(
+        "--whisper-url", default=None,
+        help="Base URL of the Whisper server for --whisper-backend remote "
+             "(default: $WHISPER_API_URL)",
+    )
+    parser.add_argument(
         "--num-frames", type=int, default=None,
         choices=[1, 2, 3, 4, 5],
         help="Number of frames per segment for VLM analysis. Set to 1 "
@@ -341,6 +354,10 @@ def _build_config(args: argparse.Namespace):
         config.whisper_device = args.whisper_device
     if getattr(args, "whisper_compute_type", None):
         config.whisper_compute_type = args.whisper_compute_type
+    if getattr(args, "whisper_backend", None):
+        config.whisper_backend = args.whisper_backend
+    if getattr(args, "whisper_url", None):
+        config.whisper_url = args.whisper_url
     if getattr(args, "scene_threshold", None) is not None:
         config.scene_threshold = args.scene_threshold
     if getattr(args, "min_scene_len", None) is not None:
@@ -834,6 +851,8 @@ def _cmd_show_config(args: argparse.Namespace) -> int:
         "scoring_weights": "Virality scoring weights",
         "whisper_device": "Whisper inference device (auto/cpu/cuda)",
         "whisper_compute_type": "Whisper compute precision (auto/int8/float16/float32)",
+        "whisper_backend": "Where Whisper runs (local/remote)",
+        "whisper_url": "Remote Whisper server base URL (empty = $WHISPER_API_URL)",
         "num_frames": "Number of frames per segment for VLM analysis",
         "dry_run": "Analysis only — no extraction, subtitles, or captions",
         "pause_threshold": "Pause duration (seconds) that triggers a segment boundary",

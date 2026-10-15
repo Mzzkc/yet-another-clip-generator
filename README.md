@@ -41,6 +41,22 @@ yacg youtube --url https://youtube.com/watch?v=XXXXX
 yacg batch --videos-dir /path/to/videos/
 ```
 
+### Whisper on another machine (optional)
+
+Transcription runs locally by default. To use a GPU elsewhere, run a Whisper server
+there (any server with the standard `POST /v1/audio/transcriptions` endpoint, e.g. a
+[faster-whisper server](https://github.com/speaches-ai/speaches)) and point yacg at it:
+
+```bash
+export WHISPER_API_URL=http://gpu-box:8000
+yacg process --video video.mp4 --title "My Video" --whisper-backend remote
+```
+
+`--whisper-url` overrides the variable, and both can live in the config file
+(`whisper_backend`, `whisper_url` under `[Model]`). yacg sends 16 kHz mono FLAC and
+keeps the same word timestamps and language checks as a local run. Set
+`WHISPER_API_KEY` if the server needs a key.
+
 ## Project Structure
 
 ```
